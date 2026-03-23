@@ -96,8 +96,9 @@ Ask the user to confirm or adjust the colouring rules.
 
 ### 5. Save as a new dashboard file
 
-Create a new file at **`prompts/dashboards/<slug>.md`** with the generated
-Part section content.
+Create a new file at **`prompts/dashboards/custom_<slug>.md`** with the generated
+Part section content. The `custom_` prefix ensures user-added files never collide
+with shipped dashboard names on future upgrades.
 
 Determine the correct Part letter by counting existing `.md` files in
 `prompts/dashboards/` (A, B → next is C, etc.).
@@ -154,7 +155,7 @@ Look good? I can adjust the thresholds.
 
 User: looks good
 
-Agent: ✓ Created prompts/dashboards/dora.md
+Agent: ✓ Created prompts/dashboards/custom_dora.md
        → Set DATADOG_DASHBOARD_URL_DORA in .env with your dashboard URL
        → Next daily run will include DORA metrics
        → This file won't conflict with future upstream upgrades
