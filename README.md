@@ -136,7 +136,6 @@ make help         # list all targets
 | `DD_API_KEY` | yes | Datadog API key |
 | `DD_APP_KEY` | yes | Datadog Application key |
 | `DD_SITE` | no | Datadog API host (default: `https://api.datadoghq.com`) |
-| `DATADOG_DASHBOARD_URL_*` | yes | One env var per dashboard (see `prompts/dashboards/`) |
 | `DATADOG_TEAMS` | no | Comma-separated team slugs — filters all queries |
 | `GITHUB_TOKEN` | yes | PAT with `repo` + `read:org` scopes |
 | `GITHUB_ORG` | yes | GitHub org slug |
@@ -205,10 +204,10 @@ Each row has **`view_url`** (Todoist on the web). For Part D Actions, use **`for
 ## Running scripts directly
 
 ```bash
-# Extract Datadog metrics for a dashboard (with slug-based output)
+# Extract Datadog metrics for a dashboard
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY \
-  --output-slug catalogue_quality \
+  --url 'https://app.datadoghq.com/dashboard/abc-123/my-dashboard?...' \
+  --output-slug my_dashboard \
   --days 2
 
 # Fetch GitHub PR review queue
@@ -224,21 +223,18 @@ python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.h
 
 You can add any Datadog dashboard to the daily report without editing existing files:
 
-1. **Set the URL in `.env`:**
-   ```bash
-   DATADOG_DASHBOARD_URL_DORA='https://app.datadoghq.com/dashboard/xyz-123/dora?...'
+1. **Run the add-dashboard command in Cursor:**
+   ```
+   @prompts/add-dashboard.md add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
    ```
 
-2. **Run the add-dashboard command in Cursor:**
-   ```
-   @prompts/add-dashboard.md add my DORA dashboard, I care about deploy rate and change failure rate
-   ```
-
-3. The command will:
+2. The command will:
    - Discover all widgets in the dashboard
    - Let you pick which ones to include
    - Generate colouring rules
-   - Save a new file at `prompts/dashboards/custom_dora.md`
+   - Save a new file at `prompts/dashboards/custom_dora.md` with the URL embedded
+
+No `.env` changes needed — dashboard URLs are stored directly in the `.md` files.
 
 Next time the daily dashboard runs, it picks up the new file automatically.
 

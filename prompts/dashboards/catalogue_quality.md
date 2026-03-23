@@ -1,12 +1,12 @@
 # Part A — Catalogue Quality
 
-- **URL env:** `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY`
+- **URL:** `https://xxx/dashboard/***REMOVED***?fromUser=false&offset=1&refresh_mode=monthly&tpl_var_criticality%5B0%5D=%2A&tpl_var_team%5B0%5D=release-engineering&from_ts=1771143508740&to_ts=1773562708739&live=true`
 - **Slug:** `catalogue_quality`
 - **Focus:** (none)
 
 ```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY \
+  --url 'https://xxx/dashboard/***REMOVED***?fromUser=false&offset=1&refresh_mode=monthly&tpl_var_criticality%5B0%5D=%2A&tpl_var_team%5B0%5D=release-engineering&from_ts=1771143508740&to_ts=1773562708739&live=true' \
   --output-slug catalogue_quality \
   --days 2
 ```

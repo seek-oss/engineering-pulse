@@ -46,7 +46,7 @@ post_install_guide() {
   if [ -f "$ex" ]; then
     echo -e "     ${DIM}Template with every variable explained:${RESET} ${MAGENTA}${ex}${RESET}"
   fi
-  echo -e "     ${DIM}GitHub PAT, Datadog keys, dashboard URLs, SMTP, optional Todoist — see comments in .env.example.${RESET}"
+  echo -e "     ${DIM}GitHub PAT, Datadog API keys, SMTP, optional Todoist — see comments in .env.example.${RESET}"
   echo ""
   echo -e "  ${BOLD}2) Dashboard workflow (Cursor agent)${RESET}"
   echo -e "     Main prompt the scheduler runs: ${MAGENTA}${BOLD}${INSTALL_DIR}/prompts/daily-dashboard.md${RESET}"

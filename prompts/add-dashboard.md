@@ -18,23 +18,17 @@ Ask the user (or extract from their message):
 | Input | Example |
 |-------|---------|
 | **Dashboard URL** | `https://app.datadoghq.com/dashboard/abc-xyz/my-dashboard?...` |
-| **Env var name** | `DATADOG_DASHBOARD_URL_DORA` |
 | **Short name** | `DORA Metrics` |
 | **Slug** (lowercase, underscores) | `dora` |
 | **What they care about** | "deploy rate", "error rate" (natural language is fine) |
 
-If the user provides a URL directly instead of an env var name:
-- Suggest an env var name based on the dashboard title
-- Instruct them to add it to `.env`
-- Use that env var name in the generated config
-
 ### 2. Discover widgets
 
-Set the env var (temporarily if needed) and run:
+Run the extraction script with the URL directly:
 
 ```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env <ENV_VAR_NAME> \
+  --url '<DASHBOARD_URL>' \
   --output-slug <SLUG> \
   --days 2
 ```
@@ -59,13 +53,13 @@ Based on the user's selections, generate a new Part section in this format:
 ```markdown
 #### Part X — <Short Name>
 
-- **URL env:** `<ENV_VAR_NAME>`
+- **URL:** `<DASHBOARD_URL>`
 - **Slug:** `<slug>`
 - **Focus:** `<comma-separated focus terms>`
 
 \```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env <ENV_VAR_NAME> \
+  --url '<DASHBOARD_URL>' \
   --output-slug <slug> \
   --days 2 \
   --focus "<focus terms>"
@@ -119,8 +113,8 @@ python3 scripts/render_daily_dashboard_html.py \
 ### 7. Confirm
 
 Tell the user:
-- The new dashboard file has been created at `prompts/dashboards/<slug>.md`
-- They need to set `<ENV_VAR_NAME>` in `.env` with the dashboard URL
+- The new dashboard file has been created at `prompts/dashboards/custom_<slug>.md`
+- The URL is embedded in the file — no `.env` changes needed
 - Next time the daily dashboard runs, it will pick up the new file automatically
 - On future upgrades, this file won't conflict with upstream changes
 
@@ -156,7 +150,7 @@ Look good? I can adjust the thresholds.
 User: looks good
 
 Agent: ✓ Created prompts/dashboards/custom_dora.md
-       → Set DATADOG_DASHBOARD_URL_DORA in .env with your dashboard URL
+       → URL is embedded in the file — no .env changes needed
        → Next daily run will include DORA metrics
        → This file won't conflict with future upstream upgrades
 ```
