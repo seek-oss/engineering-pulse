@@ -39,6 +39,7 @@ dist/
 
 # Editor swap files
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
