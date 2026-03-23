@@ -7,13 +7,13 @@ Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colou
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
 ```
 
-The installer will:
+Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo then runs `install.sh` from disk (see **Setup → Option A** for why). The installer will:
 - Clone the repo to `~/.engineering-pulse` (override with `INSTALL_DIR` if you want a different path)
 - Set up a Python virtual environment
-- Copy `.env.example` → `.env` if `.env` is missing (then **edit `.env`** with your keys — the one-liner cannot prompt because `curl | bash` does not use your keyboard for input)
+- Copy `.env.example` → `.env` if `.env` is missing (then **edit `.env`** with your keys)
 - Print where to edit prompts, customise dashboards, and adjust the LaunchAgent schedule
 - Schedule the report at **08:00, 10:00 and 18:30** via macOS LaunchAgent (override times with `SCHEDULE_HOURS` when running the installer)
 
@@ -76,10 +76,14 @@ All credentials come from `.env` — never hardcoded.
 ### Option A — one-liner installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
 ```
 
-The installer handles everything: cloning, Python venv, credential wizard, and LaunchAgent schedule.
+This bootstrap only clones/updates the repo and runs `install.sh` **from disk**. Do **not** use `curl …/install.sh | bash`: your shell would read the installer from stdin (not a real TTY), and GitHub’s raw CDN can briefly serve an older `install.sh` than `git clone` gets — both caused confusing failures in the past.
+
+**Alternative:** `curl -fsSL …/install.sh -o /tmp/ep-install.sh && bash /tmp/ep-install.sh`
+
+The installer handles cloning (or update), Python venv, `.env` seeding, runner + LaunchAgent, and prints next-step paths.
 
 ### Option B — manual setup
 
