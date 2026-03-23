@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "google-flights": {
+      "command": "python",
+      "args": ["mcp/flights_server.py"]
+    }
+  }
+}

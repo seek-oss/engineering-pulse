@@ -38,12 +38,14 @@ dist/
 .DS_Store
 
 # Editor swap files
+.idea/
 *.swp
 *.swo
 *~
 
-# Project: generated pipeline artifacts
+# Generated output (regenerated on every run)
 output/
-
-# Default HTML report from scripts/render_daily_dashboard_html.py
-daily_dashboard_report.html
+*.html
+*.txt
+github_prs.json
+dashboard*.json
