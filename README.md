@@ -7,7 +7,7 @@ Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colou
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/engineering-pulse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh | bash
 ```
 
 The installer will:
@@ -75,7 +75,7 @@ All credentials come from `.env` — never hardcoded.
 ### Option A — one-liner installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/engineering-pulse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh | bash
 ```
 
 The installer handles everything: cloning, Python venv, credential wizard, and LaunchAgent schedule.
@@ -83,7 +83,7 @@ The installer handles everything: cloning, Python venv, credential wizard, and L
 ### Option B — manual setup
 
 ```bash
-git clone https://github.com/YOUR_USER/engineering-pulse.git ~/.engineering-pulse
+git clone https://github.com/harryzhu2011/engineering-pulse.git ~/.engineering-pulse
 cd ~/.engineering-pulse
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
