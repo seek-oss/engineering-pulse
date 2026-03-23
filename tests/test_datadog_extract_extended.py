@@ -254,3 +254,75 @@ class TestMain:
                 with patch("builtins.open", MagicMock()):
                     from scripts.datadog_dashboard_extract import main
                     main()  # should not raise
+
+    @patch("scripts.datadog_dashboard_extract.get_dashboard")
+    @patch("scripts.datadog_dashboard_extract.requests.get")
+    @patch("scripts.datadog_dashboard_extract.requests.post")
+    def test_main_output_slug_changes_filenames(self, mock_post, mock_http_get, mock_dash):
+        """When --output-slug is provided, output files use the slug prefix."""
+        fake_dashboard = {
+            "title": "DORA Dashboard",
+            "template_variables": [],
+            "widgets": [],
+        }
+        mock_dash.return_value = fake_dashboard
+
+        test_env = {
+            "DD_API_KEY": "test-key",
+            "DD_APP_KEY": "test-app-key",
+            "MY_DORA_URL": "https://app.datadoghq.com/dashboard/xyz-789?from_ts=1000000000000&to_ts=1001000000000",
+        }
+        opened_files = []
+        real_open = open
+
+        def tracking_open(path, *a, **kw):
+            opened_files.append(str(path))
+            return MagicMock()
+
+        with patch.dict("os.environ", test_env):
+            with patch.object(
+                sys, "argv",
+                ["dd_extract.py", "--url-env", "MY_DORA_URL", "--days", "1", "--output-slug", "dora"],
+            ):
+                with patch("builtins.open", tracking_open):
+                    from scripts.datadog_dashboard_extract import main
+                    main()
+
+        filenames = [f.split("/")[-1] for f in opened_files]
+        assert "dora_dashboard.json" in filenames
+        assert "dora_dashboard_extracted_queries.json" in filenames
+        assert "dora_metric_results.json" in filenames
+
+    @patch("scripts.datadog_dashboard_extract.get_dashboard")
+    @patch("scripts.datadog_dashboard_extract.requests.get")
+    @patch("scripts.datadog_dashboard_extract.requests.post")
+    def test_main_no_slug_uses_default_filenames(self, mock_post, mock_http_get, mock_dash):
+        """Without --output-slug, output files have no prefix (backward compat)."""
+        fake_dashboard = {
+            "title": "Test Dashboard",
+            "template_variables": [],
+            "widgets": [],
+        }
+        mock_dash.return_value = fake_dashboard
+
+        test_env = {
+            "DD_API_KEY": "test-key",
+            "DD_APP_KEY": "test-app-key",
+            "MY_TEST_URL": "https://app.datadoghq.com/dashboard/abc-123?from_ts=1000000000000&to_ts=1001000000000",
+        }
+        opened_files = []
+
+        def tracking_open(path, *a, **kw):
+            opened_files.append(str(path))
+            return MagicMock()
+
+        with patch.dict("os.environ", test_env):
+            with patch.object(sys, "argv", ["dd_extract.py", "--url-env", "MY_TEST_URL", "--days", "1"]):
+                with patch("builtins.open", tracking_open):
+                    from scripts.datadog_dashboard_extract import main
+                    main()
+
+        filenames = [f.split("/")[-1] for f in opened_files]
+        assert "dashboard.json" in filenames
+        assert "dashboard_extracted_queries.json" in filenames
+        assert "metric_results.json" in filenames

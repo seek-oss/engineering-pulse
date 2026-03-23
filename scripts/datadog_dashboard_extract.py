@@ -13,15 +13,16 @@ Optional:
     DATADOG_TEAMS  (comma-separated team names — overrides tpl_var_team in URL)
 
 CLI args:
-    --url-env   Name of env var holding the dashboard URL
-                (default: DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY)
-    --days      Override time window to past N days (0 = use URL timestamps)
-    --focus     Comma-separated widget title substrings to highlight in output
+    --url-env       Name of env var holding the dashboard URL
+                    (default: DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY)
+    --days          Override time window to past N days (0 = use URL timestamps)
+    --focus         Comma-separated widget title substrings to highlight in output
+    --output-slug   Prefix for output files (e.g. 'owner_metrics' → owner_metrics_metric_results.json)
 
 Output files (under output/):
-    dashboard.json                      — full dashboard definition
-    dashboard_extracted_queries.json    — all extracted widget queries
-    dashboard_metric_results.json       — latest metric points per query (for HTML report)
+    [slug_]dashboard.json                      — full dashboard definition
+    [slug_]dashboard_extracted_queries.json    — all extracted widget queries
+    [slug_]metric_results.json                — latest metric points per query (for HTML report)
 """
 
 import argparse
@@ -363,6 +364,11 @@ def main() -> None:
         default="",
         help="Comma-separated widget title substrings to highlight (case-insensitive)",
     )
+    parser.add_argument(
+        "--output-slug",
+        default="",
+        help="Slug prefix for output files (e.g. 'catalogue_quality' → output/catalogue_quality_metric_results.json)",
+    )
     args = parser.parse_args()
 
     url_env = args.url_env
@@ -567,14 +573,19 @@ def main() -> None:
     # --- Write output files ---
     out_dir = Path(__file__).resolve().parent.parent / "output"
     out_dir.mkdir(exist_ok=True)
+    prefix = f"{args.output_slug}_" if args.output_slug else ""
 
-    with open(out_dir / "dashboard.json", "w", encoding="utf-8") as f:
+    fname_dash = f"{prefix}dashboard.json"
+    fname_queries = f"{prefix}dashboard_extracted_queries.json"
+    fname_results = f"{prefix}metric_results.json"
+
+    with open(out_dir / fname_dash, "w", encoding="utf-8") as f:
         json.dump(dashboard, f, ensure_ascii=False, indent=2)
 
-    with open(out_dir / "dashboard_extracted_queries.json", "w", encoding="utf-8") as f:
+    with open(out_dir / fname_queries, "w", encoding="utf-8") as f:
         json.dump(extracted, f, ensure_ascii=False, indent=2)
 
-    with open(out_dir / "dashboard_metric_results.json", "w", encoding="utf-8") as f:
+    with open(out_dir / fname_results, "w", encoding="utf-8") as f:
         json.dump(
             {
                 "dashboard_title": title,
@@ -588,9 +599,9 @@ def main() -> None:
 
     console.print()
     console.print("[dim]Saved:[/dim]")
-    console.print("  • output/dashboard.json")
-    console.print("  • output/dashboard_extracted_queries.json")
-    console.print("  • output/dashboard_metric_results.json")
+    console.print(f"  • output/{fname_dash}")
+    console.print(f"  • output/{fname_queries}")
+    console.print(f"  • output/{fname_results}")
 
 
 if __name__ == "__main__":

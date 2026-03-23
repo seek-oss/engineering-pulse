@@ -185,27 +185,85 @@ def _fmt_pct(v: Optional[float]) -> str:
     return f"{v:.1f}%"
 
 
+def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
+    """Render a generic dashboard section with tiles for each unique widget."""
+    results = data.get("results") or []
+    if not results:
+        return f'<div class="section"><div class="section-title">{html_mod.escape(label)}</div><p class="muted">No metric data</p></div>'
+
+    # Group by widget_title, take latest value from first series
+    seen: Dict[str, Optional[float]] = {}
+    for row in results:
+        title = row.get("widget_title", "—")
+        if title in seen:
+            continue
+        series = row.get("series") or []
+        val = series[0].get("latest") if series else None
+        seen[title] = float(val) if val is not None else None
+
+    tiles: List[str] = []
+    for widget_title, val in seen.items():
+        val_str = f"{val:.1f}" if val is not None else "—"
+        tile_cls = "tile-grey" if val is None else "tile-green"
+        tiles.append(
+            f'<div class="tile {tile_cls}">'
+            f'<div class="label">{html_mod.escape(widget_title)}</div>'
+            f'<div class="big-number">{val_str}</div></div>'
+        )
+
+    rows: List[str] = []
+    for i in range(0, len(tiles), 3):
+        rows.append('<div class="tile-row">' + "\n      ".join(tiles[i:i+3]) + '</div>')
+
+    return (
+        f'<div class="section">\n'
+        f'    <div class="section-title">{html_mod.escape(label)}</div>\n'
+        f'    {"    ".join(rows)}\n'
+        f'  </div>'
+    )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="daily_dashboard_report.html", help="Output HTML path")
     ap.add_argument(
         "--part-a",
-        default="output/part_a_metric_results.json",
+        default="output/catalogue_quality_metric_results.json",
         help="Catalogue Quality metric snapshot",
     )
     ap.add_argument(
         "--part-b",
-        default="output/dashboard_metric_results.json",
+        default="output/owner_metrics_metric_results.json",
         help="Owner metrics snapshot",
     )
     ap.add_argument("--prs", default="output/github_prs.json")
     ap.add_argument("--todos", default="output/todos.json")
+    ap.add_argument(
+        "--extra",
+        action="append",
+        default=[],
+        metavar="LABEL:FILE",
+        help="Extra dashboard section — 'My Dashboard:output/my_metric_results.json' (repeatable)",
+    )
     args = ap.parse_args()
 
     part_a = _load(ROOT / args.part_a)
     part_b = _load(ROOT / args.part_b)
     prs_data = _load(ROOT / args.prs)
     todos = _load(ROOT / args.todos)
+
+    # Parse extra dashboard sections (--extra "Label:path/to/file.json")
+    extra_sections: List[str] = []
+    for spec in args.extra:
+        if ":" not in spec:
+            print(f"Warning: skipping --extra '{spec}' (expected LABEL:FILE)")
+            continue
+        label, fpath = spec.split(":", 1)
+        try:
+            data = _load(ROOT / fpath.strip())
+            extra_sections.append(_render_generic_section(label.strip(), data))
+        except FileNotFoundError:
+            print(f"Warning: skipping --extra '{label}' — file not found: {fpath.strip()}")
 
     team = os.environ.get("DATADOG_TEAMS", "release-engineering").split(",")[0].strip()
     today = date.today().isoformat()
@@ -471,6 +529,8 @@ def main() -> None:
       </div>
     </div>
   </div>
+
+  {"".join(f'<div class="section">{s}</div>' for s in extra_sections)}
 
   <div class="section">
     {part_c}
