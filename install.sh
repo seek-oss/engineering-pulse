@@ -3,7 +3,7 @@
 # engineering-pulse — installer
 #
 # Usage (one-liner):
-#   curl -fsSL https://raw.githubusercontent.com/YOUR_USER/engineering-pulse/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh | bash
 #
 # Or run locally after cloning:
 #   bash install.sh
@@ -27,7 +27,7 @@ header()  { echo -e "\n${BOLD}$*${RESET}"; }
 divider() { echo -e "${DIM}────────────────────────────────────────────────────${RESET}"; }
 
 # ── Config ───────────────────────────────────────────────────────────────────
-REPO_URL="${REPO_URL:-https://github.com/YOUR_USER/engineering-pulse.git}"
+REPO_URL="${REPO_URL:-https://github.com/harryzhu2011/engineering-pulse.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
