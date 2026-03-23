@@ -71,82 +71,15 @@ Each dashboard writes to `output/<slug>_metric_results.json` — no files overwr
 
 #### Dashboard Definitions
 
-<!-- ============================================================
-     To add a new dashboard, append a new Part section below.
-     Use the /add-dashboard command to auto-generate one.
-     ============================================================ -->
+Each dashboard is defined in its own file under **`prompts/dashboards/`**.
+Read every `.md` file in that directory and execute the extraction command from each one.
 
-#### Part A — Catalogue Quality
+Shipped dashboards:
+- `prompts/dashboards/catalogue_quality.md` — Part A: Catalogue Quality
+- `prompts/dashboards/owner_metrics.md` — Part B: Owner Metrics
 
-- **URL env:** `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY`
-- **Slug:** `catalogue_quality`
-- **Focus:** (none)
-
-```bash
-python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY \
-  --output-slug catalogue_quality \
-  --days 2
-```
-
-**Metrics to extract:**
-
-| Metric | Widget title contains |
-|--------|-----------------------|
-| Incomplete systems (broad) | `Incomplete Apps And Systems` (the broad one with `has-data-objects`) |
-| Systems without quality seal | `Incomplete Apps And Systems (excluding` (no `data-objects` filter) |
-| Systems missing capability | from the per-system breakdown — count series where `has-capability:false` |
-
-**Report rendering:** 3 big-number tiles in a row:
-- Incomplete Systems → RED tile
-- No Quality Seal → YELLOW tile
-- Missing Capability → ORANGE tile
-
-Below tiles: named list of systems without quality seal.
-
-#### Part B — Owner Metrics
-
-- **URL env:** `DATADOG_DASHBOARD_URL_OWNER_METRICS`
-- **Slug:** `owner_metrics`
-- **Focus:** `Tech Fitness,Catalogue,Security Findings,Incidents per deployment,Exercised pipeline,System assessed`
-
-```bash
-python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_OWNER_METRICS \
-  --output-slug owner_metrics \
-  --days 2 \
-  --focus "Tech Fitness,Catalogue,Security Findings,Incidents per deployment,Exercised pipeline,System assessed"
-```
-
-**Metrics to extract — find and read the latest value for each:**
-
-| Metric | Widget title contains |
-|--------|-----------------------|
-| Tech Fitness Score | `Tech Fitness` |
-| Catalogue Quality | `Catalogue` |
-| Overdue Security Findings | `Security Findings` |
-| Incidents per deployment | `Incidents per deployment` |
-| Exercised pipeline | `Exercised pipeline` |
-| System assessed | `System assessed` |
-
-For each, read the latest point from the returned series.
-
-**Colouring rules:**
-
-| Metric | RED | YELLOW | GREEN |
-|--------|-----|--------|-------|
-| Tech Fitness Score | < 50% | 50–75% | > 75% |
-| Catalogue Quality | < 50% | 50–75% | > 75% |
-| Overdue Security Findings | > 0 | — | 0 |
-| Incidents per deployment | > 1 | 0.5–1 | ≤ 0.5 |
-| Exercised pipeline | < 50% | 50–80% | > 80% |
-| System assessed | < 50% | 50–80% | > 80% |
-
-If a widget returned no series / null, show `—` in a grey tile and note it.
-
-<!-- ============================================================
-     END OF DASHBOARD DEFINITIONS — add new Parts above this line
-     ============================================================ -->
+User-added dashboards (created via `/add-dashboard`) live in the same directory
+as new files — they won't conflict with shipped ones on upgrades.
 
 ---
 
