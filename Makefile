@@ -1,8 +1,8 @@
 # ────────────────────────────────────────────────────────────────────────────
-# second-brain — day-2 operations
+# engineering-pulse — day-2 operations
 # ────────────────────────────────────────────────────────────────────────────
 
-INSTALL_DIR    ?= $(HOME)/.second-brain
+INSTALL_DIR    ?= $(HOME)/.engineering-pulse
 BIN_DIR        ?= $(HOME)/bin
 RUNNER         := $(BIN_DIR)/run-daily-dashboard.sh
 PLIST_LABEL    := com.$(shell whoami).daily-dashboard
@@ -16,7 +16,7 @@ PYTHON         := $(INSTALL_DIR)/.venv/bin/python3
 .PHONY: help
 help:
 	@echo ""
-	@echo "  second-brain — available targets"
+	@echo "  engineering-pulse — available targets"
 	@echo ""
 	@echo "  make run          Run the dashboard right now (foreground)"
 	@echo "  make run-bg       Run the dashboard in the background"

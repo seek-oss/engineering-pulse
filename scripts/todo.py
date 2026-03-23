@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Todoist-backed task and reading queue manager.
+Todoist-backed tasks and reading queue.
 
 Env vars required:
     TODOIST_API_TOKEN  — API token from Settings → Integrations → Developer
@@ -48,7 +48,7 @@ load_dotenv()
 console = Console()
 
 BASE_URL = "https://api.todoist.com/api/v1"
-DEFAULT_PROJECT_NAME = "Second Brain"
+DEFAULT_PROJECT_NAME = "Engineering Pulse"
 SECTION_TASKS = "Tasks"  # work
 SECTION_PERSONAL = "Personal"
 SECTION_READING = "Reading Queue"
@@ -391,7 +391,7 @@ def cmd_cancel(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="todo.py",
-        description="Todoist-backed task and reading queue manager",
+        description="Todoist-backed tasks and reading queue",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

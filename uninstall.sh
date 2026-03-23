@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ────────────────────────────────────────────────────────────────────────────
-# second-brain — uninstaller
+# engineering-pulse — uninstaller
 #
 # Usage:
-#   bash ~/.second-brain/uninstall.sh
+#   bash ~/.engineering-pulse/uninstall.sh
 # ────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -20,14 +20,14 @@ success() { echo -e "  ${GREEN}✓${RESET}  $*"; }
 warn()    { echo -e "  ${YELLOW}⚠${RESET}  $*"; }
 divider() { echo -e "${DIM}────────────────────────────────────────────────────${RESET}"; }
 
-INSTALL_DIR="${INSTALL_DIR:-$HOME/.second-brain}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
 PLIST_LABEL="com.$(whoami).daily-dashboard"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 
 echo ""
-echo -e "${BOLD}  EM Second Brain — Uninstaller${RESET}"
+echo -e "${BOLD}  Engineering Pulse — Uninstaller${RESET}"
 divider
 echo ""
 warn "This will remove:"

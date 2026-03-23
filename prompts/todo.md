@@ -1,4 +1,4 @@
-# Todo Manager
+# Tasks & reading queue (Todoist)
 
 ## Overview
 

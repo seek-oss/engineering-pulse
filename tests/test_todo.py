@@ -148,7 +148,7 @@ class TestParser:
 # Mocked HTTP tests for commands
 # ---------------------------------------------------------------------------
 
-MOCK_PROJECT = {"id": "proj-123", "name": "Second Brain"}
+MOCK_PROJECT = {"id": "proj-123", "name": "Engineering Pulse"}
 MOCK_SECTIONS = [
     {"id": "sec-tasks", "name": "Tasks"},
     {"id": "sec-read", "name": "Reading Queue"},

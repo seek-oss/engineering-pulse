@@ -1,17 +1,17 @@
-# EM Second Brain
+# Engineering Pulse
 
-A **Cursor prompt-driven** daily engineering health dashboard for Engineering Managers.
+A **Cursor prompt-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
-Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it to you — triggered manually in Cursor or automatically on a schedule. Also manages a personal **todo list** and **reading queue** via Todoist.
+Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — triggered manually in Cursor or automatically on a schedule. Also keeps a **task list** and **reading queue** in Todoist.
 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/second-brain/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_USER/engineering-pulse/main/install.sh | bash
 ```
 
 The installer will:
-- Clone the repo to `~/.second-brain`
+- Clone the repo to `~/.engineering-pulse` (override with `INSTALL_DIR` if you want a different path)
 - Set up a Python virtual environment
 - Walk you through entering your credentials interactively
 - Schedule the report at **08:00, 10:00 and 18:30** via macOS LaunchAgent
@@ -56,7 +56,7 @@ prompts/
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
   github_prs.py                  ← fetches PR review queue via GitHub GraphQL
-  todo.py                        ← Todoist-backed todo & reading queue manager
+  todo.py                        ← Todoist-backed tasks & reading queue
   send_report_smtp.py            ← sends HTML report via SMTP
 
 output/                     ← gitignored; all generated files land here
@@ -75,7 +75,7 @@ All credentials come from `.env` — never hardcoded.
 ### Option A — one-liner installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/second-brain/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_USER/engineering-pulse/main/install.sh | bash
 ```
 
 The installer handles everything: cloning, Python venv, credential wizard, and LaunchAgent schedule.
@@ -83,8 +83,8 @@ The installer handles everything: cloning, Python venv, credential wizard, and L
 ### Option B — manual setup
 
 ```bash
-git clone https://github.com/YOUR_USER/second-brain.git ~/.second-brain
-cd ~/.second-brain
+git clone https://github.com/YOUR_USER/engineering-pulse.git ~/.engineering-pulse
+cd ~/.engineering-pulse
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
