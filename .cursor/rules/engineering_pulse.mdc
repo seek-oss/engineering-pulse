@@ -1,13 +1,13 @@
 ---
-description: Engineering Manager Second Brain project rules
+description: Engineering Pulse — engineering productivity dashboard project rules
 globs: ["**/*.py", "**/*.md"]
 alwaysApply: true
 ---
 
-# Project: EM Second Brain
+# Project: Engineering Pulse
 
 ## What this project is
-A Cursor prompt-driven automation tool that pulls data from Datadog and GitHub
+A Cursor prompt-driven engineering productivity tool that pulls data from Datadog and GitHub
 to generate a daily engineering health dashboard and emails it via SMTP.
 
 ## Architecture rules
