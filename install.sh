@@ -55,7 +55,6 @@ post_install_guide() {
   echo -e "  ${BOLD}3) Add your own Datadog dashboards${RESET}"
   echo -e "     In Cursor, run: ${CYAN}${BOLD}@prompts/add-dashboard.md${RESET} ${DIM}and describe the dashboard${RESET}"
   echo -e "     ${DIM}This creates a file in prompts/dashboards/custom_*.md — safe to upgrade later.${RESET}"
-  echo -e "     ${DIM}Or see${RESET} ${MAGENTA}${BOLD}${INSTALL_DIR}/CUSTOMISING.md${RESET} ${DIM}for the manual template approach.${RESET}"
   echo ""
   echo -e "  ${BOLD}4) Upgrading${RESET}"
   echo -e "     Re-run this installer or ${CYAN}git pull --ff-only${RESET} — your custom dashboards"
