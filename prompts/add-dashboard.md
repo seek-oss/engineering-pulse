@@ -94,24 +94,21 @@ For colouring rules, infer sensible defaults from the metric type:
 
 Ask the user to confirm or adjust the colouring rules.
 
-### 5. Merge into daily-dashboard.md
+### 5. Save as a new dashboard file
 
-Insert the new Part section into `prompts/daily-dashboard.md` **above** the
-`END OF DASHBOARD DEFINITIONS` comment marker:
+Create a new file at **`prompts/dashboards/<slug>.md`** with the generated
+Part section content.
 
-```
-<!-- ============================================================
-     END OF DASHBOARD DEFINITIONS — add new Parts above this line
-     ============================================================ -->
-```
+Determine the correct Part letter by counting existing `.md` files in
+`prompts/dashboards/` (A, B → next is C, etc.).
 
-Determine the correct Part letter by counting existing Parts (A, B, C → next is D, etc.).
+This keeps user-added dashboards in separate files from the shipped ones,
+so upstream upgrades won't conflict.
 
 ### 6. Update the renderer command
 
 If the new dashboard is not Part A or Part B (which have built-in rendering),
-update the `render_daily_dashboard_html.py` command in the **Step 2** section
-of `daily-dashboard.md` to include an `--extra` flag:
+remind the user to pass `--extra` when running the renderer:
 
 ```bash
 python3 scripts/render_daily_dashboard_html.py \
@@ -121,9 +118,10 @@ python3 scripts/render_daily_dashboard_html.py \
 ### 7. Confirm
 
 Tell the user:
-- The new Part section has been added to `daily-dashboard.md`
+- The new dashboard file has been created at `prompts/dashboards/<slug>.md`
 - They need to set `<ENV_VAR_NAME>` in `.env` with the dashboard URL
-- Next time the daily dashboard runs, it will include the new dashboard
+- Next time the daily dashboard runs, it will pick up the new file automatically
+- On future upgrades, this file won't conflict with upstream changes
 
 ---
 
@@ -156,7 +154,8 @@ Look good? I can adjust the thresholds.
 
 User: looks good
 
-Agent: ✓ Added Part C to daily-dashboard.md
+Agent: ✓ Created prompts/dashboards/dora.md
        → Set DATADOG_DASHBOARD_URL_DORA in .env with your dashboard URL
        → Next daily run will include DORA metrics
+       → This file won't conflict with future upstream upgrades
 ```
