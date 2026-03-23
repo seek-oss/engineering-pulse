@@ -220,12 +220,6 @@ python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.h
 
 ---
 
-## Customising for your dashboards
-
-The prompt and metric names in this repo are tuned for a specific Datadog setup. To adapt it for your own dashboards, see **[CUSTOMISING.md](CUSTOMISING.md)** — no scripts to run, just fill in a template and paste it into Cursor.
-
----
-
 ## Adding a new Datadog dashboard
 
 You can add any Datadog dashboard to the daily report without editing existing files:
