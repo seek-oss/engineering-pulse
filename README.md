@@ -53,17 +53,23 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 ```
 prompts/
   daily-dashboard.md        ← Cursor prompt (the entry point)
+  add-dashboard.md          ← interactive command to add a new dashboard
+  dashboards/
+    catalogue_quality.md    ← shipped: Part A
+    owner_metrics.md        ← shipped: Part B
+    custom_*.md             ← your dashboards (created via /add-dashboard)
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
+  render_daily_dashboard_html.py ← builds the HTML scorecard
   github_prs.py                  ← fetches PR review queue via GitHub GraphQL
   todo.py                        ← Todoist-backed tasks & reading queue
   send_report_smtp.py            ← sends HTML report via SMTP
 
 output/                     ← gitignored; all generated files land here
-  daily_dashboard_report.html
+  catalogue_quality_metric_results.json
+  owner_metrics_metric_results.json
   github_prs.json
-  dashboard.json
   ...
 ```
 
@@ -130,8 +136,7 @@ make help         # list all targets
 | `DD_API_KEY` | yes | Datadog API key |
 | `DD_APP_KEY` | yes | Datadog Application key |
 | `DD_SITE` | no | Datadog API host (default: `https://api.datadoghq.com`) |
-| `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY` | yes | URL of your Catalogue Quality dashboard |
-| `DATADOG_DASHBOARD_URL_OWNER_METRICS` | yes | URL of your Owner Metrics dashboard |
+| `DATADOG_DASHBOARD_URL_*` | yes | One env var per dashboard (see `prompts/dashboards/`) |
 | `DATADOG_TEAMS` | no | Comma-separated team slugs — filters all queries |
 | `GITHUB_TOKEN` | yes | PAT with `repo` + `read:org` scopes |
 | `GITHUB_ORG` | yes | GitHub org slug |
@@ -172,10 +177,17 @@ Or use natural language in Cursor: `@prompts/todo.md remind me to review the EKS
 
 ### Daily dashboard HTML
 
-After running both Datadog extractions (copy `output/dashboard_metric_results.json` → `part_a_metric_results.json` between runs), GitHub PRs, and `todo.py list --json`:
+After running both Datadog extractions, GitHub PRs, and `todo.py list --json`:
 
 ```bash
 python3 scripts/render_daily_dashboard_html.py
+```
+
+To include custom dashboards beyond Part A/B:
+
+```bash
+python3 scripts/render_daily_dashboard_html.py \
+  --extra "DORA Metrics:output/custom_dora_metric_results.json"
 ```
 
 ### View from the daily email
@@ -193,9 +205,10 @@ Each row has **`view_url`** (Todoist on the web). For Part D Actions, use **`for
 ## Running scripts directly
 
 ```bash
-# Extract Datadog metrics for a dashboard
+# Extract Datadog metrics for a dashboard (with slug-based output)
 python3 scripts/datadog_dashboard_extract.py \
   --url-env DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY \
+  --output-slug catalogue_quality \
   --days 2
 
 # Fetch GitHub PR review queue
@@ -210,6 +223,57 @@ python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.h
 ## Customising for your dashboards
 
 The prompt and metric names in this repo are tuned for a specific Datadog setup. To adapt it for your own dashboards, see **[CUSTOMISING.md](CUSTOMISING.md)** — no scripts to run, just fill in a template and paste it into Cursor.
+
+---
+
+## Adding a new Datadog dashboard
+
+You can add any Datadog dashboard to the daily report without editing existing files:
+
+1. **Set the URL in `.env`:**
+   ```bash
+   DATADOG_DASHBOARD_URL_DORA='https://app.datadoghq.com/dashboard/xyz-123/dora?...'
+   ```
+
+2. **Run the add-dashboard command in Cursor:**
+   ```
+   @prompts/add-dashboard.md add my DORA dashboard, I care about deploy rate and change failure rate
+   ```
+
+3. The command will:
+   - Discover all widgets in the dashboard
+   - Let you pick which ones to include
+   - Generate colouring rules
+   - Save a new file at `prompts/dashboards/custom_dora.md`
+
+Next time the daily dashboard runs, it picks up the new file automatically.
+
+User-added dashboards are prefixed with `custom_` to avoid collisions with shipped files.
+
+---
+
+## Upgrading
+
+To upgrade to a new release:
+
+```bash
+# If installed via web-install:
+curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+
+# If cloned manually:
+git pull --ff-only
+pip install -r requirements.txt
+```
+
+**Your custom dashboards are safe.** User-added files (`prompts/dashboards/custom_*.md`) are separate from shipped files, so `git pull` won't cause merge conflicts. Your `.env` is also preserved.
+
+| What | Upgraded? | Your changes safe? |
+|------|-----------|--------------------|
+| Shipped dashboards (`catalogue_quality.md`, `owner_metrics.md`) | Yes | N/A (don't edit these) |
+| Your custom dashboards (`custom_*.md`) | No (untouched) | Yes |
+| Scripts (`scripts/*.py`) | Yes | N/A |
+| `.env` (your credentials) | No (untouched) | Yes |
+| `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |
 
 ---
 

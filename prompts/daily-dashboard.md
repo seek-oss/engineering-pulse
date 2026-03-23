@@ -5,9 +5,9 @@
 This is an execution task, not a review task.
 Do the steps now in the workspace. Do not stop after analysis or suggestions.
 
-Run **two** Datadog dashboards, produce a **single focused HTML report**, and email it.
+Run **all Datadog dashboards defined below**, produce a **single focused HTML report**, and email it.
 
-**Time window: past 2 days for both dashboards** (use `--days 2`).
+**Time window: past 2 days for all dashboards** (use `--days 2`).
 
 ---
 
@@ -20,8 +20,7 @@ Run **two** Datadog dashboards, produce a **single focused HTML report**, and em
 | `DD_API_KEY` | yes | Datadog API key |
 | `DD_APP_KEY` | yes | Datadog application key |
 | `DD_SITE` | no | API host (default `https://api.datadoghq.com`) |
-| `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY` | yes | Catalogue Quality dashboard URL |
-| `DATADOG_DASHBOARD_URL_OWNER_METRICS` | yes | Owner Engineering Metrics dashboard URL |
+| `DATADOG_DASHBOARD_URL_*` | yes | One env var per dashboard (see Dashboard Definitions below) |
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for Part D: todo / reading queue) |
@@ -54,63 +53,57 @@ SMTP_TO=recipient@example.com
 
 ## Workflow
 
-### Step 1 — Part A: Catalogue Quality
+### Step 1 — Extract Datadog Dashboards
 
-Run the extraction script against the Catalogue Quality dashboard for the past 2 days:
-
-```bash
-python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY \
-  --days 2
-
-# Preserve Part A metric snapshot (Part B overwrites dashboard_metric_results.json)
-cp output/dashboard_metric_results.json output/part_a_metric_results.json
-```
-
-**Metrics to extract (Part A):**
-
-| Metric | Widget title contains |
-|--------|-----------------------|
-| Incomplete systems (broad) | `Incomplete Apps And Systems` (the broad one with `has-data-objects`) |
-| Systems without quality seal | `Incomplete Apps And Systems (excluding` (no `data-objects` filter) |
-| Systems missing capability | from the per-system breakdown — count series where `has-capability:false` |
-
-### Step 2 — Part B: Owner Metrics
-
-Run the extraction script against the Owner Metrics dashboard for the past 2 days:
+For **each dashboard** defined below, run the extraction script:
 
 ```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_OWNER_METRICS \
+  --url-env <URL_ENV> \
+  --output-slug <SLUG> \
   --days 2 \
-  --focus "Tech Fitness,Catalogue,Security Findings,Incidents per deployment,Exercised pipeline,System assessed"
+  --focus "<focus terms, if any>"
 ```
 
-**Metrics to extract (Part B) — find and read the latest value for each:**
+Each dashboard writes to `output/<slug>_metric_results.json` — no files overwrite each other.
 
-| Metric | Widget title contains |
-|--------|-----------------------|
-| Tech Fitness Score | `Tech Fitness` |
-| Catalogue Quality | `Catalogue` |
-| Overdue Security Findings | `Security Findings` |
-| Incidents per deployment | `Incidents per deployment` |
-| Exercised pipeline | `Exercised pipeline` |
-| System assessed | `System assessed` |
+---
 
-For each, read the latest point from the returned series.
+#### Dashboard Definitions
 
-### Step 3 — Build the HTML report
+Each dashboard is defined in its own file under **`prompts/dashboards/`**.
+Read every `.md` file in that directory and execute the extraction command from each one.
+
+Shipped dashboards:
+- `prompts/dashboards/catalogue_quality.md` — Part A: Catalogue Quality
+- `prompts/dashboards/owner_metrics.md` — Part B: Owner Metrics
+
+User-added dashboards (created via `/add-dashboard`) live in the same directory
+as new files — they won't conflict with shipped ones on upgrades.
+
+---
+
+### Step 2 — Build the HTML report
 
 > **UI skill:** Before hand-editing HTML/CSS, read and apply `.cursor/skills/ui-design-brain/SKILL.md`.
 > Use the **Data Dashboard** design direction (Step 3 of the skill).
 
-**Preferred:** generate the report from snapshots (after Steps 1–2, 3C, 3D):
+**Preferred:** generate the report from snapshots (after Step 1, 2C, 2D):
 
 ```bash
 python3 scripts/render_daily_dashboard_html.py
 ```
 
-This reads `output/part_a_metric_results.json`, `output/dashboard_metric_results.json` (Owner Metrics), `output/github_prs.json`, and `output/todos.json`, and writes **`daily_dashboard_report.html`** at the repo root. Part D Actions use **`todo_report.format_view_action_html`** (View link only).
+This reads `output/catalogue_quality_metric_results.json` (Part A), `output/owner_metrics_metric_results.json` (Part B), `output/github_prs.json`, and `output/todos.json`, and writes **`daily_dashboard_report.html`** at the repo root.
+
+To include **additional dashboards** beyond Part A/B, use the `--extra` flag:
+
+```bash
+python3 scripts/render_daily_dashboard_html.py \
+  --extra "DORA Metrics:output/dora_metric_results.json"
+```
+
+Part D Actions use **`todo_report.format_view_action_html`** (View link only).
 
 You can still hand-edit the HTML if needed; the renderer matches the scorecard layout below.
 
@@ -123,20 +116,12 @@ Header (dark gradient):
   Title: "Daily Dashboard — <DATADOG_TEAMS> — YYYY-MM-DD (past 2 days)"
   Link to each dashboard
 
-Part A: Catalogue Quality  (3 big numbers in coloured tiles)
-  ┌─────────────────┬───────────────────┬──────────────────┐
-  │ N Incomplete    │ N No Quality Seal │ N Missing Capab. │
-  │ (RED tile)      │ (YELLOW tile)     │ (ORANGE tile)    │
-  └─────────────────┴───────────────────┴──────────────────┘
-  Below: named list of systems without quality seal
+For each Dashboard Part (A, B, …):
+  Render tiles as described in that Part's definition above.
+  Generic dashboards: one tile per widget, latest value, grey tile for nulls.
 
-Part B: Owner Metrics  (6 metric tiles, 3-per-row)
-  Tech Fitness Score | Catalogue Quality | Overdue Security Findings
-  Incidents/deploy   | Exercised Pipeline | System Assessed
-  Colour each tile:
-    RED    = value indicates a problem (high overdue findings, low fitness score, etc.)
-    YELLOW = borderline / needs watching
-    GREEN  = healthy
+Part C: PR Review Queue (if enabled)
+Part D: My Queue (if enabled)
 
 Footer: link to each dashboard, generated date
 ```
@@ -149,20 +134,7 @@ Style rules (carry forward from `daily_dashboard_report.html` reference):
 - Big number font-size: `48px`, font-weight `800`
 - Max-width `660px`, centred
 
-#### Colouring rules for Part B
-
-| Metric | RED | YELLOW | GREEN |
-|--------|-----|--------|-------|
-| Tech Fitness Score | < 50% | 50–75% | > 75% |
-| Catalogue Quality | < 50% | 50–75% | > 75% |
-| Overdue Security Findings | > 0 | — | 0 |
-| Incidents per deployment | > 1 | 0.5–1 | ≤ 0.5 |
-| Exercised pipeline | < 50% | 50–80% | > 80% |
-| System assessed | < 50% | 50–80% | > 80% |
-
-If a widget returned no series / null, show `—` in a grey tile and note it.
-
-### Step 3C — PR Review Queue
+### Step 2C — PR Review Queue
 
 ```bash
 python3 scripts/github_prs.py
@@ -185,7 +157,7 @@ Add **Part C** to the HTML report:
   - Age 2–4 days → yellow
   - Draft PRs → show `(draft)` in muted text
 
-### Step 3D — Todo & Reading Queue
+### Step 2D — Todo & Reading Queue
 
 ```bash
 python3 scripts/todo.py list --json > output/todos.json
@@ -218,7 +190,7 @@ Add **Part D** to the HTML report:
   - If no reading items → show "Reading queue empty" in muted text
 - If `todos.json` is empty or the script fails → show a green "Queue clear" banner
 
-### Step 4 — Send the report
+### Step 3 — Send the report
 
 ```bash
 python3 scripts/send_report_smtp.py \
@@ -232,17 +204,18 @@ Confirm `Sent to <SMTP_TO>`. Do not mark the task complete until the send succee
 
 ## Script reference
 
-The extraction script is `scripts/datadog_dashboard_extract.py`. It saves **`output/dashboard_metric_results.json`** (per-query series + latest values) alongside `dashboard.json` and `dashboard_extracted_queries.json`. After **Part A**, copy that file to **`output/part_a_metric_results.json`** before running Part B.
+The extraction script is `scripts/datadog_dashboard_extract.py`. With `--output-slug`, it saves **`output/<slug>_metric_results.json`** (per-query series + latest values) alongside `<slug>_dashboard.json` and `<slug>_dashboard_extracted_queries.json`. Each dashboard gets its own set of output files — no need to copy/rename.
 
-The HTML builder is **`scripts/render_daily_dashboard_html.py`** (optional args: `--part-a`, `--part-b`, `--prs`, `--todos`, `--out`).
+The HTML builder is **`scripts/render_daily_dashboard_html.py`** (optional args: `--part-a`, `--part-b`, `--extra`, `--prs`, `--todos`, `--out`).
 
 **CLI arguments (`datadog_dashboard_extract.py`):**
 
 | Argument | Default | Purpose |
-|----------|---------|---------|
+|----------|---------|--------|
 | `--url-env` | `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY` | Env var name holding the dashboard URL |
 | `--days N` | `0` | Override time window to past N days (0 = use URL timestamps) |
 | `--focus "a,b"` | `""` | Comma-separated title substrings to highlight with ★ in console output |
+| `--output-slug` | `""` | Prefix for output files (e.g. `owner_metrics` → `owner_metrics_metric_results.json`) |
 
 **DATADOG_TEAMS behaviour:**
 - Replaces all `tpl_var_team[*]` URL params with the listed teams.
