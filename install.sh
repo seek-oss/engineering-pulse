@@ -26,6 +26,44 @@ error()   { echo -e "  ${RED}✗${RESET}  $*" >&2; }
 header()  { echo -e "\n${BOLD}$*${RESET}"; }
 divider() { echo -e "${DIM}────────────────────────────────────────────────────${RESET}"; }
 
+# Vivid “what to do next” (works when stdin is a pipe — e.g. curl | bash)
+MAGENTA="\033[0;35m"
+post_install_guide() {
+  local ex="$INSTALL_DIR/.env.example"
+  echo ""
+  echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${YELLOW}${BOLD}║  NEXT — finish setup (no secrets were prompted; curl | bash cannot ask you) ║${RESET}"
+  echo -e "${YELLOW}${BOLD}╚══════════════════════════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  ${BOLD}1) Credentials & API keys${RESET} ${CYAN}(required)${RESET}"
+  echo -e "     Edit: ${MAGENTA}${BOLD}${ENV_FILE}${RESET}"
+  if [ -f "$ex" ]; then
+    echo -e "     ${DIM}Template with every variable explained:${RESET} ${MAGENTA}${ex}${RESET}"
+  fi
+  echo -e "     ${DIM}GitHub PAT, Datadog keys, dashboard URLs, SMTP, optional Todoist — see comments in .env.example.${RESET}"
+  echo ""
+  echo -e "  ${BOLD}2) Dashboard workflow (Cursor agent)${RESET}"
+  echo -e "     Main prompt the scheduler runs: ${MAGENTA}${BOLD}${INSTALL_DIR}/prompts/daily-dashboard.md${RESET}"
+  echo -e "     ${DIM}Change steps, metrics, or report layout by editing that file (or ask Cursor @-mention it).${RESET}"
+  echo ""
+  echo -e "  ${BOLD}3) Customise for your Datadog dashboards${RESET}"
+  echo -e "     Read: ${MAGENTA}${BOLD}${INSTALL_DIR}/CUSTOMISING.md${RESET}"
+  echo -e "     ${DIM}Plain-language template to paste into Cursor; no script changes required.${RESET}"
+  echo ""
+  echo -e "  ${BOLD}4) Schedule (LaunchAgent)${RESET}"
+  echo -e "     ${DIM}Installed plist:${RESET} ${MAGENTA}${BOLD}${PLIST_PATH}${RESET}"
+  echo -e "     ${DIM}Default run times come from${RESET} ${BOLD}SCHEDULE_HOURS${RESET}${DIM} (${SCHEDULE_HOURS}) when you run this installer.${RESET}"
+  echo -e "     ${DIM}To change times: edit the plist (duplicate${RESET} ${BOLD}StartCalendarInterval${RESET} ${DIM}dicts), then:${RESET}"
+  echo -e "       ${CYAN}launchctl unload \"${PLIST_PATH}\" && launchctl load \"${PLIST_PATH}\"${RESET}"
+  echo -e "     ${DIM}Or re-run this installer from a clone with${RESET} ${BOLD}SCHEDULE_HOURS=\"9 12 17\" bash install.sh${RESET}"
+  echo ""
+  echo -e "  ${BOLD}5) Run once after .env is filled${RESET}"
+  echo -e "     ${CYAN}bash ${RUNNER_SCRIPT}${RESET}"
+  echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET}"
+  echo ""
+  divider
+}
+
 # ── Config ───────────────────────────────────────────────────────────────────
 REPO_URL="${REPO_URL:-https://github.com/harryzhu2011/engineering-pulse.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
@@ -114,154 +152,26 @@ python3 -m venv "$INSTALL_DIR/.venv"
 "$INSTALL_DIR/.venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
 success "Python dependencies installed"
 
-# ── 3. Configure .env ─────────────────────────────────────────────────────────
+# ── 3. Seed .env (non-interactive — safe for curl | bash) ───────────────────
 header "3/5  Configuration"
 
 ENV_FILE="$INSTALL_DIR/.env"
+EXAMPLE_ENV="$INSTALL_DIR/.env.example"
 
+# Interactive prompts are intentionally omitted: when stdin is a pipe, `read` would
+# consume this script’s own source and skip commands (e.g. qi=…), breaking the install.
 if [ -f "$ENV_FILE" ]; then
-  echo ""
-  read -r -p "  .env already exists. Reconfigure? [y/N] " RECONFIG
-  echo ""
-  if [[ ! "$RECONFIG" =~ ^[Yy]$ ]]; then
-    info "Keeping existing .env"
-    SKIP_ENV=1
-  else
-    SKIP_ENV=0
-  fi
+  info "Keeping existing $ENV_FILE (edit it with your real credentials)"
 else
-  SKIP_ENV=0
-fi
-
-prompt_var() {
-  local var="$1"
-  local desc="$2"
-  local example="$3"
-  local required="${4:-yes}"
-  local current=""
-
-  # Read existing value if present
-  if [ -f "$ENV_FILE" ]; then
-    current=$(grep "^${var}=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2- || true)
-  fi
-
-  echo ""
-  echo -e "  ${BOLD}${var}${RESET}"
-  echo -e "  ${DIM}${desc}${RESET}"
-  [ -n "$example" ] && echo -e "  ${DIM}Example: ${example}${RESET}"
-  if [ -n "$current" ]; then
-    echo -e "  ${DIM}Current: ${current}${RESET}"
-    read -r -p "  Value [leave blank to keep current]: " val
-    val="${val:-$current}"
+  if [ -f "$EXAMPLE_ENV" ]; then
+    cp "$EXAMPLE_ENV" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+    success "Created $ENV_FILE from .env.example — replace every placeholder next"
   else
-    if [ "$required" = "no" ]; then
-      read -r -p "  Value [optional, press Enter to skip]: " val
-    else
-      read -r -p "  Value: " val
-      while [ -z "$val" ]; do
-        warn "This field is required."
-        read -r -p "  Value: " val
-      done
-    fi
+    warn ".env.example not found in clone — creating empty $ENV_FILE"
+    : > "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
   fi
-  echo "$val"
-}
-
-if [ "${SKIP_ENV:-0}" = "0" ]; then
-  echo -e "  ${DIM}Fill in your credentials. All values are written to ${ENV_FILE}${RESET}"
-  echo -e "  ${DIM}Press Enter to keep an existing value.${RESET}"
-
-  # ── GitHub
-  divider
-  echo -e "  ${BOLD}GitHub${RESET}"
-  GITHUB_TOKEN=$(prompt_var "GITHUB_TOKEN" \
-    "Personal Access Token with 'repo' (read) + 'read:org' scopes" \
-    "ghp_xxxxxxxxxxxxxxxxxxxx")
-  GITHUB_ORG=$(prompt_var "GITHUB_ORG" \
-    "GitHub organisation slug" \
-    "my-company")
-  GITHUB_TEAM=$(prompt_var "GITHUB_TEAM" \
-    "Team slug for PR review queue" \
-    "platform-engineering")
-
-  # ── Datadog
-  divider
-  echo -e "  ${BOLD}Datadog${RESET}"
-  DD_API_KEY=$(prompt_var "DD_API_KEY" \
-    "Datadog API key — from Organization Settings > API Keys" \
-    "abc123...")
-  DD_APP_KEY=$(prompt_var "DD_APP_KEY" \
-    "Datadog Application key — from Organization Settings > Application Keys" \
-    "def456...")
-  DD_SITE=$(prompt_var "DD_SITE" \
-    "Datadog API host (US1 default; change for EU/US3)" \
-    "https://api.datadoghq.com" "no")
-  DD_SITE="${DD_SITE:-https://api.datadoghq.com}"
-  DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY=$(prompt_var "DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY" \
-    "Full URL of your Catalogue Quality dashboard (copy from browser)" \
-    "https://app.datadoghq.com/dashboard/abc-123/my-dashboard")
-  DATADOG_DASHBOARD_URL_OWNER_METRICS=$(prompt_var "DATADOG_DASHBOARD_URL_OWNER_METRICS" \
-    "Full URL of your Owner Metrics dashboard (copy from browser)" \
-    "https://app.datadoghq.com/dashboard/xyz-456/owner-metrics")
-  DATADOG_TEAMS=$(prompt_var "DATADOG_TEAMS" \
-    "Comma-separated team slugs — filters all Datadog queries" \
-    "release-engineering  or  team-a,team-b")
-
-  # ── Gmail SMTP
-  divider
-  echo -e "  ${BOLD}Gmail SMTP${RESET}"
-  echo -e "  ${DIM}Need an App Password? Go to: https://myaccount.google.com/apppasswords${RESET}"
-  SMTP_USER=$(prompt_var "SMTP_USER" \
-    "Your Gmail address" \
-    "you@gmail.com")
-  SMTP_PASSWORD=$(prompt_var "SMTP_PASSWORD" \
-    "Gmail App Password (16 chars, spaces are fine)" \
-    "xxxx xxxx xxxx xxxx")
-  SMTP_FROM=$(prompt_var "SMTP_FROM" \
-    "Sender address (usually same as SMTP_USER)" \
-    "you@gmail.com")
-  SMTP_TO=$(prompt_var "SMTP_TO" \
-    "Recipient address for the daily report" \
-    "you@work.com")
-
-  # ── Todoist (optional)
-  divider
-  echo -e "  ${BOLD}Todoist${RESET} ${DIM}(optional — for todo list & reading queue)${RESET}"
-  echo -e "  ${DIM}Get your token: Todoist > Settings > Integrations > Developer${RESET}"
-  TODOIST_API_TOKEN=$(prompt_var "TODOIST_API_TOKEN" \
-    "Todoist API token" \
-    "0123456789abcdef..." "no")
-
-  # Write .env (line-by-line — avoids a stray "EOF" line in a secret closing <<EOF early)
-  {
-    echo "# Generated by install.sh — $(date)"
-    echo "# Re-run install.sh to update, or edit this file directly."
-    echo ""
-    echo "# ── GitHub ────────────────────────────────────────────────────────────────────"
-    printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN"
-    printf 'GITHUB_ORG=%s\n' "$GITHUB_ORG"
-    printf 'GITHUB_TEAM=%s\n' "$GITHUB_TEAM"
-    echo ""
-    echo "# ── Datadog ───────────────────────────────────────────────────────────────────"
-    printf 'DD_API_KEY=%s\n' "$DD_API_KEY"
-    printf 'DD_APP_KEY=%s\n' "$DD_APP_KEY"
-    printf 'DD_SITE=%s\n' "$DD_SITE"
-    printf 'DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY=%s\n' "$DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY"
-    printf 'DATADOG_DASHBOARD_URL_OWNER_METRICS=%s\n' "$DATADOG_DASHBOARD_URL_OWNER_METRICS"
-    printf 'DATADOG_TEAMS=%s\n' "$DATADOG_TEAMS"
-    echo ""
-    echo "# ── Email (Gmail SMTP) ────────────────────────────────────────────────────────"
-    printf 'SMTP_USER=%s\n' "$SMTP_USER"
-    printf 'SMTP_PASSWORD=%s\n' "$SMTP_PASSWORD"
-    printf 'SMTP_FROM=%s\n' "$SMTP_FROM"
-    printf 'SMTP_TO=%s\n' "$SMTP_TO"
-    echo ""
-    echo "# ── Todoist (todo list + reading queue) ──────────────────────────────────────"
-    printf 'TODOIST_API_TOKEN=%s\n' "$TODOIST_API_TOKEN"
-    echo "# TODOIST_PROJECT_ID is auto-populated by: python scripts/todo.py setup"
-  } > "$ENV_FILE"
-  chmod 600 "$ENV_FILE"   # secrets: owner-read-only
-  success ".env written to $ENV_FILE"
 fi
 
 # ── 4. Shell runner script ────────────────────────────────────────────────────
@@ -381,5 +291,5 @@ echo -e "  ${DIM}Edit config:${RESET}  nano $ENV_FILE"
 echo -e "  ${DIM}Uninstall:${RESET}    bash $INSTALL_DIR/uninstall.sh"
 echo -e "  ${DIM}Day-2 ops:${RESET}    cd $INSTALL_DIR && make help"
 echo ""
-divider
+post_install_guide
 echo ""
