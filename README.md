@@ -13,8 +13,9 @@ curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main
 The installer will:
 - Clone the repo to `~/.engineering-pulse` (override with `INSTALL_DIR` if you want a different path)
 - Set up a Python virtual environment
-- Walk you through entering your credentials interactively
-- Schedule the report at **08:00, 10:00 and 18:30** via macOS LaunchAgent
+- Copy `.env.example` → `.env` if `.env` is missing (then **edit `.env`** with your keys — the one-liner cannot prompt because `curl | bash` does not use your keyboard for input)
+- Print where to edit prompts, customise dashboards, and adjust the LaunchAgent schedule
+- Schedule the report at **08:00, 10:00 and 18:30** via macOS LaunchAgent (override times with `SCHEDULE_HOURS` when running the installer)
 
 > **Prerequisites:** Python 3.11+, `git`, and the [Cursor](https://cursor.sh) `agent` CLI in your PATH.
 
