@@ -20,7 +20,6 @@ Run **all Datadog dashboards defined below**, produce a **single focused HTML re
 | `DD_API_KEY` | yes | Datadog API key |
 | `DD_APP_KEY` | yes | Datadog application key |
 | `DD_SITE` | no | API host (default `https://api.datadoghq.com`) |
-| `DATADOG_DASHBOARD_URL_*` | yes | One env var per dashboard (see Dashboard Definitions below) |
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for Part D: todo / reading queue) |
@@ -59,7 +58,7 @@ For **each dashboard** defined below, run the extraction script:
 
 ```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env <URL_ENV> \
+  --url '<URL from the dashboard .md file>' \
   --output-slug <SLUG> \
   --days 2 \
   --focus "<focus terms, if any>"
@@ -212,7 +211,8 @@ The HTML builder is **`scripts/render_daily_dashboard_html.py`** (optional args:
 
 | Argument | Default | Purpose |
 |----------|---------|--------|
-| `--url-env` | `DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY` | Env var name holding the dashboard URL |
+| `--url` | | Dashboard URL (preferred — pass directly) |
+| `--url-env` | | Env var name holding the dashboard URL (fallback) |
 | `--days N` | `0` | Override time window to past N days (0 = use URL timestamps) |
 | `--focus "a,b"` | `""` | Comma-separated title substrings to highlight with ★ in console output |
 | `--output-slug` | `""` | Prefix for output files (e.g. `owner_metrics` → `owner_metrics_metric_results.json`) |

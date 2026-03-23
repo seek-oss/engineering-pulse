@@ -1,12 +1,12 @@
 # Part B — Owner Metrics
 
-- **URL env:** `DATADOG_DASHBOARD_URL_OWNER_METRICS`
+- **URL:** `https://xxx/dashboard/***REMOVED***/owner-engineering-metrics-beta?fromUser=false&refresh_mode=paused&tpl_var_team%5B0%5D=team-a&from_ts=1756648800000&to_ts=1759240799999&live=false`
 - **Slug:** `owner_metrics`
 - **Focus:** `Tech Fitness,Catalogue,Security Findings,Incidents per deployment,Exercised pipeline,System assessed`
 
 ```bash
 python3 scripts/datadog_dashboard_extract.py \
-  --url-env DATADOG_DASHBOARD_URL_OWNER_METRICS \
+  --url 'https://xxx/dashboard/***REMOVED***/owner-engineering-metrics-beta?fromUser=false&refresh_mode=paused&tpl_var_team%5B0%5D=team-a&from_ts=1756648800000&to_ts=1759240799999&live=false' \
   --output-slug owner_metrics \
   --days 2 \
   --focus "Tech Fitness,Catalogue,Security Findings,Incidents per deployment,Exercised pipeline,System assessed"

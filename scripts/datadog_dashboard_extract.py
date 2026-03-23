@@ -13,8 +13,8 @@ Optional:
     DATADOG_TEAMS  (comma-separated team names — overrides tpl_var_team in URL)
 
 CLI args:
-    --url-env       Name of env var holding the dashboard URL
-                    (default: DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY)
+    --url           Dashboard URL (pass directly — preferred)
+    --url-env       Name of env var holding the dashboard URL (fallback)
     --days          Override time window to past N days (0 = use URL timestamps)
     --focus         Comma-separated widget title substrings to highlight in output
     --output-slug   Prefix for output files (e.g. 'owner_metrics' → owner_metrics_metric_results.json)
@@ -349,9 +349,14 @@ def _apply_teams_to_url(url: str, teams_csv: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Datadog Dashboard Extractor")
     parser.add_argument(
+        "--url",
+        default="",
+        help="Dashboard URL (pass directly instead of via env var)",
+    )
+    parser.add_argument(
         "--url-env",
-        default="DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY",
-        help="Name of the env var that holds the dashboard URL",
+        default="",
+        help="Name of the env var that holds the dashboard URL (fallback if --url not given)",
     )
     parser.add_argument(
         "--days",
@@ -371,12 +376,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    url_env = args.url_env
-    if url_env not in os.environ:
-        console.print(f"[red]Error: env var '{url_env}' is not set.[/red]")
-        sys.exit(1)
-    dashboard_url = os.environ[url_env]
-    console.print(f"[dim]URL env: [cyan]{url_env}[/cyan][/dim]")
+    if args.url:
+        dashboard_url = args.url
+        console.print(f"[dim]URL: [cyan]{dashboard_url[:80]}…[/cyan][/dim]")
+    else:
+        url_env = args.url_env or "DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY"
+        if url_env not in os.environ:
+            console.print(f"[red]Error: env var '{url_env}' is not set.[/red]")
+            sys.exit(1)
+        dashboard_url = os.environ[url_env]
+        console.print(f"[dim]URL env: [cyan]{url_env}[/cyan][/dim]")
 
     focus_terms = [t.strip().lower() for t in args.focus.split(",") if t.strip()]
 
