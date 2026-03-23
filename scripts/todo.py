@@ -31,11 +31,38 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-try:
-    import truststore
-    truststore.inject_into_ssl()
-except ImportError:
-    pass
+def _ensure_truststore() -> None:
+    """Install and activate truststore so Python uses the OS certificate store.
+
+    Corporate proxies (e.g. Netskope, Zscaler) re-sign TLS traffic with a
+    private CA that lives in the macOS/Windows system keychain but not in
+    Python's bundled certifi CA bundle.  ``truststore`` bridges that gap.
+    If it isn't installed we attempt a one-shot ``pip install`` so the script
+    works out-of-the-box in any Python environment (venv, Cursor Agent, etc.).
+    """
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+        return
+    except ImportError:
+        pass
+
+    # Auto-install truststore into the running environment
+    import subprocess
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet", "truststore"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        # Last resort: continue without truststore — will fail later with a
+        # clear SSL error if the network requires it.
+        pass
+
+_ensure_truststore()
 
 import requests
 from dotenv import load_dotenv
@@ -70,7 +97,16 @@ def _headers() -> Dict[str, str]:
 
 
 def _get(path: str, params: Optional[Dict] = None) -> Any:
-    resp = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params, timeout=15)
+    try:
+        resp = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params, timeout=15)
+    except requests.exceptions.SSLError as exc:
+        console.print(
+            "[red]SSL Error connecting to Todoist API.[/red]\n"
+            "Your network likely uses a TLS-intercepting proxy (Netskope / Zscaler).\n"
+            "Fix: [bold]pip install truststore[/bold]  (lets Python use the OS certificate store)\n"
+            f"Detail: {exc}"
+        )
+        sys.exit(1)
     resp.raise_for_status()
     return resp.json()
 
