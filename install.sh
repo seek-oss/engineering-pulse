@@ -82,7 +82,7 @@ RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
 PLIST_LABEL="com.$(whoami).daily-dashboard"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 LOG_FILE="/tmp/daily-dashboard.log"
-SCHEDULE_HOURS="${SCHEDULE_HOURS:-8 10 18}"  # space-separated
+SCHEDULE_HOURS="${SCHEDULE_HOURS:-9 12 16}"  # space-separated
 
 # ── Banner ───────────────────────────────────────────────────────────────────
 echo ""
@@ -234,18 +234,20 @@ else
   mkdir -p "$HOME/Library/LaunchAgents"
 
   # Build StartCalendarInterval entries from SCHEDULE_HOURS
+  # Weekday 1=Mon … 5=Fri (macOS launchd convention)
   INTERVAL_ENTRIES=""
   for H in $SCHEDULE_HOURS; do
-    MIN=0
-    # Special case: "18" means 18:30
-    if [ "$H" = "18" ]; then MIN=30; fi
-    INTERVAL_ENTRIES+="
+    for DAY in 1 2 3 4 5; do
+      INTERVAL_ENTRIES+="
       <dict>
+        <key>Weekday</key>
+        <integer>${DAY}</integer>
         <key>Hour</key>
         <integer>${H}</integer>
         <key>Minute</key>
-        <integer>${MIN}</integer>
+        <integer>0</integer>
       </dict>"
+    done
   done
 
   cat > "$PLIST_PATH" <<EOF
@@ -284,7 +286,7 @@ EOF
   launchctl unload "$PLIST_PATH" 2>/dev/null || true
   launchctl load "$PLIST_PATH"
   success "LaunchAgent loaded: $PLIST_LABEL"
-  info "Schedule: runs at $(echo "$SCHEDULE_HOURS" | sed 's/ /:00, /g'):00 daily"
+  info "Schedule: runs at $(echo "$SCHEDULE_HOURS" | sed 's/ /:00, /g'):00 Mon–Fri"
   info "Logs: $LOG_FILE"
   info "launchd stdout: /tmp/daily-dashboard-launchd.out"
 fi
