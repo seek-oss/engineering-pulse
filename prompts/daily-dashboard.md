@@ -70,15 +70,16 @@ Each dashboard writes to `output/<slug>_metric_results.json` — no files overwr
 
 #### Dashboard Definitions
 
-Each dashboard is defined in its own file under **`prompts/dashboards/`**.
-Read every `.md` file in that directory and execute the extraction command from each one.
+Each dashboard is defined in its own `.md` file under **`prompts/dashboards/`**.
+These files are **gitignored** (they contain real Datadog URLs) and live on the
+user's disk only. See `prompts/dashboards/_example.md` for the template.
 
-Shipped dashboards:
-- `prompts/dashboards/catalogue_quality.md` — Part A: Catalogue Quality
-- `prompts/dashboards/owner_metrics.md` — Part B: Owner Metrics
+**Important:** Skip any file whose name starts with `_` (like `_example.md`) —
+those are reference templates, not real dashboards. Only process files that do
+**not** start with `_`.
 
-User-added dashboards (created via `/add-dashboard`) live in the same directory
-as new files — they won't conflict with shipped ones on upgrades.
+Read every qualifying `.md` file in that directory and execute the extraction
+command from each one.
 
 ---
 

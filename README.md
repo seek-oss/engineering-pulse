@@ -55,9 +55,8 @@ prompts/
   daily-dashboard.md        ← Cursor prompt (the entry point)
   add-dashboard.md          ← interactive command to add a new dashboard
   dashboards/
-    catalogue_quality.md    ← shipped: Part A
-    owner_metrics.md        ← shipped: Part B
-    custom_*.md             ← your dashboards (created via /add-dashboard)
+    _example.md             ← format reference (tracked by git, skipped by agent)
+    custom_*.md             ← your dashboards (local only, gitignored, created via /add-dashboard)
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
@@ -103,10 +102,18 @@ cp .env.example .env
 ```
 
 You need:
-- **Datadog** — API key + App key + two dashboard URLs
+- **Datadog** — API key + App key + dashboard URLs
 - **GitHub** — Personal Access Token with `repo` (read) + `read:org` scopes
 - **Gmail SMTP** — App Password (2FA must be enabled on your Google account)
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
+
+Then add your dashboards using the interactive command in Cursor:
+```
+@prompts/add-dashboard.md add my catalogue quality dashboard at https://...
+```
+
+See `prompts/dashboards/_example.md` for the file format reference.
+Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 ### Running the dashboard
 
@@ -234,11 +241,9 @@ You can add any Datadog dashboard to the daily report without editing existing f
    - Generate colouring rules
    - Save a new file at `prompts/dashboards/custom_dora.md` with the URL embedded
 
-No `.env` changes needed — dashboard URLs are stored directly in the `.md` files.
-
 Next time the daily dashboard runs, it picks up the new file automatically.
 
-User-added dashboards are prefixed with `custom_` to avoid collisions with shipped files.
+User-added dashboards are prefixed with `custom_` by convention to keep things organised.
 
 ---
 
@@ -255,12 +260,14 @@ git pull --ff-only
 pip install -r requirements.txt
 ```
 
-**Your custom dashboards are safe.** User-added files (`prompts/dashboards/custom_*.md`) are separate from shipped files, so `git pull` won't cause merge conflicts. Your `.env` is also preserved.
+**Your dashboards and credentials are safe.** All dashboard definition files
+under `prompts/dashboards/` (except `_example.md`) are gitignored — they live
+on your disk only and are never touched by `git pull`.
 
 | What | Upgraded? | Your changes safe? |
 |------|-----------|--------------------|
-| Shipped dashboards (`catalogue_quality.md`, `owner_metrics.md`) | Yes | N/A (don't edit these) |
-| Your custom dashboards (`custom_*.md`) | No (untouched) | Yes |
+| Example template (`_example.md`) | Yes | N/A (reference only) |
+| Your dashboard files (`*.md` in `prompts/dashboards/`) | No (gitignored) | Yes |
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |
 | `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |

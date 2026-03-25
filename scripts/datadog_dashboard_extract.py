@@ -598,6 +598,7 @@ def main() -> None:
         json.dump(
             {
                 "dashboard_title": title,
+                "source_url": dashboard_url,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "results": metric_results,
             },

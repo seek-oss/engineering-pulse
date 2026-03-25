@@ -30,7 +30,7 @@ class TestExtractDashboardId:
         assert extract_dashboard_id(url) == "abc-123-xyz"
 
     def test_url_with_query_params(self):
-        url = "https://xxx/dashboard/***REMOVED***?from_ts=123&to_ts=456"
+        url = "https://app.example.com/dashboard/***REMOVED***?from_ts=123&to_ts=456"
         assert extract_dashboard_id(url) == "***REMOVED***"
 
     def test_url_without_dashboard_raises(self):
