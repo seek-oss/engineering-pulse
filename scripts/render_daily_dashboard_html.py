@@ -267,6 +267,8 @@ def main() -> None:
 
     team = os.environ.get("DATADOG_TEAMS", "release-engineering").split(",")[0].strip()
     today = date.today().isoformat()
+    part_a_url = part_a.get("source_url", "")
+    part_b_url = part_b.get("source_url", "")
     broad, no_seal, miss_cap, systems = part_a_metrics(part_a)
     b = part_b_metrics(part_b)
 
@@ -462,8 +464,8 @@ def main() -> None:
     <h1>Daily Dashboard — {html_mod.escape(team)}</h1>
     <div class="subtitle">{today} (past 2 days)</div>
     <div class="links">
-      <a href="https://xxx/dashboard/***REMOVED***">Catalogue Quality ↗</a>
-      <a href="https://xxx/dashboard/***REMOVED***/owner-engineering-metrics-beta">Owner Metrics ↗</a>
+      {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality ↗</a>' if part_a_url else ''}
+      {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics ↗</a>' if part_b_url else ''}
     </div>
   </div>
 
@@ -541,8 +543,8 @@ def main() -> None:
   </div>
 
   <div class="footer">
-    <a href="https://xxx/dashboard/***REMOVED***">Catalogue Quality</a> ·
-    <a href="https://xxx/dashboard/***REMOVED***/owner-engineering-metrics-beta">Owner Metrics</a><br>
+    {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality</a> · ' if part_a_url else ''}
+    {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics</a>' if part_b_url else ''}<br>
     Generated {today} · Past 2 days · Base metric queries only
   </div>
 </div>

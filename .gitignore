@@ -44,6 +44,10 @@ dist/
 *.swo
 *~
 
+# Customer-specific dashboard definitions (contain real Datadog URLs — local only)
+prompts/dashboards/*.md
+!prompts/dashboards/_example.md
+
 # Generated output (regenerated on every run)
 output/
 *.html

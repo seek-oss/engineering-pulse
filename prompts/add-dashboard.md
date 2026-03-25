@@ -97,8 +97,9 @@ with shipped dashboard names on future upgrades.
 Determine the correct Part letter by counting existing `.md` files in
 `prompts/dashboards/` (A, B → next is C, etc.).
 
-This keeps user-added dashboards in separate files from the shipped ones,
-so upstream upgrades won't conflict.
+All dashboard files in this directory are **gitignored** (they contain real
+Datadog URLs), so they stay on the user's disk only. The `custom_` prefix
+is a naming convention to keep things organised.
 
 ### 6. Update the renderer command
 
@@ -115,8 +116,8 @@ python3 scripts/render_daily_dashboard_html.py \
 Tell the user:
 - The new dashboard file has been created at `prompts/dashboards/custom_<slug>.md`
 - The URL is embedded in the file — no `.env` changes needed
+- The file is **gitignored** — your Datadog URLs will never be committed
 - Next time the daily dashboard runs, it will pick up the new file automatically
-- On future upgrades, this file won't conflict with upstream changes
 
 ---
 
