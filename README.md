@@ -272,8 +272,3 @@ on your disk only and are never touched by `git pull`.
 | `.env` (your credentials) | No (untouched) | Yes |
 | `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |
 
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
