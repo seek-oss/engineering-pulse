@@ -122,6 +122,7 @@ For each Dashboard Part (A, B, …):
 
 Part C: PR Review Queue (if enabled)
 Part D: My Queue (if enabled)
+Part E: Extras (if any *.md files in prompts/extras/)
 
 Footer: link to each dashboard, generated date
 ```
@@ -189,6 +190,27 @@ Add **Part D** to the HTML report:
   - Age > 7 days → yellow highlight
   - If no reading items → show "Reading queue empty" in muted text
 - If `todos.json` is empty or the script fails → show a green "Queue clear" banner
+
+### Step 2E — Extras plugin (drop-in `.md` files)
+
+Any `*.md` file dropped into **`prompts/extras/`** is rendered as a card under
+**Part E — Extras** in the report. Files starting with `_` (like
+`_example.md`) are reference templates and are skipped.
+
+No code changes or CLI flags are needed — the renderer auto-discovers the
+folder. Override the location if needed:
+
+```bash
+python3 scripts/render_daily_dashboard_html.py --extras-dir prompts/extras
+```
+
+Each file's first `# Heading` becomes the card title; the rest of the body
+is rendered with a small markdown subset (headings, bold/italic, inline
+code, lists, links, fenced code blocks). If a file has no `# Heading`, the
+filename (without `.md`) is used as the title.
+
+If `prompts/extras/` is empty (or only contains `_*.md` templates), Part E
+is omitted entirely.
 
 ### Step 3 — Send the report
 

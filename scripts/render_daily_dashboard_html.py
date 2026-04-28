@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from todo_report import format_view_action_html  # noqa: E402
+from extras_plugin import render_extras_section  # noqa: E402
 
 
 def _load(path: Path) -> Any:
@@ -245,6 +246,11 @@ def main() -> None:
         metavar="LABEL:FILE",
         help="Extra dashboard section — 'My Dashboard:output/my_metric_results.json' (repeatable)",
     )
+    ap.add_argument(
+        "--extras-dir",
+        default="prompts/extras",
+        help="Folder of drop-in *.md files rendered as Part E extras (default: prompts/extras)",
+    )
     args = ap.parse_args()
 
     part_a = _load(ROOT / args.part_a)
@@ -264,6 +270,8 @@ def main() -> None:
             extra_sections.append(_render_generic_section(label.strip(), data))
         except FileNotFoundError:
             print(f"Warning: skipping --extra '{label}' — file not found: {fpath.strip()}")
+
+    extras_html = render_extras_section(ROOT / args.extras_dir)
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()
@@ -456,6 +464,20 @@ def main() -> None:
     font-size: 12px; color: #a0aec0; text-align: center; line-height: 2;
   }}
   .footer a {{ color: #718096; text-decoration: none; }}
+  .extra-card {{
+    background: #fff; border: 1px solid #e2e8f0; border-left: 3px solid #4299e1;
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 12px;
+  }}
+  .extra-title {{ font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }}
+  .extra-body {{ font-size: 13px; color: #2d3748; line-height: 1.6; }}
+  .extra-body p {{ margin: 6px 0; }}
+  .extra-body h2, .extra-body h3, .extra-body h4 {{ margin: 10px 0 4px; font-size: 13px; color: #2d3748; }}
+  .extra-body ul, .extra-body ol {{ margin: 6px 0 6px 20px; }}
+  .extra-body li {{ margin: 2px 0; }}
+  .extra-body a {{ color: #2b6cb0; text-decoration: none; }}
+  .extra-body code {{ background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 12px; }}
+  .extra-body pre {{ background: #1a202c; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 12px; }}
+  .extra-body pre code {{ background: transparent; padding: 0; color: inherit; }}
 </style>
 </head>
 <body>
@@ -541,6 +563,8 @@ def main() -> None:
   <div class="section">
     {part_d()}
   </div>
+
+  {f'<div class="section">{extras_html}</div>' if extras_html else ''}
 
   <div class="footer">
     {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality</a> · ' if part_a_url else ''}
