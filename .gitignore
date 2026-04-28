@@ -48,6 +48,10 @@ dist/
 prompts/dashboards/*.md
 !prompts/dashboards/_example.md
 
+# Drop-in extras plugin folder (user content — local only)
+prompts/extras/*.md
+!prompts/extras/_example.md
+
 # Generated output (regenerated on every run)
 output/
 *.html

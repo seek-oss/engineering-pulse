@@ -43,6 +43,9 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 │  Part D — My Queue                                  │
 │  Tasks: 2 open (1 high, 1 low)                     │
 │  Reading Queue: 1 article                           │
+│                                                      │
+│  Part E — Extras (optional)                         │
+│  Drop *.md files in prompts/extras/                 │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -57,10 +60,14 @@ prompts/
   dashboards/
     _example.md             ← format reference (tracked by git, skipped by agent)
     custom_*.md             ← your dashboards (local only, gitignored, created via /add-dashboard)
+  extras/                   ← drop-in plugin folder for extra task cards
+    _example.md             ← format reference (tracked by git, skipped by renderer)
+    *.md                    ← your extras (local only, gitignored)
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
   render_daily_dashboard_html.py ← builds the HTML scorecard
+  extras_plugin.py               ← discovers + renders prompts/extras/*.md as cards
   github_prs.py                  ← fetches PR review queue via GitHub GraphQL
   todo.py                        ← Todoist-backed tasks & reading queue
   send_report_smtp.py            ← sends HTML report via SMTP
@@ -247,6 +254,39 @@ User-added dashboards are prefixed with `custom_` by convention to keep things o
 
 ---
 
+## Adding extra tasks (drop-in plugin folder)
+
+Beyond Datadog dashboards, you can drop **any markdown file** into
+`prompts/extras/` and it will appear as a card under **Part E — Extras** in
+the next report. No code changes, no CLI flags — just write the file and run
+the dashboard.
+
+```
+prompts/extras/
+  release-checklist.md   ← becomes a card titled from its first `# Heading`
+  oncall-notes.md
+  ...
+```
+
+Per-file format:
+
+- The first `# Heading` is the **card title**. If absent, the filename
+  (without `.md`) is used.
+- Everything below is the **body**, rendered with a small markdown subset:
+  headings, **bold**, *italic*, `inline code`, bullet/numbered lists,
+  [links](https://example.com), and fenced code blocks.
+- Files whose name starts with `_` (e.g. `_example.md`) are treated as
+  reference templates and skipped.
+- The folder is gitignored (except `_example.md`) so your notes stay local.
+
+If `prompts/extras/` is empty (or only contains templates), Part E is
+omitted from the report. Override the folder with
+`--extras-dir <path>` on `render_daily_dashboard_html.py`.
+
+See `prompts/extras/_example.md` for a working template.
+
+---
+
 ## Upgrading
 
 To upgrade to a new release:
@@ -268,6 +308,7 @@ on your disk only and are never touched by `git pull`.
 |------|-----------|--------------------|
 | Example template (`_example.md`) | Yes | N/A (reference only) |
 | Your dashboard files (`*.md` in `prompts/dashboards/`) | No (gitignored) | Yes |
+| Your extras files (`*.md` in `prompts/extras/`) | No (gitignored) | Yes |
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |
 | `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |
