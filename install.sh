@@ -3,10 +3,10 @@
 # engineering-pulse — installer
 #
 # One-liner (safe): bootstrap clones the repo, then runs this file from disk —
-#   curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 #
 # Or save then run (also safe):
-#   curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/install.sh -o /tmp/ep-install.sh && bash /tmp/ep-install.sh
+#   curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/install.sh -o /tmp/ep-install.sh && bash /tmp/ep-install.sh
 #
 # Do NOT pipe this script into bash: stdin is the pipe, not your keyboard; a cached
 # older copy on raw.githubusercontent.com can disagree with the repo you just cloned.
@@ -75,7 +75,7 @@ post_install_guide() {
 }
 
 # ── Config ───────────────────────────────────────────────────────────────────
-REPO_URL="${REPO_URL:-https://github.com/harryzhu2011/engineering-pulse.git}"
+REPO_URL="${REPO_URL:-https://github.com/seek-oss/engineering-pulse.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"

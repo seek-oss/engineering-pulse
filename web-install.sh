@@ -7,14 +7,14 @@
 # raw.githubusercontent.com may cache an older install.sh than git clone fetches.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 #
 # Optional env (same as install.sh):
 #   REPO_URL  INSTALL_DIR  SCHEDULE_HOURS  BIN_DIR
 # ────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/harryzhu2011/engineering-pulse.git}"
+REPO_URL="${REPO_URL:-https://github.com/seek-oss/engineering-pulse.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
 
 echo ""

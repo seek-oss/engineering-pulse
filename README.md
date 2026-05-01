@@ -7,7 +7,7 @@ Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colou
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 ```
 
 Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo then runs `install.sh` from disk (see **Setup → Option A** for why). The installer will:
@@ -88,7 +88,7 @@ All credentials come from `.env` — never hardcoded.
 ### Option A — one-liner installer (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 ```
 
 This bootstrap only clones/updates the repo and runs `install.sh` **from disk**. Do **not** use `curl …/install.sh | bash`: your shell would read the installer from stdin (not a real TTY), and GitHub’s raw CDN can briefly serve an older `install.sh` than `git clone` gets — both caused confusing failures in the past.
@@ -100,7 +100,7 @@ The installer handles cloning (or update), Python venv, `.env` seeding, runner +
 ### Option B — manual setup
 
 ```bash
-git clone https://github.com/harryzhu2011/engineering-pulse.git ~/.engineering-pulse
+git clone https://github.com/seek-oss/engineering-pulse.git ~/.engineering-pulse
 cd ~/.engineering-pulse
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -293,7 +293,7 @@ To upgrade to a new release:
 
 ```bash
 # If installed via web-install:
-curl -fsSL https://raw.githubusercontent.com/harryzhu2011/engineering-pulse/main/web-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 
 # If cloned manually:
 git pull --ff-only
