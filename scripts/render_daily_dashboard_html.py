@@ -484,7 +484,7 @@ def main() -> None:
 <div class="wrapper">
   <div class="header">
     <h1>Daily Dashboard — {html_mod.escape(team)}</h1>
-    <div class="subtitle">{today} (past 2 days)</div>
+    <div class="subtitle">{today} (past 7 days)</div>
     <div class="links">
       {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality ↗</a>' if part_a_url else ''}
       {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics ↗</a>' if part_b_url else ''}
@@ -569,7 +569,7 @@ def main() -> None:
   <div class="footer">
     {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality</a> · ' if part_a_url else ''}
     {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics</a>' if part_b_url else ''}<br>
-    Generated {today} · Past 2 days · Base metric queries only
+    Generated {today} · Past 7 days · Base metric queries only
   </div>
 </div>
 </body>

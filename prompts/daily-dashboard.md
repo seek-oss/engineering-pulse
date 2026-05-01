@@ -7,7 +7,7 @@ Do the steps now in the workspace. Do not stop after analysis or suggestions.
 
 Run **all Datadog dashboards defined below**, produce a **single focused HTML report**, and email it.
 
-**Time window: past 2 days for all dashboards** (use `--days 2`).
+**Time window: past 7 days for all dashboards** (use `--days 7`).
 
 ---
 
@@ -60,7 +60,7 @@ For **each dashboard** defined below, run the extraction script:
 python3 scripts/datadog_dashboard_extract.py \
   --url '<URL from the dashboard .md file>' \
   --output-slug <SLUG> \
-  --days 2 \
+  --days 7 \
   --focus "<focus terms, if any>"
 ```
 
@@ -113,7 +113,7 @@ The report is a **focused scorecard** — no long prose, no caveats section. Use
 
 ```
 Header (dark gradient):
-  Title: "Daily Dashboard — <DATADOG_TEAMS> — YYYY-MM-DD (past 2 days)"
+  Title: "Daily Dashboard — <DATADOG_TEAMS> — YYYY-MM-DD (past 7 days)"
   Link to each dashboard
 
 For each Dashboard Part (A, B, …):

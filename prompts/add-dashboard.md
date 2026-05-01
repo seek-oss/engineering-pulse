@@ -30,7 +30,7 @@ Run the extraction script with the URL directly:
 python3 scripts/datadog_dashboard_extract.py \
   --url '<DASHBOARD_URL>' \
   --output-slug <SLUG> \
-  --days 2
+  --days 7
 ```
 
 Then read `output/<slug>_dashboard_extracted_queries.json` to get the list of
@@ -61,7 +61,7 @@ Based on the user's selections, generate a new Part section in this format:
 python3 scripts/datadog_dashboard_extract.py \
   --url '<DASHBOARD_URL>' \
   --output-slug <slug> \
-  --days 2 \
+  --days 7 \
   --focus "<focus terms>"
 \```
 

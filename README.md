@@ -222,7 +222,7 @@ Each row has **`view_url`** (Todoist on the web). For Part D Actions, use **`for
 python3 scripts/datadog_dashboard_extract.py \
   --url 'https://app.datadoghq.com/dashboard/abc-123/my-dashboard?...' \
   --output-slug my_dashboard \
-  --days 2
+  --days 7
 
 # Fetch GitHub PR review queue
 python3 scripts/github_prs.py
