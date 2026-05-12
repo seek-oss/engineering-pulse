@@ -53,6 +53,10 @@ prompts/dashboards/*.md
 prompts/extras/*.md
 !prompts/extras/_example.md
 
+# Stakeholder pulse cards (regenerated on every run by the agent)
+prompts/stakeholders/*.md
+!prompts/stakeholders/_example.md
+
 # Generated output (regenerated on every run)
 output/
 *.html

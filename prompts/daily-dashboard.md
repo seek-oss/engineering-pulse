@@ -24,6 +24,7 @@ Run **all Datadog dashboards defined below**, produce a **single focused HTML re
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue: todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
+| `STAKEHOLDERS` | no | Comma-separated **full names or emails** to track via Glean MCP (for Stakeholder Pulse). Empty/unset skips Step 2F. Prefer `Jane Doe,john.smith@xyz.com.au` over single first names — disambiguation matters. Soft-cap at ~5 names to keep agent latency reasonable. |
 
 ### Datadog Site
 
@@ -109,6 +110,7 @@ order, skipping any that have no content:
 3. PR Review Queue
 4. My Queue
 5. Extras (`prompts/extras/*.md`)
+6. Stakeholder Pulse (`prompts/stakeholders/*.md`, when `STAKEHOLDERS` is set)
 
 So with zero dashboard `.md` files, PR Queue becomes Part A. With two
 dashboards, PR Queue becomes Part C, and so on.
@@ -145,6 +147,7 @@ Dashboards (Part A, B, …):
 PR Review Queue (next letter)
 My Queue (next letter)
 Extras (next letter — only if any *.md files in prompts/extras/)
+Stakeholder Pulse (next letter — only if STAKEHOLDERS is set and any *.md in prompts/stakeholders/)
 
 Footer: link to each dashboard, generated date
 ```
@@ -235,6 +238,71 @@ If `prompts/extras/` is empty (or only contains `_*.md` templates), the Extras
 section is omitted entirely.
 
 
+### Step 2F — Stakeholder Pulse (Slack via Glean MCP)
+
+Track what a small set of named stakeholders have been working on in Slack
+over the past 7 days. Uses the **Glean MCP server** (already configured in
+`.cursor/mcp.json` as `Glean`) — no Slack token required.
+
+**Skip this entire step if `STAKEHOLDERS` is empty or unset.**
+
+**Procedure:**
+
+1. **Clean stale cards.** Delete every file in `prompts/stakeholders/`
+   whose name does **not** start with `_`. This guarantees that removing a
+   name from `STAKEHOLDERS` removes the card on the next run.
+
+2. **For each name** in `STAKEHOLDERS` (split on `,`, strip whitespace,
+   skip empties):
+
+   a. **Inspect the Glean MCP `search` tool schema first** (read parameters
+      before calling). Typical filters for Slack-only, last 7 days:
+      - `app`: `"slack"`
+      - `from`: `"<name>"` (full name or email)
+      - `updated`: `"past_week"` (or `after` / `before` as `YYYY-MM-DD`)
+      - `query`: `"*"` or a few discriminative keywords (required)
+      - `sort_by_recency`: `true` when you want newest hits first
+
+   b. **Summarize** the returned hits into exactly three bullets:
+      - **Themes:** one sentence — what is this person mostly engaged in?
+      - **Notable:** one sentence — most useful thread/decision/question,
+        with a markdown link.
+      - **Top links:** up to 3 markdown links (channels, threads, key
+        messages), comma-separated on a single bullet.
+
+   c. **Write** to `prompts/stakeholders/<slug>.md` where `<slug>` is the
+      lowercased name with spaces replaced by hyphens (e.g. `Jane Doe` →
+      `jane-doe.md`). Use this exact format:
+
+      ```
+      # <Display Name>
+
+      - **Themes:** ...
+      - **Notable:** [thread title](url) — short context
+      - **Top links:** [#chan-name](url), [thread](url), [message](url)
+      ```
+
+   d. **No-activity case.** If Glean returns no Slack hits for the person
+      in the window, write a single bullet instead:
+
+      ```
+      # <Display Name>
+
+      - No Slack activity in the last 7 days.
+      ```
+
+3. **Renderer is automatic.** `render_daily_dashboard_html.py`
+   auto-discovers `prompts/stakeholders/*.md` and emits a dynamically
+   lettered **Stakeholder Pulse** section (same card styling as Extras).
+   Override the folder with `--stakeholders-dir` if needed.
+
+**Scope caveats to keep in mind (and surface in cards if relevant):**
+
+- Glean only indexes **public Slack channels** that it has been granted
+  access to. DMs and private channels will not appear.
+- Glean indexes on a delay (often a few hours), so very recent activity
+  may be missing until the next run.
+
 ### Step 3 — Send the report
 
 ```bash
@@ -251,7 +319,7 @@ Confirm `Sent to <SMTP_TO>`. Do not mark the task complete until the send succee
 
 The extraction script is `scripts/datadog_dashboard_extract.py`. With `--output-slug`, it saves **`output/<slug>_metric_results.json`** (per-query series + latest values) alongside `<slug>_dashboard.json` and `<slug>_dashboard_extracted_queries.json`. Each dashboard gets its own set of output files — no need to copy/rename.
 
-The HTML builder is **`scripts/render_daily_dashboard_html.py`**. Useful optional args: `--out`, `--dashboards-dir`, `--output-dir`, `--prs`, `--todos`, `--extras-dir`, and repeatable `--extra "Label:path/to_metric_results.json"`.
+The HTML builder is **`scripts/render_daily_dashboard_html.py`**. Useful optional args: `--out`, `--dashboards-dir`, `--output-dir`, `--prs`, `--todos`, `--extras-dir`, `--stakeholders-dir`, and repeatable `--extra "Label:path/to_metric_results.json"`.
 
 **CLI arguments (`datadog_dashboard_extract.py`):**
 

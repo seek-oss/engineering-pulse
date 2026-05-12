@@ -15,6 +15,7 @@ actually present:
   - PR Review Queue
   - My Queue (Todoist)
   - Extras cards (from `prompts/extras/*.md`)
+  - Stakeholder Pulse cards (from `prompts/stakeholders/*.md`)
 """
 
 from __future__ import annotations
@@ -126,6 +127,11 @@ def main() -> None:
         default="prompts/extras",
         help="Folder of drop-in *.md cards (default: prompts/extras)",
     )
+    ap.add_argument(
+        "--stakeholders-dir",
+        default="prompts/stakeholders",
+        help="Folder of per-stakeholder *.md cards (default: prompts/stakeholders)",
+    )
     args = ap.parse_args()
 
     prs_data = _load(ROOT / args.prs)
@@ -191,6 +197,15 @@ def main() -> None:
     extras_html = render_extras_section(ROOT / args.extras_dir, label=extras_label)
     if extras_html:
         sections.append((extras_label, extras_html))
+
+    # 6) Stakeholder Pulse (.md cards) — only if any files
+    stakeholders_label = f"Part {_part_letter(len(sections))} — Stakeholder Pulse"
+    stakeholders_html = render_extras_section(
+        ROOT / args.stakeholders_dir,
+        label=stakeholders_label,
+    )
+    if stakeholders_html:
+        sections.append((stakeholders_label, stakeholders_html))
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()
@@ -313,6 +328,7 @@ def main() -> None:
   </div>
 
   {body_sections}
+
 
   <div class="footer">
     {footer_links + '<br>' if footer_links else ''}
