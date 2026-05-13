@@ -25,17 +25,16 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Daily Dashboard — my-team — 2026-03-20 (past 2d)  │
+│  Daily Dashboard — my-team — 2026-03-20 (past 7d)  │
 ├──────────────────────────────────────────────────────┤
-│  Part A — Catalogue Quality                         │
+│  Part A — <Your Dashboard #1>                       │
 │  ┌──────────────┬─────────────────┬───────────────┐ │
-│  │ 14 Incomplete│ 4 No Seal       │ 3 No Capabil. │ │
-│  │  (RED)       │  (YELLOW)       │  (ORANGE)     │ │
+│  │  Widget 1    │  Widget 2       │  Widget 3     │ │
+│  │  latest val  │  latest val     │  latest val   │ │
 │  └──────────────┴─────────────────┴───────────────┘ │
 │                                                      │
-│  Part B — Owner Metrics                             │
-│  Tech Fitness 69% · Catalogue 73% · Security 0     │
-│  Exercised 88% · Systems Assessed 13               │
+│  Part B — <Your Dashboard #2>                       │
+│  (one tile per widget, populated automatically)     │
 │                                                      │
 │  Part C — PR Review Queue  (21 open, 14 red)       │
 │  Newest-first, renovate bots excluded              │
@@ -48,6 +47,11 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 │  Drop *.md files in prompts/extras/                 │
 └──────────────────────────────────────────────────────┘
 ```
+
+Section letters (A, B, C, …) are assigned **dynamically**: dashboards from
+`prompts/dashboards/*.md` come first (sorted by filename), then PR Queue,
+My Queue, and Extras fill the remaining letters. With zero dashboards
+configured, PR Queue is Part A.
 
 ---
 
@@ -73,9 +77,9 @@ scripts/
   send_report_smtp.py            ← sends HTML report via SMTP
 
 output/                     ← gitignored; all generated files land here
-  catalogue_quality_metric_results.json
-  owner_metrics_metric_results.json
+  <slug>_metric_results.json   ← one per dashboard .md file (named after its Slug)
   github_prs.json
+  todos.json
   ...
 ```
 
@@ -116,7 +120,7 @@ You need:
 
 Then add your dashboards using the interactive command in Cursor:
 ```
-@prompts/add-dashboard.md add my catalogue quality dashboard at https://...
+@prompts/add-dashboard.md add my dashboard at https://app.datadoghq.com/dashboard/...
 ```
 
 See `prompts/dashboards/_example.md` for the file format reference.

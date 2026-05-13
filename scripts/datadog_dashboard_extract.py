@@ -6,8 +6,6 @@ cleanly to an API endpoint (metrics, logs analytics).
 
 Env vars required:
     DD_API_KEY, DD_APP_KEY
-    DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY  (default url-env)
-    or any other URL env var passed via --url-env
 Optional:
     DD_SITE        (default https://api.datadoghq.com)
     DATADOG_TEAMS  (comma-separated team names — overrides tpl_var_team in URL)
@@ -17,7 +15,7 @@ CLI args:
     --url-env       Name of env var holding the dashboard URL (fallback)
     --days          Override time window to past N days (0 = use URL timestamps)
     --focus         Comma-separated widget title substrings to highlight in output
-    --output-slug   Prefix for output files (e.g. 'owner_metrics' → owner_metrics_metric_results.json)
+    --output-slug   Prefix for output files (e.g. 'my_dashboard' → my_dashboard_metric_results.json)
 
 Output files (under output/):
     [slug_]dashboard.json                      — full dashboard definition
@@ -372,20 +370,22 @@ def main() -> None:
     parser.add_argument(
         "--output-slug",
         default="",
-        help="Slug prefix for output files (e.g. 'catalogue_quality' → output/catalogue_quality_metric_results.json)",
+        help="Slug prefix for output files (e.g. 'my_dashboard' → output/my_dashboard_metric_results.json)",
     )
     args = parser.parse_args()
 
     if args.url:
         dashboard_url = args.url
         console.print(f"[dim]URL: [cyan]{dashboard_url[:80]}…[/cyan][/dim]")
-    else:
-        url_env = args.url_env or "DATADOG_DASHBOARD_URL_CATALOGUE_QUALITY"
-        if url_env not in os.environ:
-            console.print(f"[red]Error: env var '{url_env}' is not set.[/red]")
+    elif args.url_env:
+        if args.url_env not in os.environ:
+            console.print(f"[red]Error: env var '{args.url_env}' is not set.[/red]")
             sys.exit(1)
-        dashboard_url = os.environ[url_env]
-        console.print(f"[dim]URL env: [cyan]{url_env}[/cyan][/dim]")
+        dashboard_url = os.environ[args.url_env]
+        console.print(f"[dim]URL env: [cyan]{args.url_env}[/cyan][/dim]")
+    else:
+        console.print("[red]Error: pass --url or --url-env.[/red]")
+        sys.exit(1)
 
     focus_terms = [t.strip().lower() for t in args.focus.split(",") if t.strip()]
 

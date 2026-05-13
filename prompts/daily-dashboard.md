@@ -22,7 +22,7 @@ Run **all Datadog dashboards defined below**, produce a **single focused HTML re
 | `DD_SITE` | no | API host (default `https://api.datadoghq.com`) |
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
-| `TODOIST_API_TOKEN` | no | Todoist API token (for Part D: todo / reading queue) |
+| `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue: todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 
 ### Datadog Site
@@ -94,16 +94,38 @@ command from each one.
 python3 scripts/render_daily_dashboard_html.py
 ```
 
-This reads `output/catalogue_quality_metric_results.json` (Part A), `output/owner_metrics_metric_results.json` (Part B), `output/github_prs.json`, and `output/todos.json`, and writes **`daily_dashboard_report.html`** at the repo root.
+The renderer is **fully data-driven by `prompts/dashboards/*.md`**. For each
+qualifying file (skipping `_*.md` templates) it reads the matching
+`output/<slug>_metric_results.json` snapshot and renders one Part section.
+It also reads `output/github_prs.json` and `output/todos.json` for the PR
+Queue and My Queue sections, and writes **`daily_dashboard_report.html`** at
+the repo root.
 
-To include **additional dashboards** beyond Part A/B, use the `--extra` flag:
+Section letters (Part A, B, C, …) are assigned **dynamically** in this
+order, skipping any that have no content:
+
+1. Each dashboard `.md` (sorted by filename)
+2. Each `--extra LABEL:FILE` argument (CLI order)
+3. PR Review Queue
+4. My Queue
+5. Extras (`prompts/extras/*.md`)
+
+So with zero dashboard `.md` files, PR Queue becomes Part A. With two
+dashboards, PR Queue becomes Part C, and so on.
+
+For **one-off snapshots** that aren't worth a permanent `.md` file, use
+`--extra`:
 
 ```bash
 python3 scripts/render_daily_dashboard_html.py \
   --extra "DORA Metrics:output/dora_metric_results.json"
 ```
 
-Part D Actions use **`todo_report.format_view_action_html`** (View link only).
+Each dashboard renders as one tile per unique widget — latest value per
+widget, grey tile for nulls. No per-widget colouring or thresholds in the
+shipped library; that's intentionally kept generic.
+
+My Queue Actions use **`todo_report.format_view_action_html`** (View link only).
 
 You can still hand-edit the HTML if needed; the renderer matches the scorecard layout below.
 
@@ -114,15 +136,15 @@ The report is a **focused scorecard** — no long prose, no caveats section. Use
 ```
 Header (dark gradient):
   Title: "Daily Dashboard — <DATADOG_TEAMS> — YYYY-MM-DD (past 7 days)"
-  Link to each dashboard
+  One link per discovered dashboard
 
-For each Dashboard Part (A, B, …):
-  Render tiles as described in that Part's definition above.
-  Generic dashboards: one tile per widget, latest value, grey tile for nulls.
+Dashboards (Part A, B, …):
+  One section per *.md in prompts/dashboards/ (sorted by filename).
+  One tile per unique widget, latest value, grey tile for nulls.
 
-Part C: PR Review Queue (if enabled)
-Part D: My Queue (if enabled)
-Part E: Extras (if any *.md files in prompts/extras/)
+PR Review Queue (next letter)
+My Queue (next letter)
+Extras (next letter — only if any *.md files in prompts/extras/)
 
 Footer: link to each dashboard, generated date
 ```
@@ -151,7 +173,7 @@ This writes `github_prs.json` with all open PRs where you or the team are a requ
 | `GITHUB_ORG` | GitHub org slug (e.g. `my-org`) |
 | `GITHUB_TEAM` | Team slug (e.g. `my-team`) |
 
-Add **Part C** to the HTML report:
+The renderer adds a **PR Review Queue** section (Part letter depends on how many dashboard sections precede it — see Step 2 ordering above):
 - If `prs` is empty → show a green "No PRs awaiting review — inbox clear" banner
 - If PRs exist → show a compact table: **Repo** | **Title** (linked) | **Author** | **Age**
   - Age ≥ 5 days → red bold
@@ -175,7 +197,7 @@ For the Actions column HTML, use **`scripts/todo_report.format_view_action_html(
 | `TODOIST_API_TOKEN` | Todoist API token |
 | `TODOIST_PROJECT_ID` | Project ID (auto-set by `setup`) |
 
-Add **Part D** to the HTML report:
+The renderer adds a **My Queue** section (Part letter depends on dashboards and PR section — see Step 2 ordering above):
 
 - Section header: **"My Queue"**
 - Subsection: **Work tasks** (`type` = `task` and `domain` = `work`, or missing `domain` for backward compatibility)
@@ -194,7 +216,7 @@ Add **Part D** to the HTML report:
 ### Step 2E — Extras plugin (drop-in `.md` files)
 
 Any `*.md` file dropped into **`prompts/extras/`** is rendered as a card under
-**Part E — Extras** in the report. Files starting with `_` (like
+**Extras** in the report (section title includes the dynamic Part letter). Files starting with `_` (like
 `_example.md`) are reference templates and are skipped.
 
 No code changes or CLI flags are needed — the renderer auto-discovers the
@@ -209,8 +231,9 @@ is rendered with a small markdown subset (headings, bold/italic, inline
 code, lists, links, fenced code blocks). If a file has no `# Heading`, the
 filename (without `.md`) is used as the title.
 
-If `prompts/extras/` is empty (or only contains `_*.md` templates), Part E
-is omitted entirely.
+If `prompts/extras/` is empty (or only contains `_*.md` templates), the Extras
+section is omitted entirely.
+
 
 ### Step 3 — Send the report
 
@@ -228,7 +251,7 @@ Confirm `Sent to <SMTP_TO>`. Do not mark the task complete until the send succee
 
 The extraction script is `scripts/datadog_dashboard_extract.py`. With `--output-slug`, it saves **`output/<slug>_metric_results.json`** (per-query series + latest values) alongside `<slug>_dashboard.json` and `<slug>_dashboard_extracted_queries.json`. Each dashboard gets its own set of output files — no need to copy/rename.
 
-The HTML builder is **`scripts/render_daily_dashboard_html.py`** (optional args: `--part-a`, `--part-b`, `--extra`, `--prs`, `--todos`, `--out`).
+The HTML builder is **`scripts/render_daily_dashboard_html.py`**. Useful optional args: `--out`, `--dashboards-dir`, `--output-dir`, `--prs`, `--todos`, `--extras-dir`, and repeatable `--extra "Label:path/to_metric_results.json"`.
 
 **CLI arguments (`datadog_dashboard_extract.py`):**
 
@@ -238,7 +261,7 @@ The HTML builder is **`scripts/render_daily_dashboard_html.py`** (optional args:
 | `--url-env` | | Env var name holding the dashboard URL (fallback) |
 | `--days N` | `0` | Override time window to past N days (0 = use URL timestamps) |
 | `--focus "a,b"` | `""` | Comma-separated title substrings to highlight with ★ in console output |
-| `--output-slug` | `""` | Prefix for output files (e.g. `owner_metrics` → `owner_metrics_metric_results.json`) |
+| `--output-slug` | `""` | Prefix for output files (e.g. `my_dashboard` → `my_dashboard_metric_results.json`) |
 
 **DATADOG_TEAMS behaviour:**
 - Replaces all `tpl_var_team[*]` URL params with the listed teams.
@@ -254,5 +277,5 @@ When `live=true` is in the URL, `to_ts` is snapped to `now` regardless.
 ## Important caveats
 
 1. The script runs **base metric queries** — it does not re-evaluate Datadog formula arithmetic client-side. Values may differ slightly from dashboard UI totals.
-2. For Owner Metrics, many widgets may use non-metric sources (logs, APM, RUM). Those are skipped; note any gaps in the report tile with `—`.
+2. Widgets sourced from logs, APM, or RUM (rather than metrics) are skipped; the corresponding tile will show `—`.
 3. Template variables other than `$team` (e.g. `$criticality`) remain at their dashboard defaults unless you add more overrides.

@@ -44,9 +44,10 @@ dist/
 *.swo
 *~
 
-# Customer-specific dashboard definitions (contain real Datadog URLs — local only)
+# Customer-specific dashboard definitions (contain real Datadog URLs — local only).
+# Underscore-prefixed files are reference templates and stay in the repo.
 prompts/dashboards/*.md
-!prompts/dashboards/_example.md
+!prompts/dashboards/_*.md
 
 # Drop-in extras plugin folder (user content — local only)
 prompts/extras/*.md

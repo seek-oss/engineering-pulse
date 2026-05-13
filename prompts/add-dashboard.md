@@ -101,23 +101,16 @@ All dashboard files in this directory are **gitignored** (they contain real
 Datadog URLs), so they stay on the user's disk only. The `custom_` prefix
 is a naming convention to keep things organised.
 
-### 6. Update the renderer command
-
-If the new dashboard is not Part A or Part B (which have built-in rendering),
-remind the user to pass `--extra` when running the renderer:
-
-```bash
-python3 scripts/render_daily_dashboard_html.py \
-  --extra "<Short Name>:output/<slug>_metric_results.json"
-```
-
-### 7. Confirm
+### 6. Confirm
 
 Tell the user:
 - The new dashboard file has been created at `prompts/dashboards/custom_<slug>.md`
 - The URL is embedded in the file — no `.env` changes needed
 - The file is **gitignored** — your Datadog URLs will never be committed
-- Next time the daily dashboard runs, it will pick up the new file automatically
+- Next time the daily dashboard runs, the renderer will pick up the new file
+  automatically (no `--extra` flag needed). The dashboard will appear as the
+  next available `Part X` in the report, rendered as one tile per unique
+  widget (latest value, grey tile for nulls).
 
 ---
 

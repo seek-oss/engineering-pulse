@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """
-Build daily_dashboard_report.html from Datadog metric snapshots + GitHub + Todoist.
+Build daily_dashboard_report.html from per-dashboard Datadog snapshots,
+GitHub PRs, Todoist tasks, and drop-in extras cards.
 
-Expects:
-  output/part_a_metric_results.json   — after Catalogue Quality extract + cp
-  output/dashboard_metric_results.json — after Owner Metrics extract (overwrites)
-  output/github_prs.json
-  output/todos.json
+Dashboards are discovered from `prompts/dashboards/*.md` (skipping `_*.md`
+templates). Each `.md` file declares a title + slug + URL; the matching
+`output/<slug>_metric_results.json` snapshot is loaded and rendered with
+the generic tile renderer (one tile per unique widget, latest value).
+
+Sections are numbered dynamically (Part A, B, C, …) based on what is
+actually present:
+  - one Part per dashboard `.md` (sorted by filename)
+  - one Part per `--extra LABEL:FILE` argument (CLI order)
+  - PR Review Queue
+  - My Queue (Todoist)
+  - Extras cards (from `prompts/extras/*.md`)
 """
 
 from __future__ import annotations
@@ -15,7 +23,7 @@ import argparse
 import html as html_mod
 import json
 import os
-import re
+import string
 import sys
 from datetime import date
 from pathlib import Path
@@ -23,8 +31,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from todo_report import format_view_action_html  # noqa: E402
+from dashboards_plugin import (  # noqa: E402
+    Dashboard,
+    discover_dashboards,
+    load_snapshot,
+    parse_dashboard,
+)
 from extras_plugin import render_extras_section  # noqa: E402
+from todo_report import format_view_action_html  # noqa: E402
 
 
 def _load(path: Path) -> Any:
@@ -33,166 +47,25 @@ def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _first_widget_block(results: List[Dict[str, Any]], title: str) -> List[Dict[str, Any]]:
-    i = 0
-    while i < len(results):
-        if results[i].get("widget_title") == title:
-            block: List[Dict[str, Any]] = []
-            while i < len(results) and results[i].get("widget_title") == title:
-                block.append(results[i])
-                i += 1
-            return block
-        i += 1
-    return []
+def _part_letter(idx: int) -> str:
+    """0 → A, 1 → B, …, 25 → Z. Beyond that, fall back to AA, AB, …"""
+    letters = string.ascii_uppercase
+    if idx < len(letters):
+        return letters[idx]
+    first, second = divmod(idx - len(letters), len(letters))
+    return letters[first] + letters[second]
 
 
-def _sum_latest(block: List[Dict[str, Any]], sub: str) -> float:
-    for row in block:
-        if row.get("subquery") != sub:
-            continue
-        return float(sum(s.get("latest") or 0 for s in row.get("series") or []))
-    return 0.0
-
-
-def _scalar_latest(block: List[Dict[str, Any]], sub: str = "query1") -> Optional[float]:
-    for row in block:
-        if row.get("subquery") != sub:
-            continue
-        series = row.get("series") or []
-        if not series:
-            return None
-        v = series[0].get("latest")
-        return float(v) if v is not None else None
-    return None
-
-
-def part_a_metrics(part_a: Dict[str, Any]) -> Tuple[int, int, int, List[str]]:
-    """Broad incomplete, no seal (excluding data-object-only), missing capability count, system names."""
-    results = part_a.get("results") or []
-
-    broad = int(_scalar_latest(_first_widget_block(results, "Incomplete Apps And Systems")) or 0)
-
-    excl = _first_widget_block(
-        results, "Incomplete Apps And Systems (excluding those only missing Data Object)"
-    )
-    no_seal = int(_scalar_latest(excl) or 0)
-
-    own = _first_widget_block(
-        results,
-        "Incomplete Apps And Systems (excluding those only missing Data Object) - Owner's Responsibility",
-    )
-    miss_cap = 0
-    systems: List[str] = []
-    for row in own:
-        if row.get("subquery") != "query1":
-            continue
-        for s in row.get("series") or []:
-            scope = str(s.get("scope", ""))
-            if "has-capability:false" in scope:
-                miss_cap += 1
-            if "has-approved-quality-seal:false" in scope:
-                m = re.search(r"system:([^,]+)", scope)
-                if m:
-                    systems.append(m.group(1))
-    seen = set()
-    uniq = []
-    for n in systems:
-        if n not in seen:
-            seen.add(n)
-            uniq.append(n)
-    return broad, no_seal, miss_cap, uniq[:12]
-
-
-def part_b_metrics(part_b: Dict[str, Any]) -> Dict[str, Any]:
-    results = part_b.get("results") or []
-    out: Dict[str, Any] = {}
-
-    tf = _first_widget_block(results, "Tech Fitness Score")
-    if tf:
-        q2, q1 = _sum_latest(tf, "query2"), _sum_latest(tf, "query1")
-        out["tech_fitness_pct"] = (100.0 * q2 / q1) if q1 else None
-        out["tech_fitness_sub"] = f"{int(q2)} / {q1:g} target"
-    else:
-        out["tech_fitness_pct"] = out["tech_fitness_sub"] = None
-
-    cq = _first_widget_block(results, "Catalog Quality")
-    if cq:
-        appr = _sum_latest(cq, "query2")
-        npr = _sum_latest(cq, "query1")
-        tot = appr + npr
-        out["catalog_pct"] = (100.0 * appr / tot) if tot else None
-        out["catalog_sub"] = f"{int(appr)} approved / {int(tot)} total"
-    else:
-        out["catalog_pct"] = out["catalog_sub"] = None
-
-    osf = _first_widget_block(results, "Overdue Security Findings")
-    if osf:
-        out["overdue_sec"] = int(_sum_latest(osf, "query1"))
-    else:
-        out["overdue_sec"] = None
-
-    out["incidents"] = None  # DORA widget — not queried by extract script
-
-    ep = _first_widget_block(results, "Exercised Pipelines")
-    if ep:
-        ex = _sum_latest(ep, "query1")
-        tot = _sum_latest(ep, "query2")
-        out["exercised_pct"] = (100.0 * ex / tot) if tot else None
-        out["exercised_sub"] = f"{int(ex)} / {int(tot)} pipelines"
-    else:
-        out["exercised_pct"] = out["exercised_sub"] = None
-
-    sa = _first_widget_block(results, "Systems Assessed")
-    if sa:
-        comp = _sum_latest(sa, "query2")
-        nonc = _sum_latest(sa, "query1")
-        out["assessed_pct"] = (100.0 * comp / (comp + nonc)) if (comp + nonc) else None
-        out["assessed_sub"] = f"{int(comp)} compliant · {int(nonc)} non-compliant"
-    else:
-        out["assessed_pct"] = out["assessed_sub"] = None
-
-    return out
-
-
-def _tile_class_b(key: str, b: Dict[str, Any]) -> str:
-    pct = b.get(f"{key}_pct")
-    num = b.get("overdue_sec")
-    if key == "overdue_sec" or key == "security":
-        if num is None:
-            return "tile-grey"
-        return "tile-green" if num == 0 else "tile-red"
-    if key == "incidents":
-        return "tile-grey"
-    if pct is None:
-        return "tile-grey"
-    if key == "tech_fitness" or key == "catalog":
-        if pct < 50:
-            return "tile-red"
-        if pct <= 75:
-            return "tile-yellow"
-        return "tile-green"
-    if key == "exercised" or key == "assessed":
-        if pct < 50:
-            return "tile-red"
-        if pct <= 80:
-            return "tile-yellow"
-        return "tile-green"
-    return "tile-grey"
-
-
-def _fmt_pct(v: Optional[float]) -> str:
-    if v is None:
-        return "—"
-    return f"{v:.1f}%"
+# ── Section renderers ──────────────────────────────────────────────────────
 
 
 def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
-    """Render a generic dashboard section with tiles for each unique widget."""
+    """Render a generic dashboard section with one tile per unique widget."""
+    label_esc = html_mod.escape(label)
     results = data.get("results") or []
     if not results:
-        return f'<div class="section"><div class="section-title">{html_mod.escape(label)}</div><p class="muted">No metric data</p></div>'
+        return f'<div class="section-title">{label_esc}</div><p class="muted">No metric data</p>'
 
-    # Group by widget_title, take latest value from first series
     seen: Dict[str, Optional[float]] = {}
     for row in results:
         title = row.get("widget_title", "—")
@@ -214,28 +87,29 @@ def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
 
     rows: List[str] = []
     for i in range(0, len(tiles), 3):
-        rows.append('<div class="tile-row">' + "\n      ".join(tiles[i:i+3]) + '</div>')
+        rows.append('<div class="tile-row">' + "\n      ".join(tiles[i:i + 3]) + '</div>')
 
     return (
-        f'<div class="section">\n'
-        f'    <div class="section-title">{html_mod.escape(label)}</div>\n'
-        f'    {"    ".join(rows)}\n'
-        f'  </div>'
+        f'<div class="section-title">{label_esc}</div>\n    '
+        + "\n    ".join(rows)
     )
+
+
+# ── Main ───────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="daily_dashboard_report.html", help="Output HTML path")
     ap.add_argument(
-        "--part-a",
-        default="output/catalogue_quality_metric_results.json",
-        help="Catalogue Quality metric snapshot",
+        "--dashboards-dir",
+        default="prompts/dashboards",
+        help="Folder of dashboard *.md files (default: prompts/dashboards)",
     )
     ap.add_argument(
-        "--part-b",
-        default="output/owner_metrics_metric_results.json",
-        help="Owner metrics snapshot",
+        "--output-dir",
+        default="output",
+        help="Folder containing <slug>_metric_results.json snapshots (default: output)",
     )
     ap.add_argument("--prs", default="output/github_prs.json")
     ap.add_argument("--todos", default="output/todos.json")
@@ -244,149 +118,97 @@ def main() -> None:
         action="append",
         default=[],
         metavar="LABEL:FILE",
-        help="Extra dashboard section — 'My Dashboard:output/my_metric_results.json' (repeatable)",
+        help="One-off dashboard snapshot not tied to a *.md file (repeatable). "
+        "Example: --extra 'DORA Metrics:output/dora_metric_results.json'",
     )
     ap.add_argument(
         "--extras-dir",
         default="prompts/extras",
-        help="Folder of drop-in *.md files rendered as Part E extras (default: prompts/extras)",
+        help="Folder of drop-in *.md cards (default: prompts/extras)",
     )
     args = ap.parse_args()
 
-    part_a = _load(ROOT / args.part_a)
-    part_b = _load(ROOT / args.part_b)
     prs_data = _load(ROOT / args.prs)
     todos = _load(ROOT / args.todos)
 
-    # Parse extra dashboard sections (--extra "Label:path/to/file.json")
-    extra_sections: List[str] = []
+    output_dir = ROOT / args.output_dir
+
+    # Discover dashboards and pair each with its snapshot.
+    dashboard_records: List[Tuple[Dashboard, Dict[str, Any]]] = []
+    for md_path in discover_dashboards(ROOT / args.dashboards_dir):
+        dash = parse_dashboard(md_path)
+        snap = load_snapshot(dash.slug, output_dir)
+        if snap is None:
+            print(
+                f"Warning: snapshot output/{dash.slug}_metric_results.json not "
+                f"found for dashboard '{dash.title}' ({md_path.name}); skipping. "
+                f"Run scripts/datadog_dashboard_extract.py --output-slug {dash.slug} "
+                f"to populate it.",
+                file=sys.stderr,
+            )
+            continue
+        dashboard_records.append((dash, snap))
+
+    # Build numbered section list. Each entry: (label, html_body).
+    sections: List[Tuple[str, str]] = []
+
+    def next_label(suffix: str) -> str:
+        return f"Part {_part_letter(len(sections))} — {suffix}"
+
+    # 1) Dashboards from *.md
+    for dash, snap in dashboard_records:
+        label = next_label(dash.title)
+        sections.append((label, _render_generic_section(label, snap)))
+
+    # 2) Ad-hoc --extra dashboards (CLI order)
     for spec in args.extra:
         if ":" not in spec:
-            print(f"Warning: skipping --extra '{spec}' (expected LABEL:FILE)")
+            print(f"Warning: skipping --extra '{spec}' (expected LABEL:FILE)", file=sys.stderr)
             continue
-        label, fpath = spec.split(":", 1)
+        extra_label, fpath = spec.split(":", 1)
         try:
             data = _load(ROOT / fpath.strip())
-            extra_sections.append(_render_generic_section(label.strip(), data))
         except FileNotFoundError:
-            print(f"Warning: skipping --extra '{label}' — file not found: {fpath.strip()}")
+            print(
+                f"Warning: skipping --extra '{extra_label}' — file not found: {fpath.strip()}",
+                file=sys.stderr,
+            )
+            continue
+        label = next_label(extra_label.strip())
+        sections.append((label, _render_generic_section(label, data)))
 
-    extras_html = render_extras_section(ROOT / args.extras_dir)
+    # 3) PR Review Queue
+    pr_list = prs_data.get("prs") or []
+    pr_label = next_label("PR Review Queue")
+    sections.append((pr_label, _render_pr_section(pr_label, pr_list)))
+
+    # 4) My Queue (Todoist)
+    queue_label = next_label("My Queue")
+    sections.append((queue_label, _render_my_queue_section(queue_label, todos)))
+
+    # 5) Extras (.md cards) — only if any files
+    extras_label = f"Part {_part_letter(len(sections))} — Extras"
+    extras_html = render_extras_section(ROOT / args.extras_dir, label=extras_label)
+    if extras_html:
+        sections.append((extras_label, extras_html))
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()
-    part_a_url = part_a.get("source_url", "")
-    part_b_url = part_b.get("source_url", "")
-    broad, no_seal, miss_cap, systems = part_a_metrics(part_a)
-    b = part_b_metrics(part_b)
 
-    def repo_short(full: str) -> str:
-        return full.split("/")[-1] if "/" in full else full
-
-    def pr_rows() -> str:
-        rows = []
-        for pr in prs_data.get("prs") or []:
-            age = pr["age_days"]
-            cls = "age-red" if age >= 5 else ("age-yellow" if age >= 2 else "")
-            age_html = f'<span class="{cls}">{age}d</span>' if cls else f"{age}d"
-            draft = ' <span class="draft-tag">(draft)</span>' if pr.get("draft") else ""
-            title_esc = html_mod.escape(pr["title"][:200])
-            rows.append(
-                f'<tr><td>{html_mod.escape(repo_short(pr["repo"]))}</td>'
-                f'<td><a href="{html_mod.escape(pr["url"])}">{title_esc}</a>{draft}</td>'
-                f'<td>{html_mod.escape(pr["author"])}</td><td>{age_html}</td></tr>'
-            )
-        return "\n        ".join(rows)
-
-    def _task_rows(task_list: List[Dict[str, Any]]) -> str:
-        lines = []
-        for t in task_list:
-            p = t["priority"]
-            prow = "age-red" if p == "high" else ("age-yellow" if p == "medium" else "")
-            lines.append(
-                f'<tr><td class="{prow}">{html_mod.escape(p)}</td>'
-                f'<td>{html_mod.escape(t["title"])}</td><td>{t["age_days"]}d</td>'
-                f'<td>{format_view_action_html(t)}</td></tr>'
-            )
-        return "\n        ".join(lines)
-
-    def part_d() -> str:
-        if not todos:
-            return '<div class="banner-green" style="margin-top:8px">Queue clear — no open tasks or reading items.</div>'
-        work_tasks = [
-            t
-            for t in todos
-            if t["type"] == "task" and t.get("domain", "work") != "personal"
-        ]
-        personal_tasks = [t for t in todos if t["type"] == "task" and t.get("domain") == "personal"]
-        reads = [t for t in todos if t["type"] == "read"]
-        out: List[str] = []
-        out.append('<div class="section-title" style="margin-top:4px">Part D — My Queue</div>')
-        out.append('<div class="subsection-label">Work tasks</div>')
-        if not work_tasks:
-            out.append('<p class="muted">No open work tasks</p>')
-        else:
-            out.append(
-                '<table class="pr-table"><thead><tr><th>Priority</th><th>Title</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
-            )
-            out.append(_task_rows(work_tasks))
-            out.append("</tbody></table>")
-        out.append('<div class="subsection-label" style="margin-top:16px">Personal tasks</div>')
-        if not personal_tasks:
-            out.append('<p class="muted">No personal tasks</p>')
-        else:
-            out.append(
-                '<table class="pr-table"><thead><tr><th>Priority</th><th>Title</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
-            )
-            out.append(_task_rows(personal_tasks))
-            out.append("</tbody></table>")
-        out.append('<div class="subsection-label" style="margin-top:16px">Reading queue</div>')
-        if not reads:
-            out.append('<p class="muted">Reading queue empty</p>')
-        else:
-            out.append(
-                '<table class="pr-table"><thead><tr><th>Title</th><th>Link</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
-            )
-            for t in reads:
-                url = t.get("url") or ""
-                link_cell = (
-                    f'<a href="{html_mod.escape(url)}">{html_mod.escape(t["title"])}</a>'
-                    if url
-                    else "—"
-                )
-                age_cls = "age-yellow" if t["age_days"] > 7 else ""
-                age_cell = (
-                    f'<span class="{age_cls}">{t["age_days"]}d</span>' if age_cls else f'{t["age_days"]}d'
-                )
-                out.append(
-                    f"<tr><td>{html_mod.escape(t['title'])}</td><td>{link_cell}</td>"
-                    f"<td>{age_cell}</td><td>{format_view_action_html(t)}</td></tr>"
-                )
-            out.append("</tbody></table>")
-        return "\n    ".join(out)
-
-    systems_html = (
-        "<ul>"
-        + "".join(f"<li>{html_mod.escape(s)}</li>" for s in systems)
-        + (
-            f'<li><span style="color:#a0aec0">+ more</span></li>'
-            if len(systems) >= 12
-            else ""
-        )
-        + "</ul>"
+    # Header / footer dashboard links
+    header_links = "\n      ".join(
+        f'<a href="{html_mod.escape(d.url)}">{html_mod.escape(d.title)} ↗</a>'
+        for d, _ in dashboard_records
+        if d.url
+    )
+    footer_links = " · ".join(
+        f'<a href="{html_mod.escape(d.url)}">{html_mod.escape(d.title)}</a>'
+        for d, _ in dashboard_records
+        if d.url
     )
 
-    pr_list = prs_data.get("prs") or []
-    part_c = (
-        f'<div class="banner-green">No PRs awaiting review — inbox clear</div>'
-        if not pr_list
-        else f'''<div class="section-title">Part C — PR Review Queue ({len(pr_list)} open)</div>
-    <table class="pr-table">
-      <thead><tr><th>Repo</th><th>Title</th><th>Author</th><th>Age</th></tr></thead>
-      <tbody>
-        {pr_rows()}
-      </tbody>
-    </table>'''
+    body_sections = "\n\n  ".join(
+        f'<div class="section">\n    {body}\n  </div>' for _, body in sections
     )
 
     html = f"""<!DOCTYPE html>
@@ -486,89 +308,14 @@ def main() -> None:
     <h1>Daily Dashboard — {html_mod.escape(team)}</h1>
     <div class="subtitle">{today} (past 7 days)</div>
     <div class="links">
-      {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality ↗</a>' if part_a_url else ''}
-      {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics ↗</a>' if part_b_url else ''}
+      {header_links}
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Part A — Catalogue Quality</div>
-    <div class="tile-row">
-      <div class="tile tile-red">
-        <div class="label">Incomplete Systems</div>
-        <div class="big-number">{broad}</div>
-        <div class="sublabel">broad (incl. missing data objects)</div>
-      </div>
-      <div class="tile tile-yellow">
-        <div class="label">No Quality Seal</div>
-        <div class="big-number">{no_seal}</div>
-        <div class="sublabel">excl. data-object-only gaps</div>
-      </div>
-      <div class="tile tile-orange">
-        <div class="label">Missing Capability</div>
-        <div class="big-number">{miss_cap}</div>
-        <div class="sublabel">has-capability: false (owner breakdown)</div>
-      </div>
-    </div>
-    <div class="system-list">
-      <strong>Systems without quality seal (sample):</strong>
-      {systems_html}
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Part B — Owner Engineering Metrics</div>
-    <div class="tile-row">
-      <div class="tile {_tile_class_b('tech_fitness', b)}">
-        <div class="label">Tech Fitness Score</div>
-        <div class="big-number">{_fmt_pct(b['tech_fitness_pct'])}</div>
-        <div class="sublabel">{html_mod.escape(b['tech_fitness_sub'] or '—')}</div>
-      </div>
-      <div class="tile {_tile_class_b('catalog', b)}">
-        <div class="label">Catalogue Quality</div>
-        <div class="big-number">{_fmt_pct(b['catalog_pct'])}</div>
-        <div class="sublabel">{html_mod.escape(b['catalog_sub'] or '—')}</div>
-      </div>
-      <div class="tile {_tile_class_b('security', b)}">
-        <div class="label">Overdue Security</div>
-        <div class="big-number">{b['overdue_sec'] if b['overdue_sec'] is not None else '—'}</div>
-        <div class="sublabel">all severities</div>
-      </div>
-    </div>
-    <div class="tile-row">
-      <div class="tile tile-grey">
-        <div class="label">Incidents / Deploy</div>
-        <div class="big-number">—</div>
-        <div class="sublabel">non-metric widget</div>
-      </div>
-      <div class="tile {_tile_class_b('exercised', b)}">
-        <div class="label">Exercised Pipeline</div>
-        <div class="big-number">{_fmt_pct(b['exercised_pct'])}</div>
-        <div class="sublabel">{html_mod.escape(b['exercised_sub'] or '—')}</div>
-      </div>
-      <div class="tile {_tile_class_b('assessed', b)}">
-        <div class="label">Systems Assessed</div>
-        <div class="big-number">{_fmt_pct(b['assessed_pct'])}</div>
-        <div class="sublabel">{html_mod.escape(b['assessed_sub'] or '—')}</div>
-      </div>
-    </div>
-  </div>
-
-  {"".join(f'<div class="section">{s}</div>' for s in extra_sections)}
-
-  <div class="section">
-    {part_c}
-  </div>
-
-  <div class="section">
-    {part_d()}
-  </div>
-
-  {f'<div class="section">{extras_html}</div>' if extras_html else ''}
+  {body_sections}
 
   <div class="footer">
-    {'<a href="' + html_mod.escape(part_a_url) + '">Catalogue Quality</a> · ' if part_a_url else ''}
-    {'<a href="' + html_mod.escape(part_b_url) + '">Owner Metrics</a>' if part_b_url else ''}<br>
+    {footer_links + '<br>' if footer_links else ''}
     Generated {today} · Past 7 days · Base metric queries only
   </div>
 </div>
@@ -579,6 +326,111 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
     print(f"Wrote {out_path}")
+
+
+# ── PR + My Queue helpers (extracted from previous inline main) ─────────────
+
+
+def _repo_short(full: str) -> str:
+    return full.split("/")[-1] if "/" in full else full
+
+
+def _render_pr_section(label: str, pr_list: List[Dict[str, Any]]) -> str:
+    if not pr_list:
+        return f'<div class="section-title">{html_mod.escape(label)}</div>\n    <div class="banner-green">No PRs awaiting review — inbox clear</div>'
+    rows: List[str] = []
+    for pr in pr_list:
+        age = pr["age_days"]
+        cls = "age-red" if age >= 5 else ("age-yellow" if age >= 2 else "")
+        age_html = f'<span class="{cls}">{age}d</span>' if cls else f"{age}d"
+        draft = ' <span class="draft-tag">(draft)</span>' if pr.get("draft") else ""
+        title_esc = html_mod.escape(pr["title"][:200])
+        rows.append(
+            f'<tr><td>{html_mod.escape(_repo_short(pr["repo"]))}</td>'
+            f'<td><a href="{html_mod.escape(pr["url"])}">{title_esc}</a>{draft}</td>'
+            f'<td>{html_mod.escape(pr["author"])}</td><td>{age_html}</td></tr>'
+        )
+    rows_html = "\n        ".join(rows)
+    return f"""<div class="section-title">{html_mod.escape(label)} ({len(pr_list)} open)</div>
+    <table class="pr-table">
+      <thead><tr><th>Repo</th><th>Title</th><th>Author</th><th>Age</th></tr></thead>
+      <tbody>
+        {rows_html}
+      </tbody>
+    </table>"""
+
+
+def _task_rows(task_list: List[Dict[str, Any]]) -> str:
+    lines: List[str] = []
+    for t in task_list:
+        p = t["priority"]
+        prow = "age-red" if p == "high" else ("age-yellow" if p == "medium" else "")
+        lines.append(
+            f'<tr><td class="{prow}">{html_mod.escape(p)}</td>'
+            f'<td>{html_mod.escape(t["title"])}</td><td>{t["age_days"]}d</td>'
+            f'<td>{format_view_action_html(t)}</td></tr>'
+        )
+    return "\n        ".join(lines)
+
+
+def _render_my_queue_section(label: str, todos: List[Dict[str, Any]]) -> str:
+    label_esc = html_mod.escape(label)
+    if not todos:
+        return (
+            f'<div class="section-title">{label_esc}</div>\n    '
+            '<div class="banner-green">Queue clear — no open tasks or reading items.</div>'
+        )
+    work_tasks = [
+        t for t in todos
+        if t["type"] == "task" and t.get("domain", "work") != "personal"
+    ]
+    personal_tasks = [t for t in todos if t["type"] == "task" and t.get("domain") == "personal"]
+    reads = [t for t in todos if t["type"] == "read"]
+    out: List[str] = [f'<div class="section-title">{label_esc}</div>']
+    out.append('<div class="subsection-label">Work tasks</div>')
+    if not work_tasks:
+        out.append('<p class="muted">No open work tasks</p>')
+    else:
+        out.append(
+            '<table class="pr-table"><thead><tr><th>Priority</th><th>Title</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
+        )
+        out.append(_task_rows(work_tasks))
+        out.append("</tbody></table>")
+    out.append('<div class="subsection-label" style="margin-top:16px">Personal tasks</div>')
+    if not personal_tasks:
+        out.append('<p class="muted">No personal tasks</p>')
+    else:
+        out.append(
+            '<table class="pr-table"><thead><tr><th>Priority</th><th>Title</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
+        )
+        out.append(_task_rows(personal_tasks))
+        out.append("</tbody></table>")
+    out.append('<div class="subsection-label" style="margin-top:16px">Reading queue</div>')
+    if not reads:
+        out.append('<p class="muted">Reading queue empty</p>')
+    else:
+        out.append(
+            '<table class="pr-table"><thead><tr><th>Title</th><th>Link</th><th>Age</th><th>Actions</th></tr></thead><tbody>'
+        )
+        for t in reads:
+            url = t.get("url") or ""
+            link_cell = (
+                f'<a href="{html_mod.escape(url)}">{html_mod.escape(t["title"])}</a>'
+                if url
+                else "—"
+            )
+            age_cls = "age-yellow" if t["age_days"] > 7 else ""
+            age_cell = (
+                f'<span class="{age_cls}">{t["age_days"]}d</span>'
+                if age_cls
+                else f'{t["age_days"]}d'
+            )
+            out.append(
+                f"<tr><td>{html_mod.escape(t['title'])}</td><td>{link_cell}</td>"
+                f"<td>{age_cell}</td><td>{format_view_action_html(t)}</td></tr>"
+            )
+        out.append("</tbody></table>")
+    return "\n    ".join(out)
 
 
 if __name__ == "__main__":
