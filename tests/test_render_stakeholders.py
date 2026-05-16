@@ -8,11 +8,10 @@ using the same subprocess style as `test_render_dashboards_integration.py`.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
-
-import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "render_daily_dashboard_html.py"
@@ -31,7 +30,9 @@ def _run(
     *,
     stakeholders_dir: Path,
     extras_dir: Path | None = None,
+    stakeholders_env: str | None = None,
 ) -> str:
+    """Run the renderer CLI; `stakeholders_env=None` clears `STAKEHOLDERS` for a hermetic run."""
     out = tmp_path / "report.html"
     extras = extras_dir if extras_dir is not None else tmp_path / "extras"
     (tmp_path / "dashboards").mkdir(exist_ok=True)
@@ -39,6 +40,12 @@ def _run(
     extras.mkdir(exist_ok=True)
     _write_prs(tmp_path / "output" / "github_prs.json")
     _write_todos(tmp_path / "output" / "todos.json")
+
+    env = os.environ.copy()
+    if stakeholders_env is None:
+        env.pop("STAKEHOLDERS", None)
+    else:
+        env["STAKEHOLDERS"] = stakeholders_env
 
     cmd = [
         sys.executable,
@@ -58,7 +65,7 @@ def _run(
         "--stakeholders-dir",
         str(stakeholders_dir),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
     assert result.returncode == 0, (
         f"renderer failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
@@ -79,13 +86,30 @@ class TestStakeholderPulseWiring:
         html = _run(tmp_path, stakeholders_dir=sdir)
         assert "Stakeholder Pulse" not in html
 
+    def test_deletes_stale_cards_when_stakeholders_env_unset(
+        self, tmp_path: Path
+    ) -> None:
+        sdir = tmp_path / "stakeholders"
+        sdir.mkdir()
+        stale = sdir / "jane-doe.md"
+        stale.write_text("# Jane Doe\n\n- old\n", encoding="utf-8")
+        (sdir / "_keep.md").write_text("# keep\n", encoding="utf-8")
+        html = _run(tmp_path, stakeholders_dir=sdir, stakeholders_env=None)
+        assert "Stakeholder Pulse" not in html
+        assert not stale.is_file()
+        assert (sdir / "_keep.md").is_file()
+
     def test_emits_stakeholder_pulse_with_card(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         (sdir / "jane-doe.md").write_text(
             "# Jane Doe\n\n- **Themes:** orchestrator work\n", encoding="utf-8"
         )
-        html = _run(tmp_path, stakeholders_dir=sdir)
+        html = _run(
+            tmp_path,
+            stakeholders_dir=sdir,
+            stakeholders_env="Jane Doe",
+        )
         # Zero dashboards: PR=A, Queue=B, Stakeholder=C
         assert "Part C — Stakeholder Pulse" in html
         assert "Jane Doe" in html
@@ -97,7 +121,11 @@ class TestStakeholderPulseWiring:
         sdir.mkdir()
         (sdir / "jane-doe.md").write_text("# Jane Doe\n\n- A\n", encoding="utf-8")
         (sdir / "john-smith.md").write_text("# John Smith\n\n- B\n", encoding="utf-8")
-        html = _run(tmp_path, stakeholders_dir=sdir)
+        html = _run(
+            tmp_path,
+            stakeholders_dir=sdir,
+            stakeholders_env="Jane Doe, John Smith",
+        )
         assert "Jane Doe" in html
         assert "John Smith" in html
         assert html.count('<div class="extra-card">') == 2
@@ -112,9 +140,27 @@ class TestStakeholderPulseWiring:
         sdir.mkdir()
         (sdir / "jane-doe.md").write_text("# Jane Doe\n\n- A\n", encoding="utf-8")
 
-        html = _run(tmp_path, stakeholders_dir=sdir, extras_dir=edir)
+        html = _run(
+            tmp_path,
+            stakeholders_dir=sdir,
+            extras_dir=edir,
+            stakeholders_env="Jane Doe",
+        )
         assert "Part C — Extras" in html
         assert "Part D — Stakeholder Pulse" in html
         assert "Release notes" in html
         assert "Jane Doe" in html
         assert html.index("Part C") < html.index("Part D")
+
+    def test_placeholder_when_stakeholders_set_but_no_cards(
+        self, tmp_path: Path
+    ) -> None:
+        sdir = tmp_path / "stakeholders"
+        sdir.mkdir()
+        html = _run(
+            tmp_path,
+            stakeholders_dir=sdir,
+            stakeholders_env="Jane Doe",
+        )
+        assert "Part C — Stakeholder Pulse" in html
+        assert "No stakeholder markdown cards yet" in html

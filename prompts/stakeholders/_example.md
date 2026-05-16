@@ -15,7 +15,8 @@
 ## How it works
 
 Each `*.md` file in `prompts/stakeholders/` becomes one card under
-**Stakeholder Pulse** (next dynamic Part letter) in the daily report.
+**Stakeholder Pulse** (next dynamic Part letter) in the daily report — only
+when `STAKEHOLDERS` in `.env` is non-empty (the HTML renderer enforces that).
 
 - The first `# Heading` is used as the stakeholder's display name.
 - Everything below is rendered as the card body (3-bullet summary).

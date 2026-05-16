@@ -110,7 +110,10 @@ order, skipping any that have no content:
 3. PR Review Queue
 4. My Queue
 5. Extras (`prompts/extras/*.md`)
-6. Stakeholder Pulse (`prompts/stakeholders/*.md`, when `STAKEHOLDERS` is set)
+6. Stakeholder Pulse — **only if `STAKEHOLDERS` in `.env` is non-empty** (the
+   HTML renderer reads this; cards still come from `prompts/stakeholders/*.md`
+   after Step 2F). When `STAKEHOLDERS` is empty or unset, the renderer removes
+   all non-`_` `*.md` in that folder so the report cannot show stale names.
 
 So with zero dashboard `.md` files, PR Queue becomes Part A. With two
 dashboards, PR Queue becomes Part C, and so on.
@@ -147,7 +150,7 @@ Dashboards (Part A, B, …):
 PR Review Queue (next letter)
 My Queue (next letter)
 Extras (next letter — only if any *.md files in prompts/extras/)
-Stakeholder Pulse (next letter — only if STAKEHOLDERS is set and any *.md in prompts/stakeholders/)
+Stakeholder Pulse (next letter — only if `STAKEHOLDERS` in `.env` is non-empty)
 
 Footer: link to each dashboard, generated date
 ```
@@ -250,7 +253,9 @@ over the past 7 days. Uses the **Glean MCP server** (already configured in
 
 1. **Clean stale cards.** Delete every file in `prompts/stakeholders/`
    whose name does **not** start with `_`. This guarantees that removing a
-   name from `STAKEHOLDERS` removes the card on the next run.
+   name from `STAKEHOLDERS` removes the card on the next run. (The HTML
+   renderer also deletes these files when `STAKEHOLDERS` is empty/unset,
+   so commenting out `.env` alone is enough to drop the section next run.)
 
 2. **For each name** in `STAKEHOLDERS` (split on `,`, strip whitespace,
    skip empties):
@@ -291,10 +296,12 @@ over the past 7 days. Uses the **Glean MCP server** (already configured in
       - No Slack activity in the last 7 days.
       ```
 
-3. **Renderer is automatic.** `render_daily_dashboard_html.py`
-   auto-discovers `prompts/stakeholders/*.md` and emits a dynamically
-   lettered **Stakeholder Pulse** section (same card styling as Extras).
-   Override the folder with `--stakeholders-dir` if needed.
+3. **Renderer reads `STAKEHOLDERS` from `.env`.** When it is **empty or
+   unset**, no Stakeholder Pulse section is emitted and all non-`_`
+   `prompts/stakeholders/*.md` files are deleted. When it is **non-empty**,
+   the section appears (with cards from Step 2F, or a short placeholder if
+   no `*.md` files exist yet). Override the folder with `--stakeholders-dir`
+   if needed.
 
 **Scope caveats to keep in mind (and surface in cards if relevant):**
 

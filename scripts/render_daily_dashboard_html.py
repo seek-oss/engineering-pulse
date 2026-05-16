@@ -15,7 +15,9 @@ actually present:
   - PR Review Queue
   - My Queue (Todoist)
   - Extras cards (from `prompts/extras/*.md`)
-  - Stakeholder Pulse cards (from `prompts/stakeholders/*.md`)
+  - Stakeholder Pulse — only when `STAKEHOLDERS` in `.env` is non-empty; cards
+    from `prompts/stakeholders/*.md`. When unset/empty, stale `*.md` there are
+    removed (except `_*.md` templates) so the report matches `.env` alone.
 """
 
 from __future__ import annotations
@@ -29,6 +31,8 @@ import sys
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -55,6 +59,29 @@ def _part_letter(idx: int) -> str:
         return letters[idx]
     first, second = divmod(idx - len(letters), len(letters))
     return letters[first] + letters[second]
+
+
+def _parse_stakeholder_names() -> List[str]:
+    """Names from `STAKEHOLDERS` env (comma-separated). Empty/unset → []."""
+    raw = (os.environ.get("STAKEHOLDERS") or "").strip()
+    if not raw:
+        return []
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
+    """Remove generated cards; keep `_*.md` reference templates."""
+    if not stakeholders_dir.is_dir():
+        return
+    for path in stakeholders_dir.glob("*.md"):
+        if path.is_file() and not path.name.startswith("_"):
+            try:
+                path.unlink()
+            except OSError as exc:
+                print(
+                    f"Warning: could not remove stale stakeholder card {path}: {exc}",
+                    file=sys.stderr,
+                )
 
 
 # ── Section renderers ──────────────────────────────────────────────────────
@@ -134,6 +161,8 @@ def main() -> None:
     )
     args = ap.parse_args()
 
+    load_dotenv(ROOT / ".env")
+
     prs_data = _load(ROOT / args.prs)
     todos = _load(ROOT / args.todos)
 
@@ -198,14 +227,26 @@ def main() -> None:
     if extras_html:
         sections.append((extras_label, extras_html))
 
-    # 6) Stakeholder Pulse (.md cards) — only if any files
-    stakeholders_label = f"Part {_part_letter(len(sections))} — Stakeholder Pulse"
-    stakeholders_html = render_extras_section(
-        ROOT / args.stakeholders_dir,
-        label=stakeholders_label,
-    )
-    if stakeholders_html:
-        sections.append((stakeholders_label, stakeholders_html))
+    # 6) Stakeholder Pulse — gated on `STAKEHOLDERS` in `.env` (single source of truth).
+    stakeholder_names = _parse_stakeholder_names()
+    stakeholders_dir = ROOT / args.stakeholders_dir
+    if not stakeholder_names:
+        _clean_stale_stakeholder_cards(stakeholders_dir)
+    else:
+        stakeholders_label = f"Part {_part_letter(len(sections))} — Stakeholder Pulse"
+        stakeholders_html = render_extras_section(
+            stakeholders_dir,
+            label=stakeholders_label,
+        )
+        if stakeholders_html:
+            sections.append((stakeholders_label, stakeholders_html))
+        else:
+            placeholder = (
+                f'<div class="section-title">{html_mod.escape(stakeholders_label)}</div>\n    '
+                '<p class="muted">No stakeholder markdown cards yet — run Step 2F '
+                "in the daily dashboard workflow to populate this folder from Glean.</p>"
+            )
+            sections.append((stakeholders_label, placeholder))
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()

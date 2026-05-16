@@ -9,6 +9,7 @@ shipped library is generic.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -44,6 +45,9 @@ def _write_snapshot(path: Path, results: list[dict], *, url: str = "") -> None:
 def _run(tmp_path: Path, *extra_args: str) -> str:
     """Invoke the CLI against tmp dirs; return the rendered HTML."""
     out = tmp_path / "report.html"
+    (tmp_path / "stakeholders").mkdir(exist_ok=True)
+    env = os.environ.copy()
+    env.pop("STAKEHOLDERS", None)
     cmd = [
         sys.executable,
         str(SCRIPT),
@@ -53,19 +57,21 @@ def _run(tmp_path: Path, *extra_args: str) -> str:
         "--prs", str(tmp_path / "output" / "github_prs.json"),
         "--todos", str(tmp_path / "output" / "todos.json"),
         "--extras-dir", str(tmp_path / "extras"),
+        "--stakeholders-dir", str(tmp_path / "stakeholders"),
         *extra_args,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
     assert result.returncode == 0, f"renderer failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     return out.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def base_dirs(tmp_path: Path) -> Path:
-    """Set up empty dashboards/output/extras dirs + minimal fixtures."""
+    """Set up empty dashboards/output/extras/stakeholders dirs + minimal fixtures."""
     (tmp_path / "dashboards").mkdir()
     (tmp_path / "output").mkdir()
     (tmp_path / "extras").mkdir()
+    (tmp_path / "stakeholders").mkdir()
     _write_prs(tmp_path / "output" / "github_prs.json", [])
     _write_todos(tmp_path / "output" / "todos.json", [])
     return tmp_path
@@ -135,6 +141,8 @@ class TestDashboardOrdering:
             "# Lonely\n- **Slug:** `lonely`\n", encoding="utf-8"
         )
         # No `lonely_metric_results.json` — renderer should warn and skip.
+        env = os.environ.copy()
+        env.pop("STAKEHOLDERS", None)
         cmd = [
             sys.executable,
             str(SCRIPT),
@@ -144,8 +152,9 @@ class TestDashboardOrdering:
             "--prs", str(base_dirs / "output" / "github_prs.json"),
             "--todos", str(base_dirs / "output" / "todos.json"),
             "--extras-dir", str(base_dirs / "extras"),
+            "--stakeholders-dir", str(base_dirs / "stakeholders"),
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
         assert result.returncode == 0
         assert "lonely_metric_results.json not found" in result.stderr
         html = (base_dirs / "report.html").read_text(encoding="utf-8")
