@@ -2,9 +2,7 @@
 scripts/render_daily_dashboard_html.py.
 
 These exercise the CLI end-to-end against a temporary `prompts/dashboards/`
-folder, asserting the dynamic Part-letter numbering and that no
-organisation-specific section names ever leak into the rendered HTML — the
-shipped library is generic.
+folder, asserting dynamic Part-letter numbering and generic dashboard rendering.
 """
 from __future__ import annotations
 
@@ -183,18 +181,6 @@ class TestGenericRendererWithDashboard:
         assert "Throughput" in html
         assert "3.5" in html
         assert "1200.0" in html
-
-    def test_no_bundled_org_section_names_in_default_report(self, base_dirs: Path) -> None:
-        html = _run(base_dirs)
-        for forbidden in (
-            "Catalogue Quality",
-            "Owner Engineering",
-            "Tech Fitness",
-            "Incomplete Apps",
-            "Quality Seal",
-            "Stakeholder Pulse",
-        ):
-            assert forbidden not in html, f"unexpected leftover: {forbidden!r}"
 
 
 class TestExtraFlag:

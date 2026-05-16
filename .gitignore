@@ -57,6 +57,9 @@ prompts/extras/*.md
 prompts/stakeholders/*.md
 !prompts/stakeholders/_example.md
 
+# Local maintainer tools (org-term scanner, etc. — not shipped)
+local/
+
 # Generated output (regenerated on every run)
 output/
 *.html
