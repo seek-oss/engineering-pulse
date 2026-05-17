@@ -1,15 +1,15 @@
 """Tests for scripts/send_report_smtp.py."""
+
 import sys
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from scripts.send_report_smtp import _detect_html, main
-
 
 # ---------------------------------------------------------------------------
 # _detect_html
 # ---------------------------------------------------------------------------
+
 
 class TestDetectHtml:
     def test_html_doctype_lowercase(self):
@@ -71,7 +71,7 @@ class TestMain:
         with patch.object(sys, "argv", ["send_report_smtp.py", "My Subject", str(report)]):
             with patch.dict("os.environ", FULL_ENV):
                 mock_server = MagicMock()
-                mock_smtp_cls = MagicMock(return_value=__import__("contextlib").nullcontext(mock_server))
+                MagicMock(return_value=__import__("contextlib").nullcontext(mock_server))
                 with patch("scripts.send_report_smtp.smtplib.SMTP") as mock_smtp:
                     mock_smtp.return_value.__enter__ = MagicMock(return_value=mock_server)
                     mock_smtp.return_value.__exit__ = MagicMock(return_value=False)

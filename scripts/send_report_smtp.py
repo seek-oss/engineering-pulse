@@ -31,6 +31,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def _detect_html(body: str) -> bool:
     return body.strip().lower().startswith(("<!doctype", "<html"))
 
@@ -56,12 +57,16 @@ def main() -> None:
     to_addr = os.environ.get("SMTP_TO", "")
     use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
 
-    missing = [k for k, v in [
-        ("SMTP_USER", user),
-        ("SMTP_PASSWORD", password),
-        ("SMTP_FROM", from_addr),
-        ("SMTP_TO", to_addr),
-    ] if not v]
+    missing = [
+        k
+        for k, v in [
+            ("SMTP_USER", user),
+            ("SMTP_PASSWORD", password),
+            ("SMTP_FROM", from_addr),
+            ("SMTP_TO", to_addr),
+        ]
+        if not v
+    ]
     if missing:
         print(f"Missing env: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)

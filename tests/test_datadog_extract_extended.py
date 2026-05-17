@@ -1,26 +1,25 @@
 """Extended tests for datadog_dashboard_extract.py — covers HTTP helpers,
 display functions, and the main() orchestration flow (fully mocked).
 """
-import io
+
 import sys
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests as req_lib
-
 from scripts.datadog_dashboard_extract import (
     _headers,
     get_dashboard,
-    query_metrics_v1,
-    query_logs_aggregate,
-    print_extraction_summary,
     print_extracted_requests,
+    print_extraction_summary,
+    query_logs_aggregate,
+    query_metrics_v1,
 )
-
 
 # ---------------------------------------------------------------------------
 # _headers
 # ---------------------------------------------------------------------------
+
 
 class TestHeaders:
     def test_returns_required_keys(self):
@@ -37,6 +36,7 @@ class TestHeaders:
 # ---------------------------------------------------------------------------
 # get_dashboard (mocked HTTP)
 # ---------------------------------------------------------------------------
+
 
 class TestGetDashboard:
     @patch("scripts.datadog_dashboard_extract.requests.get")
@@ -74,6 +74,7 @@ class TestGetDashboard:
 # ---------------------------------------------------------------------------
 # query_metrics_v1 (mocked HTTP)
 # ---------------------------------------------------------------------------
+
 
 class TestQueryMetricsV1:
     @patch("scripts.datadog_dashboard_extract.requests.get")
@@ -113,6 +114,7 @@ class TestQueryMetricsV1:
 # ---------------------------------------------------------------------------
 # query_logs_aggregate (mocked HTTP)
 # ---------------------------------------------------------------------------
+
 
 class TestQueryLogsAggregate:
     @patch("scripts.datadog_dashboard_extract.requests.post")
@@ -166,6 +168,7 @@ class TestQueryLogsAggregate:
 # Display functions — just verify they run without raising
 # ---------------------------------------------------------------------------
 
+
 class TestDisplayFunctions:
     def test_print_extraction_summary_empty(self):
         print_extraction_summary([])  # should not raise
@@ -200,20 +203,22 @@ class TestDisplayFunctions:
 # main() — argument parsing and env-var guard
 # ---------------------------------------------------------------------------
 
+
 class TestMain:
     @patch("scripts.datadog_dashboard_extract.get_dashboard")
     @patch("scripts.datadog_dashboard_extract.requests.get")
     def test_main_exits_when_url_env_not_set(self, mock_get, mock_dash):
         with patch.dict("os.environ", {}, clear=False):
             import os
+
             # Remove any dashboard URL env var
             for key in list(os.environ.keys()):
                 if "DATADOG_DASHBOARD_URL" in key:
                     del os.environ[key]
             with patch.object(sys, "argv", ["dd_extract.py", "--url-env", "MISSING_ENV_VAR"]):
                 with pytest.raises(SystemExit):
-                    from importlib import reload
                     import scripts.datadog_dashboard_extract as mod
+
                     mod.main()
 
     @patch("scripts.datadog_dashboard_extract.get_dashboard")
@@ -229,7 +234,9 @@ class TestMain:
                     "definition": {
                         "type": "query_value",
                         "title": "CPU",
-                        "requests": [{"queries": [{"data_source": "metrics", "query": "avg:cpu{*}"}]}],
+                        "requests": [
+                            {"queries": [{"data_source": "metrics", "query": "avg:cpu{*}"}]}
+                        ],
                     }
                 }
             ],
@@ -250,9 +257,12 @@ class TestMain:
             "MY_TEST_DASH_URL": "https://app.datadoghq.com/dashboard/abc-123?from_ts=1000000000000&to_ts=1001000000000",
         }
         with patch.dict("os.environ", test_env):
-            with patch.object(sys, "argv", ["dd_extract.py", "--url-env", "MY_TEST_DASH_URL", "--days", "2"]):
+            with patch.object(
+                sys, "argv", ["dd_extract.py", "--url-env", "MY_TEST_DASH_URL", "--days", "2"]
+            ):
                 with patch("builtins.open", MagicMock()):
                     from scripts.datadog_dashboard_extract import main
+
                     main()  # should not raise
 
     @patch("scripts.datadog_dashboard_extract.get_dashboard")
@@ -273,7 +283,6 @@ class TestMain:
             "MY_DORA_URL": "https://app.datadoghq.com/dashboard/xyz-789?from_ts=1000000000000&to_ts=1001000000000",
         }
         opened_files = []
-        real_open = open
 
         def tracking_open(path, *a, **kw):
             opened_files.append(str(path))
@@ -281,11 +290,21 @@ class TestMain:
 
         with patch.dict("os.environ", test_env):
             with patch.object(
-                sys, "argv",
-                ["dd_extract.py", "--url-env", "MY_DORA_URL", "--days", "1", "--output-slug", "dora"],
+                sys,
+                "argv",
+                [
+                    "dd_extract.py",
+                    "--url-env",
+                    "MY_DORA_URL",
+                    "--days",
+                    "1",
+                    "--output-slug",
+                    "dora",
+                ],
             ):
                 with patch("builtins.open", tracking_open):
                     from scripts.datadog_dashboard_extract import main
+
                     main()
 
         filenames = [f.split("/")[-1] for f in opened_files]
@@ -317,9 +336,12 @@ class TestMain:
             return MagicMock()
 
         with patch.dict("os.environ", test_env):
-            with patch.object(sys, "argv", ["dd_extract.py", "--url-env", "MY_TEST_URL", "--days", "1"]):
+            with patch.object(
+                sys, "argv", ["dd_extract.py", "--url-env", "MY_TEST_URL", "--days", "1"]
+            ):
                 with patch("builtins.open", tracking_open):
                     from scripts.datadog_dashboard_extract import main
+
                     main()
 
         filenames = [f.split("/")[-1] for f in opened_files]

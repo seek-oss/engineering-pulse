@@ -2,11 +2,10 @@
 HTTP-calling functions (get_dashboard, query_metrics_v1, etc.) are mocked
 so no real network traffic is made.
 """
+
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 from scripts.datadog_dashboard_extract import (
     _apply_teams_to_url,
     _extract_time_window,
@@ -19,10 +18,10 @@ from scripts.datadog_dashboard_extract import (
     resolve_template_variables,
 )
 
-
 # ---------------------------------------------------------------------------
 # extract_dashboard_id
 # ---------------------------------------------------------------------------
+
 
 class TestExtractDashboardId:
     def test_standard_url(self):
@@ -49,6 +48,7 @@ class TestExtractDashboardId:
 # ---------------------------------------------------------------------------
 # flatten_widgets
 # ---------------------------------------------------------------------------
+
 
 class TestFlattenWidgets:
     def test_empty_list(self):
@@ -84,6 +84,7 @@ class TestFlattenWidgets:
 # ---------------------------------------------------------------------------
 # detect_query_source
 # ---------------------------------------------------------------------------
+
 
 class TestDetectQuerySource:
     def test_metrics_via_q_field(self):
@@ -137,6 +138,7 @@ class TestDetectQuerySource:
 # resolve_template_variables
 # ---------------------------------------------------------------------------
 
+
 class TestResolveTemplateVariables:
     def test_basic_substitution(self):
         tvs = [{"name": "team", "prefix": "team", "default": "my-team"}]
@@ -145,7 +147,9 @@ class TestResolveTemplateVariables:
 
     def test_override_takes_precedence(self):
         tvs = [{"name": "team", "prefix": "team", "default": "original"}]
-        result = resolve_template_variables("avg:cpu{$team}", tvs, overrides={"team": "override-team"})
+        result = resolve_template_variables(
+            "avg:cpu{$team}", tvs, overrides={"team": "override-team"}
+        )
         assert result == "avg:cpu{team:override-team}"
 
     def test_wildcard_default_when_empty(self):
@@ -171,7 +175,7 @@ class TestResolveTemplateVariables:
     def test_multiple_variables(self):
         tvs = [
             {"name": "team", "prefix": "team", "default": "eng"},
-            {"name": "env",  "prefix": "env",  "default": "prod"},
+            {"name": "env", "prefix": "env", "default": "prod"},
         ]
         result = resolve_template_variables("avg:cpu{$team,$env}", tvs)
         assert result == "avg:cpu{team:eng,env:prod}"
@@ -189,6 +193,7 @@ class TestResolveTemplateVariables:
 # ---------------------------------------------------------------------------
 # _teams_to_query_value
 # ---------------------------------------------------------------------------
+
 
 class TestTeamsToQueryValue:
     def test_empty_string_returns_wildcard(self):
@@ -219,6 +224,7 @@ class TestTeamsToQueryValue:
 # ---------------------------------------------------------------------------
 # _extract_time_window
 # ---------------------------------------------------------------------------
+
 
 class TestExtractTimeWindow:
     def test_returns_none_when_no_timestamps(self):
@@ -260,9 +266,12 @@ class TestExtractTimeWindow:
 # _apply_teams_to_url
 # ---------------------------------------------------------------------------
 
+
 class TestApplyTeamsToUrl:
     def test_replaces_existing_team_params(self):
-        url = "https://app.datadoghq.com/dashboard/abc?tpl_var_team[0]=old-team&tpl_var_team[1]=other"
+        url = (
+            "https://app.datadoghq.com/dashboard/abc?tpl_var_team[0]=old-team&tpl_var_team[1]=other"
+        )
         result = _apply_teams_to_url(url, "new-team")
         assert "new-team" in result
         assert "old-team" not in result
@@ -291,6 +300,7 @@ class TestApplyTeamsToUrl:
 # _source_style
 # ---------------------------------------------------------------------------
 
+
 class TestSourceStyle:
     def test_known_sources_return_colour(self):
         assert _source_style("metrics") == "green"
@@ -308,6 +318,7 @@ class TestSourceStyle:
 # ---------------------------------------------------------------------------
 # extract_widget_queries
 # ---------------------------------------------------------------------------
+
 
 class TestExtractWidgetQueries:
     def test_extracts_requests_from_widgets(self):

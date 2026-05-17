@@ -1,4 +1,5 @@
 """Tests for scripts/todo_report.py."""
+
 import sys
 from pathlib import Path
 

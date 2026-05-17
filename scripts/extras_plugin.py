@@ -29,7 +29,6 @@ import html as html_mod
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -41,7 +40,7 @@ class Extra:
     source: Path
 
 
-def discover_extras(extras_dir: Path) -> List[Path]:
+def discover_extras(extras_dir: Path) -> list[Path]:
     """Return sorted `*.md` paths in `extras_dir`, skipping `_*.md` templates.
 
     Returns an empty list if the directory does not exist — extras are
@@ -49,11 +48,7 @@ def discover_extras(extras_dir: Path) -> List[Path]:
     """
     if not extras_dir.is_dir():
         return []
-    return sorted(
-        p
-        for p in extras_dir.glob("*.md")
-        if p.is_file() and not p.name.startswith("_")
-    )
+    return sorted(p for p in extras_dir.glob("*.md") if p.is_file() and not p.name.startswith("_"))
 
 
 def parse_extra(path: Path) -> Extra:
@@ -101,12 +96,12 @@ def markdown_to_html(text: str) -> str:
     if not text.strip():
         return ""
 
-    out: List[str] = []
+    out: list[str] = []
     in_ul = False
     in_ol = False
     in_code = False
-    code_buf: List[str] = []
-    para_buf: List[str] = []
+    code_buf: list[str] = []
+    para_buf: list[str] = []
 
     def flush_para() -> None:
         if para_buf:
@@ -130,11 +125,7 @@ def markdown_to_html(text: str) -> str:
             flush_para()
             close_lists()
             if in_code:
-                out.append(
-                    "<pre><code>"
-                    + html_mod.escape("\n".join(code_buf))
-                    + "</code></pre>"
-                )
+                out.append("<pre><code>" + html_mod.escape("\n".join(code_buf)) + "</code></pre>")
                 code_buf = []
                 in_code = False
             else:
@@ -188,9 +179,7 @@ def markdown_to_html(text: str) -> str:
     flush_para()
     close_lists()
     if in_code:
-        out.append(
-            "<pre><code>" + html_mod.escape("\n".join(code_buf)) + "</code></pre>"
-        )
+        out.append("<pre><code>" + html_mod.escape("\n".join(code_buf)) + "</code></pre>")
 
     return "\n".join(out)
 
@@ -207,7 +196,7 @@ def _inline(text: str) -> str:
     s = _BOLD_RE.sub(r"<strong>\1</strong>", s)
     s = _ITALIC_RE.sub(r"<em>\1</em>", s)
 
-    stash: List[str] = []
+    stash: list[str] = []
 
     def link_repl(m: re.Match[str]) -> str:
         stash.append(f'<a href="{m.group(2)}">{m.group(1)}</a>')
@@ -223,9 +212,7 @@ def _inline(text: str) -> str:
 # ── Section rendering ──────────────────────────────────────────────────────
 
 
-def render_extras_section(
-    extras_dir: Path, *, label: str = "Part E — Extras"
-) -> Optional[str]:
+def render_extras_section(extras_dir: Path, *, label: str = "Part E — Extras") -> str | None:
     """Render the full extras section HTML, or `None` if no extras present.
 
     Callers can inline the returned string directly into the report. Returning
@@ -236,7 +223,7 @@ def render_extras_section(
     if not paths:
         return None
 
-    cards: List[str] = []
+    cards: list[str] = []
     for p in paths:
         extra = parse_extra(p)
         cards.append(
@@ -246,7 +233,4 @@ def render_extras_section(
             "</div>"
         )
 
-    return (
-        f'<div class="section-title">{html_mod.escape(label)}</div>\n    '
-        + "\n    ".join(cards)
-    )
+    return f'<div class="section-title">{html_mod.escape(label)}</div>\n    ' + "\n    ".join(cards)

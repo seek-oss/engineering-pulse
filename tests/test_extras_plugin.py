@@ -1,18 +1,15 @@
 """Tests for the drop-in extras plugin."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from scripts.extras_plugin import (
-    Extra,
     discover_extras,
     markdown_to_html,
     parse_extra,
     render_extras_section,
 )
-
 
 # ── discover_extras ────────────────────────────────────────────────────────
 
