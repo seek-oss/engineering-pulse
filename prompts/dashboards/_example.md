@@ -8,7 +8,7 @@
 > To add a real dashboard, use the **add-dashboard** command in Cursor:
 >
 > ```
-> @prompts/add-dashboard.md add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
+> /add-dashboard add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
 > ```
 
 ---
