@@ -34,7 +34,7 @@ Tests use mocked API credentials (see `tests/conftest.py`). No `.env` file is re
 python -m pytest tests/ --cov=scripts --cov-report=term-missing -q
 ```
 
-This matches what [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs in CI (Python 3.11 and 3.12).
+This matches what [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs in CI (lint + Python 3.11 and 3.12). CI runs on every **push** to any branch and on **pull requests** targeting `main`.
 
 ## Pull requests
 
