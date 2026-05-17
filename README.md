@@ -72,7 +72,7 @@ The daily workflow lives in a portable **[Agent Skill](https://agentskills.io/sp
 - **Harness adapters:** [`harness/`](harness/) — thin Cursor / Claude Code / Pi entrypoints
 - **Repo context:** [`AGENTS.md`](AGENTS.md) — always-on rules for agents in this tree
 
-[`prompts/daily-dashboard.md`](prompts/daily-dashboard.md) remains a backward-compatible shim (`@prompts/daily-dashboard.md`).
+**Run in Cursor:** `/daily-dashboard` — or scheduled via `make run` / LaunchAgent (see below).
 
 ## Architecture
 
@@ -81,10 +81,7 @@ skills/engineering-pulse/   ← publishable Agent Skill (SKILL.md + references/)
 harness/                    ← per-harness commands / install notes
 AGENTS.md                   ← repo-wide agent context
 
-prompts/
-  daily-dashboard.md        ← shim → engineering-pulse skill
-  add-dashboard.md          ← shim → references/add-dashboard.md
-  todo.md                   ← shim → references/todo.md
+prompts/                    ← user workspace data only (no workflow shims)
   dashboards/
     _example.md             ← format reference (tracked by git, skipped by agent)
     custom_*.md             ← your dashboards (local only, gitignored)
@@ -145,7 +142,7 @@ You need:
 
 Then add your dashboards using the interactive command in Cursor:
 ```
-@prompts/add-dashboard.md add my dashboard at https://app.datadoghq.com/dashboard/...
+/add-dashboard add my dashboard at https://app.datadoghq.com/dashboard/...
 ```
 
 See `prompts/dashboards/_example.md` for the file format reference.
@@ -153,12 +150,9 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 ### Running the dashboard
 
-**Manually in Cursor** — open a chat and type:
-```
-@prompts/daily-dashboard.md
-```
+**Manually in Cursor** — `/daily-dashboard` (or ask the agent to run the **engineering-pulse** skill).
 
-**From the terminal:**
+**From the terminal** (`agent -p` uses the same skill as the schedule):
 ```bash
 make run          # run now (foreground)
 make run-bg       # run now (background)
@@ -168,7 +162,7 @@ make update       # pull latest + reinstall deps
 make help         # list all targets
 ```
 
-**On a schedule** — the installer sets up a macOS LaunchAgent that runs at 08:00, 10:00, and 18:30 automatically.
+**On a schedule** — the installer sets up a macOS LaunchAgent (default 9:00, 12:00, 16:00 Mon–Fri). After upgrading the repo, re-run `bash install.sh` from `~/.engineering-pulse` so `~/bin/run-daily-dashboard.sh` points at `skills/engineering-pulse/SKILL.md`.
 
 ---
 
@@ -216,7 +210,7 @@ python3 scripts/todo.py done <task-id> --comment "Merged"
 python3 scripts/todo.py cancel <task-id> --comment "No longer needed"
 ```
 
-Or use natural language in Cursor: `@prompts/todo.md remind me to review the EKS upgrade`
+Or use `/todo` in Cursor: `remind me to review the EKS upgrade`
 
 ### Daily dashboard HTML
 
@@ -269,7 +263,7 @@ You can add any Datadog dashboard to the daily report without editing existing f
 
 1. **Run the add-dashboard command in Cursor:**
    ```
-   @prompts/add-dashboard.md add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
+   /add-dashboard add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
    ```
 
 2. The command will:
@@ -288,8 +282,9 @@ User-added dashboards are prefixed with `custom_` by convention to keep things o
 
 Track what a small set of **named stakeholders** have been doing in **Slack**
 over the past 7 days. The daily dashboard agent (Step 2F in
-`prompts/daily-dashboard.md`) writes one markdown card per name; the HTML
-report picks them up when `STAKEHOLDERS` is set in `.env`.
+[`skills/engineering-pulse/references/stakeholder-pulse.md`](skills/engineering-pulse/references/stakeholder-pulse.md))
+writes one markdown card per name in `output/stakeholders/`; the HTML report picks
+them up when `STAKEHOLDERS` is set in `.env`.
 
 ### Slack data: two possible approaches
 
@@ -306,7 +301,7 @@ added later for teams that prefer a readonly token over enterprise search.
 1. **Glean MCP** — add/configure the Glean server in your [Cursor MCP settings](https://docs.cursor.com/context/mcp) (not shipped in this repo).
 2. **`STAKEHOLDERS` in `.env`** — comma-separated names or emails, e.g.  
    `STAKEHOLDERS=Jane Doe,john.smith@example.com`
-3. Run the dashboard in Cursor: `@prompts/daily-dashboard.md`
+3. Run the dashboard in Cursor: `/daily-dashboard`
 
 ### What happens each run
 
@@ -395,5 +390,5 @@ on your disk only and are never touched by `git pull`.
 | `STAKEHOLDERS` in `.env` | No (untouched) | Yes |
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |
-| `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |
+| `skills/engineering-pulse/` (workflow) | Yes | N/A (don't edit) |
 

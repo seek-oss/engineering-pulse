@@ -252,7 +252,8 @@ def main() -> None:
                 f'<div class="section-title">{html_mod.escape(stakeholders_label)}</div>\n    '
                 f'<p class="muted">No cards in <code>{html_mod.escape(args.stakeholders_dir)}/</code> yet '
                 f"(expected: {html_mod.escape(expected)}). Run Step 2F in "
-                "<code>prompts/daily-dashboard.md</code> (Glean → write those files) "
+                "<code>skills/engineering-pulse/references/stakeholder-pulse.md</code> "
+                "(Glean → write those files) "
                 "before rendering.</p>"
             )
             sections.append((stakeholders_label, placeholder))

@@ -4,8 +4,8 @@
 
 > **This file is a format reference only.** Real cards are written to
 > **`output/stakeholders/`** by the daily dashboard agent (Step 2F in
-> `prompts/daily-dashboard.md`). That folder is gitignored with the rest of
-> `output/`.
+> `skills/engineering-pulse/references/stakeholder-pulse.md`). Cards live under
+> `output/stakeholders/` (gitignored with the rest of `output/`).
 
 ---
 

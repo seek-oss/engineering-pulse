@@ -8,8 +8,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 **Product skill (portable):** [`skills/engineering-pulse/`](skills/engineering-pulse/) per
 [Agent Skills](https://agentskills.io/specification).
 
-**Harness entrypoints:** [`harness/`](harness/) (Cursor, Claude Code, Pi Agent) and
-[`prompts/daily-dashboard.md`](prompts/daily-dashboard.md) (backward-compatible shim).
+**Harness entrypoints:** [`harness/`](harness/) (Cursor `/daily-dashboard`, Claude Code, Pi Agent).
 
 ## Layout
 

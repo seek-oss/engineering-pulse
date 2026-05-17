@@ -23,5 +23,5 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 
 ## Run
 
-- Cursor: `/daily-dashboard` or `@prompts/daily-dashboard.md`
+- Cursor: `/daily-dashboard` (or invoke the **engineering-pulse** skill by name)
 - Any harness: invoke skill by description; agent reads `SKILL.md` then `references/daily-workflow.md`
