@@ -14,6 +14,9 @@
 
 ## How it works
 
+**Slack data today:** Glean MCP in Cursor (Step 2F). **Possible later:**
+read-only Slack token for orgs without Glean — same card files, not wired up yet.
+
 Each `*.md` file in `prompts/stakeholders/` becomes one card under
 **Stakeholder Pulse** (next dynamic Part letter) in the daily report — only
 when `STAKEHOLDERS` in `.env` is non-empty (the HTML renderer enforces that).
