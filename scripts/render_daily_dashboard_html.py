@@ -246,8 +246,7 @@ def main() -> None:
             sections.append((stakeholders_label, stakeholders_html))
         else:
             expected = ", ".join(
-                f"{args.stakeholders_dir}/{_stakeholder_slug(n)}.md"
-                for n in stakeholder_names
+                f"{args.stakeholders_dir}/{_stakeholder_slug(n)}.md" for n in stakeholder_names
             )
             placeholder = (
                 f'<div class="section-title">{html_mod.escape(stakeholders_label)}</div>\n    '
