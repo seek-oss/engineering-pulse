@@ -1,28 +1,13 @@
 ---
-description: Engineering Pulse — engineering productivity dashboard project rules
+description: Engineering Pulse — pointer to AGENTS.md and product skill
 globs: ["**/*.py", "**/*.md"]
 alwaysApply: true
 ---
 
-# Project: Engineering Pulse
+# Engineering Pulse
 
-## What this project is
-A Cursor prompt-driven engineering productivity tool that pulls data from Datadog and GitHub
-to generate a daily engineering health dashboard and emails it via SMTP.
+See [AGENTS.md](../../AGENTS.md) for repo layout, scripts, and development commands.
 
-## Architecture rules
-- Scripts live in `/scripts` — thin orchestration only
-- All credentials come from `.env` via python-dotenv — never hardcode tokens or URLs
-- Generated output (HTML, JSON) goes to `/output/` — always gitignored
-- No hardcoded org/team names — everything configurable via env vars
+**Daily dashboard:** [`skills/engineering-pulse/SKILL.md`](../../skills/engineering-pulse/SKILL.md) ([Agent Skills spec](https://agentskills.io/specification)).
 
-## Scripts
-- `scripts/datadog_dashboard_extract.py` — fetches Datadog dashboard metrics
-- `scripts/github_prs.py` — fetches GitHub PR review queue
-- `scripts/send_report_smtp.py` — sends HTML report via SMTP
-
-## Output style
-Use the `rich` library for terminal output. Color-coded:
-- Red = needs attention
-- Yellow = watch / trending wrong
-- Green = healthy, no action needed
+**Cursor commands:** `harness/cursor/commands/` (e.g. `/daily-dashboard`).

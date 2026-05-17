@@ -63,19 +63,33 @@ Stakeholder Pulse is omitted entirely when `STAKEHOLDERS` is empty or unset.
 
 ---
 
+## Agent skill (multi-harness)
+
+The daily workflow lives in a portable **[Agent Skill](https://agentskills.io/specification)**:
+
+- **Canonical:** [`skills/engineering-pulse/SKILL.md`](skills/engineering-pulse/SKILL.md) + [`references/`](skills/engineering-pulse/references/)
+- **Install matrix:** [`skills/README.md`](skills/README.md) (Cursor, Claude Code, skills.sh, ai-toolkit)
+- **Harness adapters:** [`harness/`](harness/) — thin Cursor / Claude Code / Pi entrypoints
+- **Repo context:** [`AGENTS.md`](AGENTS.md) — always-on rules for agents in this tree
+
+[`prompts/daily-dashboard.md`](prompts/daily-dashboard.md) remains a backward-compatible shim (`@prompts/daily-dashboard.md`).
+
 ## Architecture
 
 ```
+skills/engineering-pulse/   ← publishable Agent Skill (SKILL.md + references/)
+harness/                    ← per-harness commands / install notes
+AGENTS.md                   ← repo-wide agent context
+
 prompts/
-  daily-dashboard.md        ← Cursor prompt (the entry point)
-  add-dashboard.md          ← interactive command to add a new dashboard
+  daily-dashboard.md        ← shim → engineering-pulse skill
+  add-dashboard.md          ← shim → references/add-dashboard.md
+  todo.md                   ← shim → references/todo.md
   dashboards/
     _example.md             ← format reference (tracked by git, skipped by agent)
-    custom_*.md             ← your dashboards (local only, gitignored, created via /add-dashboard)
-  extras/                   ← drop-in plugin folder for extra task cards
-    _example.md             ← format reference (tracked by git, skipped by renderer)
-    *.md                    ← your extras (local only, gitignored)
-  _stakeholder-card-example.md  ← Stakeholder Pulse card format (reference only)
+    custom_*.md             ← your dashboards (local only, gitignored)
+  extras/                   ← drop-in report cards (gitignored except _example)
+  _stakeholder-card-example.md
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
@@ -86,9 +100,10 @@ scripts/
   send_report_smtp.py            ← sends HTML report via SMTP
 
 output/                     ← gitignored; all generated files land here
-  <slug>_metric_results.json   ← one per dashboard .md file (named after its Slug)
+  <slug>_metric_results.json
   github_prs.json
   todos.json
+  stakeholders/*.md         ← Glean-generated Stakeholder Pulse cards
   ...
 ```
 
