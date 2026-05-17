@@ -1,5 +1,7 @@
 # Engineering Pulse
 
+[![CI](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml)
+
 A **Cursor prompt-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
 Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — triggered manually in Cursor or automatically on a schedule. Also keeps a **task list** and **reading queue** in Todoist.
@@ -18,6 +20,8 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 - Schedule the report at **09:00, 12:00 and 16:00 Mon–Fri** via macOS LaunchAgent (override times with `SCHEDULE_HOURS` when running the installer)
 
 > **Prerequisites:** Python 3.11+, `git`, and the [Cursor](https://cursor.sh) `agent` CLI in your PATH.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests and opening pull requests.
 
 ---
 
