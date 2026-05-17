@@ -27,9 +27,10 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 def _ensure_truststore() -> None:
     """Install and activate truststore so Python uses the OS certificate store.
@@ -42,6 +43,7 @@ def _ensure_truststore() -> None:
     """
     try:
         import truststore
+
         truststore.inject_into_ssl()
         return
     except ImportError:
@@ -49,6 +51,7 @@ def _ensure_truststore() -> None:
 
     # Auto-install truststore into the running environment
     import subprocess
+
     try:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "--quiet", "truststore"],
@@ -56,11 +59,13 @@ def _ensure_truststore() -> None:
             stderr=subprocess.DEVNULL,
         )
         import truststore
+
         truststore.inject_into_ssl()
     except Exception:
         # Last resort: continue without truststore — will fail later with a
         # clear SSL error if the network requires it.
         pass
+
 
 _ensure_truststore()
 
@@ -88,7 +93,8 @@ PRIORITY_REVERSE = {4: "high", 3: "medium", 2: "low", 1: "none"}
 # HTTP helpers  (Todoist API v1 — cursor-based pagination)
 # ---------------------------------------------------------------------------
 
-def _headers() -> Dict[str, str]:
+
+def _headers() -> dict[str, str]:
     token = os.environ.get("TODOIST_API_TOKEN", "")
     if not token:
         console.print("[red]Error: TODOIST_API_TOKEN is required. Set it in .env.[/red]")
@@ -96,7 +102,7 @@ def _headers() -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
-def _get(path: str, params: Optional[Dict] = None) -> Any:
+def _get(path: str, params: dict | None = None) -> Any:
     try:
         resp = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params, timeout=15)
     except requests.exceptions.SSLError as exc:
@@ -111,10 +117,10 @@ def _get(path: str, params: Optional[Dict] = None) -> Any:
     return resp.json()
 
 
-def _get_all(path: str, params: Optional[Dict] = None) -> List[Dict]:
+def _get_all(path: str, params: dict | None = None) -> list[dict]:
     """Paginate through a v1 endpoint that returns {results, next_cursor}."""
-    all_results: List[Dict] = []
-    cursor: Optional[str] = None
+    all_results: list[dict] = []
+    cursor: str | None = None
     p = dict(params or {})
     p["limit"] = 200
     while True:
@@ -130,7 +136,7 @@ def _get_all(path: str, params: Optional[Dict] = None) -> List[Dict]:
     return all_results
 
 
-def _post(path: str, body: Optional[Dict] = None) -> Any:
+def _post(path: str, body: dict | None = None) -> Any:
     resp = requests.post(f"{BASE_URL}{path}", headers=_headers(), json=body or {}, timeout=15)
     resp.raise_for_status()
     if resp.status_code == 204 or not resp.text:
@@ -142,7 +148,8 @@ def _post(path: str, body: Optional[Dict] = None) -> Any:
 # Project / section resolution
 # ---------------------------------------------------------------------------
 
-def _find_project_by_name(name: str) -> Optional[Dict]:
+
+def _find_project_by_name(name: str) -> dict | None:
     for p in _get_all("/projects"):
         if p["name"].lower() == name.lower():
             return p
@@ -156,17 +163,19 @@ def _get_project_id() -> str:
     project = _find_project_by_name(DEFAULT_PROJECT_NAME)
     if project:
         return project["id"]
-    console.print(f"[red]Project '{DEFAULT_PROJECT_NAME}' not found. Run: python scripts/todo.py setup[/red]")
+    console.print(
+        f"[red]Project '{DEFAULT_PROJECT_NAME}' not found. Run: python scripts/todo.py setup[/red]"
+    )
     sys.exit(1)
 
 
-def _get_sections(project_id: str) -> Dict[str, str]:
+def _get_sections(project_id: str) -> dict[str, str]:
     """Return {section_name: section_id} for the project."""
     sections = _get_all("/sections", {"project_id": project_id})
     return {s["name"]: s["id"] for s in sections}
 
 
-def _ensure_section(project_id: str, name: str, existing: Dict[str, str]) -> str:
+def _ensure_section(project_id: str, name: str, existing: dict[str, str]) -> str:
     if name in existing:
         return existing[name]
     section = _post("/sections", {"project_id": project_id, "name": name})
@@ -180,6 +189,7 @@ def _env_path() -> Path:
 # ---------------------------------------------------------------------------
 # setup
 # ---------------------------------------------------------------------------
+
 
 def cmd_setup(args: argparse.Namespace) -> None:
     name = args.name or DEFAULT_PROJECT_NAME
@@ -209,12 +219,13 @@ def cmd_setup(args: argparse.Namespace) -> None:
     env_path.write_text(env_text)
 
     console.print(f"\n[green]✓ Done. TODOIST_PROJECT_ID={pid} saved to .env[/green]")
-    console.print("  You can now use: python scripts/todo.py add \"My first task\"")
+    console.print('  You can now use: python scripts/todo.py add "My first task"')
 
 
 # ---------------------------------------------------------------------------
 # add
 # ---------------------------------------------------------------------------
+
 
 def cmd_add(args: argparse.Namespace) -> None:
     project_id = _get_project_id()
@@ -230,7 +241,7 @@ def cmd_add(args: argparse.Namespace) -> None:
 
     priority = PRIORITY_MAP.get(args.priority or "none", 1)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "content": args.title,
         "project_id": project_id,
         "section_id": section_id,
@@ -241,7 +252,7 @@ def cmd_add(args: argparse.Namespace) -> None:
         body["description"] = args.url
 
     task = _post("/tasks", body)
-    console.print(f"[green]✓ Added {item_type}: \"{task['content']}\" (id={task['id']})[/green]")
+    console.print(f'[green]✓ Added {item_type}: "{task["content"]}" (id={task["id"]})[/green]')
     if args.url:
         console.print(f"  URL: {args.url}")
 
@@ -250,12 +261,13 @@ def cmd_add(args: argparse.Namespace) -> None:
 # list
 # ---------------------------------------------------------------------------
 
+
 def _age_days(ts: str) -> int:
     dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    return (datetime.now(timezone.utc) - dt).days
+    return (datetime.now(UTC) - dt).days
 
 
-def _task_created(task: Dict) -> str:
+def _task_created(task: dict) -> str:
     """Return the creation timestamp — v1 uses 'added_at', v2 used 'created_at'."""
     return task.get("added_at") or task.get("created_at", "")
 
@@ -319,16 +331,18 @@ def cmd_list(args: argparse.Namespace) -> None:
             else:
                 json_type = "task"
                 domain = "work"
-            out.append({
-                "id": t["id"],
-                "title": t["content"],
-                "type": json_type,
-                "domain": domain,
-                "priority": PRIORITY_REVERSE.get(t.get("priority", 1), "none"),
-                "url": _extract_url(t.get("description", "")),
-                "age_days": _age_days(_task_created(t)),
-                "created_at": _task_created(t),
-            })
+            out.append(
+                {
+                    "id": t["id"],
+                    "title": t["content"],
+                    "type": json_type,
+                    "domain": domain,
+                    "priority": PRIORITY_REVERSE.get(t.get("priority", 1), "none"),
+                    "url": _extract_url(t.get("description", "")),
+                    "age_days": _age_days(_task_created(t)),
+                    "created_at": _task_created(t),
+                }
+            )
         _scripts = Path(__file__).resolve().parent
         if str(_scripts) not in sys.path:
             sys.path.insert(0, str(_scripts))
@@ -365,14 +379,18 @@ def cmd_list(args: argparse.Namespace) -> None:
         age = _age_days(_task_created(t))
 
         pri_styled = (
-            f"[red bold]{pri}[/red bold]" if pri == "high" else
-            f"[yellow]{pri}[/yellow]" if pri == "medium" else
-            f"[dim]{pri}[/dim]"
+            f"[red bold]{pri}[/red bold]"
+            if pri == "high"
+            else f"[yellow]{pri}[/yellow]"
+            if pri == "medium"
+            else f"[dim]{pri}[/dim]"
         )
         age_styled = (
-            f"[red]{age}d[/red]" if age >= 7 else
-            f"[yellow]{age}d[/yellow]" if age >= 3 else
-            f"{age}d"
+            f"[red]{age}d[/red]"
+            if age >= 7
+            else f"[yellow]{age}d[/yellow]"
+            if age >= 3
+            else f"{age}d"
         )
 
         title = t["content"]
@@ -389,6 +407,7 @@ def cmd_list(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # done / cancel
 # ---------------------------------------------------------------------------
+
 
 def _add_comment(task_id: str, text: str) -> None:
     _post("/comments", {"task_id": task_id, "content": text})
@@ -424,6 +443,7 @@ def cmd_cancel(args: argparse.Namespace) -> None:
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="todo.py",
@@ -432,7 +452,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sp_setup = sub.add_parser("setup", help="Create Todoist project and sections")
-    sp_setup.add_argument("--name", default=None, help=f"Project name (default: {DEFAULT_PROJECT_NAME})")
+    sp_setup.add_argument(
+        "--name", default=None, help=f"Project name (default: {DEFAULT_PROJECT_NAME})"
+    )
     sp_setup.set_defaults(func=cmd_setup)
 
     sp_add = sub.add_parser("add", help="Add a task or reading item")
@@ -457,7 +479,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --type task: filter to work or personal only (default: both)",
     )
     sp_list.add_argument("--all", action="store_true", help="Include completed items")
-    sp_list.add_argument("--json", action="store_true", help="Output as JSON (includes view_url per item)")
+    sp_list.add_argument(
+        "--json", action="store_true", help="Output as JSON (includes view_url per item)"
+    )
     sp_list.set_defaults(func=cmd_list)
 
     sp_done = sub.add_parser("done", help="Mark a task as done")

@@ -29,9 +29,9 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import requests
@@ -51,9 +51,9 @@ DD_APP_KEY = os.environ["DD_APP_KEY"]
 DD_SITE = os.environ.get("DD_SITE", "https://api.datadoghq.com")
 
 
-def _snapshot_series(series: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _snapshot_series(series: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Latest point per series for persistence / HTML report."""
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for s in series:
         pointlist = s.get("pointlist") or []
         last_val = pointlist[-1][1] if pointlist else None
@@ -61,7 +61,7 @@ def _snapshot_series(series: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return rows
 
 
-def _headers() -> Dict[str, str]:
+def _headers() -> dict[str, str]:
     return {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -74,6 +74,7 @@ def _headers() -> Dict[str, str]:
 # Dashboard fetching & parsing
 # ---------------------------------------------------------------------------
 
+
 def extract_dashboard_id(dashboard_url: str) -> str:
     m = re.search(r"/dashboard/([^/?]+)", dashboard_url)
     if not m:
@@ -81,16 +82,16 @@ def extract_dashboard_id(dashboard_url: str) -> str:
     return m.group(1)
 
 
-def get_dashboard(dashboard_id: str) -> Dict[str, Any]:
+def get_dashboard(dashboard_id: str) -> dict[str, Any]:
     url = f"{DD_SITE}/api/v1/dashboard/{dashboard_id}"
     resp = requests.get(url, headers=_headers(), timeout=30)
     resp.raise_for_status()
     return resp.json()
 
 
-def flatten_widgets(widgets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def flatten_widgets(widgets: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Recursively flatten group widgets that contain nested definition.widgets."""
-    flat: List[Dict[str, Any]] = []
+    flat: list[dict[str, Any]] = []
     for widget in widgets:
         flat.append(widget)
         nested = widget.get("definition", {}).get("widgets", [])
@@ -99,7 +100,7 @@ def flatten_widgets(widgets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return flat
 
 
-def detect_query_source(req: Dict[str, Any]) -> str:
+def detect_query_source(req: dict[str, Any]) -> str:
     if "q" in req and isinstance(req["q"], str):
         q = req["q"].strip()
         if re.match(r"^(avg|min|max|sum|count|p\d{2}|p\d{2}\.\d+):", q):
@@ -128,9 +129,9 @@ def detect_query_source(req: Dict[str, Any]) -> str:
     return "unknown"
 
 
-def extract_widget_queries(dashboard_json: Dict[str, Any]) -> List[Dict[str, Any]]:
+def extract_widget_queries(dashboard_json: dict[str, Any]) -> list[dict[str, Any]]:
     widgets = flatten_widgets(dashboard_json.get("widgets", []))
-    extracted: List[Dict[str, Any]] = []
+    extracted: list[dict[str, Any]] = []
     for idx, widget in enumerate(widgets):
         definition = widget.get("definition", {})
         for req_idx, req in enumerate(definition.get("requests", [])):
@@ -151,10 +152,11 @@ def extract_widget_queries(dashboard_json: Dict[str, Any]) -> List[Dict[str, Any
 # Template variable substitution
 # ---------------------------------------------------------------------------
 
+
 def resolve_template_variables(
     query: str,
-    template_variables: List[Dict[str, Any]],
-    overrides: Optional[Dict[str, str]] = None,
+    template_variables: list[dict[str, Any]],
+    overrides: dict[str, str] | None = None,
 ) -> str:
     """Replace $var placeholders with prefix:value so the Datadog API can
     evaluate the query.  *overrides* maps variable name → value and takes
@@ -195,7 +197,8 @@ def _teams_to_query_value(teams_csv: str) -> str:
 # Query execution
 # ---------------------------------------------------------------------------
 
-def query_metrics_v1(query: str, from_ts: int, to_ts: int) -> Dict[str, Any]:
+
+def query_metrics_v1(query: str, from_ts: int, to_ts: int) -> dict[str, Any]:
     url = f"{DD_SITE}/api/v1/query"
     params = {"from": from_ts, "to": to_ts, "query": query}
     resp = requests.get(url, headers=_headers(), params=params, timeout=60)
@@ -208,19 +211,19 @@ def query_logs_aggregate(
     from_iso: str,
     to_iso: str,
     compute_aggregation: str = "count",
-    compute_metric: Optional[str] = None,
-    group_by_facet: Optional[str] = None,
-    interval: Optional[str] = None,
-) -> Dict[str, Any]:
+    compute_metric: str | None = None,
+    group_by_facet: str | None = None,
+    interval: str | None = None,
+) -> dict[str, Any]:
     url = f"{DD_SITE}/api/v2/logs/analytics/aggregate"
-    compute_obj: Dict[str, Any] = {"aggregation": compute_aggregation}
+    compute_obj: dict[str, Any] = {"aggregation": compute_aggregation}
     if compute_metric:
         compute_obj["metric"] = compute_metric
     if interval:
         compute_obj["interval"] = interval
         compute_obj["type"] = "timeseries"
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "filter": {"from": from_iso, "to": to_iso, "query": search_query},
         "compute": [compute_obj],
     }
@@ -236,6 +239,7 @@ def query_logs_aggregate(
 # Rich output helpers
 # ---------------------------------------------------------------------------
 
+
 def _source_style(source: str) -> str:
     mapping = {
         "metrics": "green",
@@ -248,8 +252,8 @@ def _source_style(source: str) -> str:
     return mapping.get(source, "red")
 
 
-def print_extraction_summary(extracted: List[Dict[str, Any]]) -> None:
-    source_counts: Dict[str, int] = {}
+def print_extraction_summary(extracted: list[dict[str, Any]]) -> None:
+    source_counts: dict[str, int] = {}
     for item in extracted:
         source_counts[item["source"]] = source_counts.get(item["source"], 0) + 1
 
@@ -269,7 +273,7 @@ def print_extraction_summary(extracted: List[Dict[str, Any]]) -> None:
     console.print(table)
 
 
-def print_extracted_requests(extracted: List[Dict[str, Any]]) -> None:
+def print_extracted_requests(extracted: list[dict[str, Any]]) -> None:
     table = Table(
         title="Extracted Widget Requests",
         show_header=True,
@@ -298,7 +302,8 @@ def print_extracted_requests(extracted: List[Dict[str, Any]]) -> None:
 # Team URL helpers
 # ---------------------------------------------------------------------------
 
-def _extract_time_window(url: str) -> Optional[tuple]:
+
+def _extract_time_window(url: str) -> tuple | None:
     """Extract from_ts / to_ts from the dashboard URL (both in milliseconds).
 
     Returns (from_epoch_sec, to_epoch_sec) as ints, or None if not present.
@@ -308,12 +313,12 @@ def _extract_time_window(url: str) -> Optional[tuple]:
     params = parse_qs(parsed.query, keep_blank_values=True)
 
     raw_from = params.get("from_ts", [None])[0]
-    raw_to   = params.get("to_ts",   [None])[0]
+    raw_to = params.get("to_ts", [None])[0]
     if not raw_from or not raw_to:
         return None
 
     from_sec = int(raw_from) // 1000
-    to_sec   = int(raw_to)   // 1000
+    to_sec = int(raw_to) // 1000
 
     live = params.get("live", ["false"])[0].lower() == "true"
     if live:
@@ -343,6 +348,7 @@ def _apply_teams_to_url(url: str, teams_csv: str) -> str:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Datadog Dashboard Extractor")
@@ -391,7 +397,7 @@ def main() -> None:
 
     teams_csv = os.environ.get("DATADOG_TEAMS", "").strip()
     # Build overrides dict used when resolving template variables in queries
-    query_overrides: Dict[str, str] = {}
+    query_overrides: dict[str, str] = {}
     if teams_csv:
         dashboard_url = _apply_teams_to_url(dashboard_url, teams_csv)
         query_overrides["team"] = _teams_to_query_value(teams_csv)
@@ -406,8 +412,7 @@ def main() -> None:
     if args.days > 0:
         lookback = now - args.days * 86400
         console.print(
-            f"[dim]Time window: past [cyan]{args.days}[/cyan] days "
-            f"({round(args.days, 1)}d)[/dim]"
+            f"[dim]Time window: past [cyan]{args.days}[/cyan] days ({round(args.days, 1)}d)[/dim]"
         )
     else:
         time_window = _extract_time_window(dashboard_url)
@@ -424,10 +429,12 @@ def main() -> None:
 
     dashboard_id = extract_dashboard_id(dashboard_url)
 
-    console.print(Panel(
-        f"[bold]Datadog Dashboard Review[/bold]\nDashboard ID: [cyan]{dashboard_id}[/cyan]",
-        border_style="blue",
-    ))
+    console.print(
+        Panel(
+            f"[bold]Datadog Dashboard Review[/bold]\nDashboard ID: [cyan]{dashboard_id}[/cyan]",
+            border_style="blue",
+        )
+    )
 
     console.print("[dim]Fetching dashboard definition…[/dim]")
     dashboard = get_dashboard(dashboard_id)
@@ -465,21 +472,20 @@ def main() -> None:
     console.print()
 
     # --- Execute metric queries ---
-    metric_results: List[Dict[str, Any]] = []
-    errors: List[str] = []
-    skipped: List[str] = []
+    metric_results: list[dict[str, Any]] = []
+    errors: list[str] = []
+    skipped: list[str] = []
 
     for item in extracted:
         req = item["request"]
         source = item["source"]
         widget_label = item["title"] or f"widget#{item['widget_index']}"
 
-        is_focused = focus_terms and any(
-            t in widget_label.lower() for t in focus_terms
-        )
+        is_focused = focus_terms and any(t in widget_label.lower() for t in focus_terms)
         label_styled = (
             f"[bold yellow]{widget_label}[/bold yellow] [yellow]★ focus[/yellow]"
-            if is_focused else f"[bold]{widget_label}[/bold]"
+            if is_focused
+            else f"[bold]{widget_label}[/bold]"
         )
 
         if source == "metrics" and isinstance(req.get("q"), str):
@@ -519,7 +525,9 @@ def main() -> None:
                 metric_query = qobj.get("query")
                 if not metric_query:
                     continue
-                metric_query = resolve_template_variables(metric_query, template_vars, query_overrides)
+                metric_query = resolve_template_variables(
+                    metric_query, template_vars, query_overrides
+                )
                 console.print(f"[green]▶[/green] Formula base query — {label_styled}")
                 console.print(f"  [dim]{metric_query}[/dim]")
                 try:
@@ -562,7 +570,9 @@ def main() -> None:
     summary_parts.append(f"[bold]Dashboard:[/bold] {title}")
     summary_parts.append(f"[bold]Total widgets:[/bold] {total_widgets}")
     summary_parts.append(f"[bold]Extracted requests:[/bold] {len(extracted)}")
-    summary_parts.append(f"[bold]Metric queries executed:[/bold] {len(metric_results)}")  # rows, not unique widgets
+    summary_parts.append(
+        f"[bold]Metric queries executed:[/bold] {len(metric_results)}"
+    )  # rows, not unique widgets
 
     if errors:
         summary_parts.append("")
@@ -599,7 +609,7 @@ def main() -> None:
             {
                 "dashboard_title": title,
                 "source_url": dashboard_url,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "results": metric_results,
             },
             f,

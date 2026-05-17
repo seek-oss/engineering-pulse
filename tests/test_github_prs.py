@@ -1,10 +1,9 @@
 """Tests for scripts/github_prs.py — pure logic functions."""
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
 
-import pytest
+from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
-from scripts.github_prs import format_pr, fetch_review_prs, graphql_search_all, MAX_PAGES
+from scripts.github_prs import MAX_PAGES, fetch_review_prs, format_pr, graphql_search_all
 
 
 def _make_node(
@@ -19,7 +18,7 @@ def _make_node(
     labels=None,
 ):
     """Helper to build a realistic GraphQL PR node."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     created = now - timedelta(days=created_days_ago)
     updated = now - timedelta(days=updated_days_ago)
     return {
@@ -38,6 +37,7 @@ def _make_node(
 # ---------------------------------------------------------------------------
 # format_pr
 # ---------------------------------------------------------------------------
+
 
 class TestFormatPr:
     def test_basic_fields(self):
@@ -85,6 +85,7 @@ class TestFormatPr:
 # ---------------------------------------------------------------------------
 # fetch_review_prs
 # ---------------------------------------------------------------------------
+
 
 class TestFetchReviewPrs:
     def _pr(self, url, author="alice", age=5):
@@ -155,6 +156,7 @@ class TestFetchReviewPrs:
 # graphql_search_all (pagination logic, no real HTTP)
 # ---------------------------------------------------------------------------
 
+
 class TestGraphqlSearchAll:
     @patch("scripts.github_prs.gql")
     def test_single_page_no_next(self, mock_gql):
@@ -191,10 +193,10 @@ class TestGraphqlSearchAll:
     def test_page_cap_stops_at_max_pages(self, mock_gql):
         always_has_next = {
             "search": {
-                "nodes": [{"url": f"https://github.com/org/repo/pull/x"}],
+                "nodes": [{"url": "https://github.com/org/repo/pull/x"}],
                 "pageInfo": {"hasNextPage": True, "endCursor": "cursor"},
             }
         }
         mock_gql.return_value = always_has_next
-        results = graphql_search_all("is:open is:pr review-requested:alice")
+        graphql_search_all("is:open is:pr review-requested:alice")
         assert mock_gql.call_count == MAX_PAGES

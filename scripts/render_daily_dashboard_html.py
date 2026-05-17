@@ -30,7 +30,7 @@ import string
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -61,7 +61,7 @@ def _part_letter(idx: int) -> str:
     return letters[first] + letters[second]
 
 
-def _parse_stakeholder_names() -> List[str]:
+def _parse_stakeholder_names() -> list[str]:
     """Names from `STAKEHOLDERS` env (comma-separated). Empty/unset → []."""
     raw = (os.environ.get("STAKEHOLDERS") or "").strip()
     if not raw:
@@ -87,14 +87,14 @@ def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
 # ── Section renderers ──────────────────────────────────────────────────────
 
 
-def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
+def _render_generic_section(label: str, data: dict[str, Any]) -> str:
     """Render a generic dashboard section with one tile per unique widget."""
     label_esc = html_mod.escape(label)
     results = data.get("results") or []
     if not results:
         return f'<div class="section-title">{label_esc}</div><p class="muted">No metric data</p>'
 
-    seen: Dict[str, Optional[float]] = {}
+    seen: dict[str, float | None] = {}
     for row in results:
         title = row.get("widget_title", "—")
         if title in seen:
@@ -103,7 +103,7 @@ def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
         val = series[0].get("latest") if series else None
         seen[title] = float(val) if val is not None else None
 
-    tiles: List[str] = []
+    tiles: list[str] = []
     for widget_title, val in seen.items():
         val_str = f"{val:.1f}" if val is not None else "—"
         tile_cls = "tile-grey" if val is None else "tile-green"
@@ -113,14 +113,11 @@ def _render_generic_section(label: str, data: Dict[str, Any]) -> str:
             f'<div class="big-number">{val_str}</div></div>'
         )
 
-    rows: List[str] = []
+    rows: list[str] = []
     for i in range(0, len(tiles), 3):
-        rows.append('<div class="tile-row">' + "\n      ".join(tiles[i:i + 3]) + '</div>')
+        rows.append('<div class="tile-row">' + "\n      ".join(tiles[i : i + 3]) + "</div>")
 
-    return (
-        f'<div class="section-title">{label_esc}</div>\n    '
-        + "\n    ".join(rows)
-    )
+    return f'<div class="section-title">{label_esc}</div>\n    ' + "\n    ".join(rows)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────
@@ -169,7 +166,7 @@ def main() -> None:
     output_dir = ROOT / args.output_dir
 
     # Discover dashboards and pair each with its snapshot.
-    dashboard_records: List[Tuple[Dashboard, Dict[str, Any]]] = []
+    dashboard_records: list[tuple[Dashboard, dict[str, Any]]] = []
     for md_path in discover_dashboards(ROOT / args.dashboards_dir):
         dash = parse_dashboard(md_path)
         snap = load_snapshot(dash.slug, output_dir)
@@ -185,7 +182,7 @@ def main() -> None:
         dashboard_records.append((dash, snap))
 
     # Build numbered section list. Each entry: (label, html_body).
-    sections: List[Tuple[str, str]] = []
+    sections: list[tuple[str, str]] = []
 
     def next_label(suffix: str) -> str:
         return f"Part {_part_letter(len(sections))} — {suffix}"
@@ -372,7 +369,7 @@ def main() -> None:
 
 
   <div class="footer">
-    {footer_links + '<br>' if footer_links else ''}
+    {footer_links + "<br>" if footer_links else ""}
     Generated {today} · Past 7 days · Base metric queries only
   </div>
 </div>
@@ -392,10 +389,10 @@ def _repo_short(full: str) -> str:
     return full.split("/")[-1] if "/" in full else full
 
 
-def _render_pr_section(label: str, pr_list: List[Dict[str, Any]]) -> str:
+def _render_pr_section(label: str, pr_list: list[dict[str, Any]]) -> str:
     if not pr_list:
         return f'<div class="section-title">{html_mod.escape(label)}</div>\n    <div class="banner-green">No PRs awaiting review — inbox clear</div>'
-    rows: List[str] = []
+    rows: list[str] = []
     for pr in pr_list:
         age = pr["age_days"]
         cls = "age-red" if age >= 5 else ("age-yellow" if age >= 2 else "")
@@ -403,9 +400,9 @@ def _render_pr_section(label: str, pr_list: List[Dict[str, Any]]) -> str:
         draft = ' <span class="draft-tag">(draft)</span>' if pr.get("draft") else ""
         title_esc = html_mod.escape(pr["title"][:200])
         rows.append(
-            f'<tr><td>{html_mod.escape(_repo_short(pr["repo"]))}</td>'
+            f"<tr><td>{html_mod.escape(_repo_short(pr['repo']))}</td>"
             f'<td><a href="{html_mod.escape(pr["url"])}">{title_esc}</a>{draft}</td>'
-            f'<td>{html_mod.escape(pr["author"])}</td><td>{age_html}</td></tr>'
+            f"<td>{html_mod.escape(pr['author'])}</td><td>{age_html}</td></tr>"
         )
     rows_html = "\n        ".join(rows)
     return f"""<div class="section-title">{html_mod.escape(label)} ({len(pr_list)} open)</div>
@@ -417,33 +414,30 @@ def _render_pr_section(label: str, pr_list: List[Dict[str, Any]]) -> str:
     </table>"""
 
 
-def _task_rows(task_list: List[Dict[str, Any]]) -> str:
-    lines: List[str] = []
+def _task_rows(task_list: list[dict[str, Any]]) -> str:
+    lines: list[str] = []
     for t in task_list:
         p = t["priority"]
         prow = "age-red" if p == "high" else ("age-yellow" if p == "medium" else "")
         lines.append(
             f'<tr><td class="{prow}">{html_mod.escape(p)}</td>'
-            f'<td>{html_mod.escape(t["title"])}</td><td>{t["age_days"]}d</td>'
-            f'<td>{format_view_action_html(t)}</td></tr>'
+            f"<td>{html_mod.escape(t['title'])}</td><td>{t['age_days']}d</td>"
+            f"<td>{format_view_action_html(t)}</td></tr>"
         )
     return "\n        ".join(lines)
 
 
-def _render_my_queue_section(label: str, todos: List[Dict[str, Any]]) -> str:
+def _render_my_queue_section(label: str, todos: list[dict[str, Any]]) -> str:
     label_esc = html_mod.escape(label)
     if not todos:
         return (
             f'<div class="section-title">{label_esc}</div>\n    '
             '<div class="banner-green">Queue clear — no open tasks or reading items.</div>'
         )
-    work_tasks = [
-        t for t in todos
-        if t["type"] == "task" and t.get("domain", "work") != "personal"
-    ]
+    work_tasks = [t for t in todos if t["type"] == "task" and t.get("domain", "work") != "personal"]
     personal_tasks = [t for t in todos if t["type"] == "task" and t.get("domain") == "personal"]
     reads = [t for t in todos if t["type"] == "read"]
-    out: List[str] = [f'<div class="section-title">{label_esc}</div>']
+    out: list[str] = [f'<div class="section-title">{label_esc}</div>']
     out.append('<div class="subsection-label">Work tasks</div>')
     if not work_tasks:
         out.append('<p class="muted">No open work tasks</p>')
@@ -480,7 +474,7 @@ def _render_my_queue_section(label: str, todos: List[Dict[str, Any]]) -> str:
             age_cell = (
                 f'<span class="{age_cls}">{t["age_days"]}d</span>'
                 if age_cls
-                else f'{t["age_days"]}d'
+                else f"{t['age_days']}d"
             )
             out.append(
                 f"<tr><td>{html_mod.escape(t['title'])}</td><td>{link_cell}</td>"

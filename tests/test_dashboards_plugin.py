@@ -1,18 +1,16 @@
 """Tests for the dashboards plugin (file-driven dashboard discovery + parsing)."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 import pytest
-
 from scripts.dashboards_plugin import (
-    Dashboard,
     discover_dashboards,
     load_snapshot,
     parse_dashboard,
 )
-
 
 # ── discover_dashboards ────────────────────────────────────────────────────
 
@@ -92,9 +90,7 @@ class TestParseDashboard:
     def test_keys_are_case_insensitive(self, tmp_path: Path) -> None:
         f = tmp_path / "x.md"
         f.write_text(
-            "# X\n"
-            "- **url:** `https://example.com`\n"
-            "- **SLUG:** `x`\n",
+            "# X\n- **url:** `https://example.com`\n- **SLUG:** `x`\n",
             encoding="utf-8",
         )
         d = parse_dashboard(f)
@@ -104,9 +100,7 @@ class TestParseDashboard:
     def test_value_unwrapping_strips_quotes_and_backticks(self, tmp_path: Path) -> None:
         f = tmp_path / "x.md"
         f.write_text(
-            "# X\n"
-            "- **URL:** `https://example.com`\n"
-            "- **Slug:** \"my-slug\"\n",
+            '# X\n- **URL:** `https://example.com`\n- **Slug:** "my-slug"\n',
             encoding="utf-8",
         )
         d = parse_dashboard(f)
@@ -137,9 +131,7 @@ class TestLoadSnapshot:
             "source_url": "https://example.com",
             "results": [{"widget_title": "x", "series": []}],
         }
-        (tmp_path / "foo_metric_results.json").write_text(
-            json.dumps(payload), encoding="utf-8"
-        )
+        (tmp_path / "foo_metric_results.json").write_text(json.dumps(payload), encoding="utf-8")
         out = load_snapshot("foo", tmp_path)
         assert out == payload
 

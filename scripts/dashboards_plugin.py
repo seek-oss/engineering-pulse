@@ -37,7 +37,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ class Dashboard:
     source: Path
 
 
-def discover_dashboards(dashboards_dir: Path) -> List[Path]:
+def discover_dashboards(dashboards_dir: Path) -> list[Path]:
     """Return sorted `*.md` paths in `dashboards_dir`, skipping `_*.md` templates.
 
     Returns an empty list if the directory does not exist — dashboards are
@@ -59,9 +59,7 @@ def discover_dashboards(dashboards_dir: Path) -> List[Path]:
     if not dashboards_dir.is_dir():
         return []
     return sorted(
-        p
-        for p in dashboards_dir.glob("*.md")
-        if p.is_file() and not p.name.startswith("_")
+        p for p in dashboards_dir.glob("*.md") if p.is_file() and not p.name.startswith("_")
     )
 
 
@@ -94,8 +92,8 @@ def parse_dashboard(path: Path) -> Dashboard:
     """
     raw = path.read_text(encoding="utf-8")
 
-    title: Optional[str] = None
-    fields: Dict[str, str] = {}
+    title: str | None = None
+    fields: dict[str, str] = {}
 
     for line in raw.splitlines():
         if title is None:
@@ -116,7 +114,7 @@ def parse_dashboard(path: Path) -> Dashboard:
     )
 
 
-def load_snapshot(slug: str, output_dir: Path) -> Optional[Dict[str, Any]]:
+def load_snapshot(slug: str, output_dir: Path) -> dict[str, Any] | None:
     """Return the parsed `<slug>_metric_results.json`, or `None` if missing.
 
     The extract script writes this file with shape::

@@ -4,6 +4,7 @@ scripts/render_daily_dashboard_html.py.
 These exercise the CLI end-to-end against a temporary `prompts/dashboards/`
 folder, asserting dynamic Part-letter numbering and generic dashboard rendering.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,17 +50,26 @@ def _run(tmp_path: Path, *extra_args: str) -> str:
     cmd = [
         sys.executable,
         str(SCRIPT),
-        "--out", str(out),
-        "--dashboards-dir", str(tmp_path / "dashboards"),
-        "--output-dir", str(tmp_path / "output"),
-        "--prs", str(tmp_path / "output" / "github_prs.json"),
-        "--todos", str(tmp_path / "output" / "todos.json"),
-        "--extras-dir", str(tmp_path / "extras"),
-        "--stakeholders-dir", str(tmp_path / "stakeholders"),
+        "--out",
+        str(out),
+        "--dashboards-dir",
+        str(tmp_path / "dashboards"),
+        "--output-dir",
+        str(tmp_path / "output"),
+        "--prs",
+        str(tmp_path / "output" / "github_prs.json"),
+        "--todos",
+        str(tmp_path / "output" / "todos.json"),
+        "--extras-dir",
+        str(tmp_path / "extras"),
+        "--stakeholders-dir",
+        str(tmp_path / "stakeholders"),
         *extra_args,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
-    assert result.returncode == 0, f"renderer failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    assert result.returncode == 0, (
+        f"renderer failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
     return out.read_text(encoding="utf-8")
 
 
@@ -92,15 +102,11 @@ class TestDashboardOrdering:
     def test_two_dashboards_shift_pr_queue_to_part_c(self, base_dirs: Path) -> None:
         # Two generic dashboards with snapshots.
         (base_dirs / "dashboards" / "alpha.md").write_text(
-            "# Alpha\n"
-            "- **URL:** `https://example.com/alpha`\n"
-            "- **Slug:** `alpha`\n",
+            "# Alpha\n- **URL:** `https://example.com/alpha`\n- **Slug:** `alpha`\n",
             encoding="utf-8",
         )
         (base_dirs / "dashboards" / "beta.md").write_text(
-            "# Beta\n"
-            "- **URL:** `https://example.com/beta`\n"
-            "- **Slug:** `beta`\n",
+            "# Beta\n- **URL:** `https://example.com/beta`\n- **Slug:** `beta`\n",
             encoding="utf-8",
         )
         _write_snapshot(
@@ -132,9 +138,7 @@ class TestDashboardOrdering:
         assert "Skipped" not in html
         assert "Part A — PR Review Queue" in html
 
-    def test_dashboard_without_snapshot_is_skipped_with_warning(
-        self, base_dirs: Path
-    ) -> None:
+    def test_dashboard_without_snapshot_is_skipped_with_warning(self, base_dirs: Path) -> None:
         (base_dirs / "dashboards" / "lonely.md").write_text(
             "# Lonely\n- **Slug:** `lonely`\n", encoding="utf-8"
         )
@@ -144,13 +148,20 @@ class TestDashboardOrdering:
         cmd = [
             sys.executable,
             str(SCRIPT),
-            "--out", str(base_dirs / "report.html"),
-            "--dashboards-dir", str(base_dirs / "dashboards"),
-            "--output-dir", str(base_dirs / "output"),
-            "--prs", str(base_dirs / "output" / "github_prs.json"),
-            "--todos", str(base_dirs / "output" / "todos.json"),
-            "--extras-dir", str(base_dirs / "extras"),
-            "--stakeholders-dir", str(base_dirs / "stakeholders"),
+            "--out",
+            str(base_dirs / "report.html"),
+            "--dashboards-dir",
+            str(base_dirs / "dashboards"),
+            "--output-dir",
+            str(base_dirs / "output"),
+            "--prs",
+            str(base_dirs / "output" / "github_prs.json"),
+            "--todos",
+            str(base_dirs / "output" / "todos.json"),
+            "--extras-dir",
+            str(base_dirs / "extras"),
+            "--stakeholders-dir",
+            str(base_dirs / "stakeholders"),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
         assert result.returncode == 0
@@ -163,9 +174,7 @@ class TestDashboardOrdering:
 class TestGenericRendererWithDashboard:
     def test_generic_renderer_emits_tile_per_widget(self, base_dirs: Path) -> None:
         (base_dirs / "dashboards" / "my_dashboard.md").write_text(
-            "# My Dashboard\n"
-            "- **URL:** `https://example.com/mine`\n"
-            "- **Slug:** `my_dashboard`\n",
+            "# My Dashboard\n- **URL:** `https://example.com/mine`\n- **Slug:** `my_dashboard`\n",
             encoding="utf-8",
         )
         _write_snapshot(
