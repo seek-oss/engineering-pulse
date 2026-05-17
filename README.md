@@ -4,7 +4,7 @@
 
 A **Cursor prompt-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
-Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — triggered manually in Cursor or automatically on a schedule. Also keeps a **task list** and **reading queue** in Todoist.
+Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — triggered manually in Cursor or automatically on a schedule. Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP) for names you list in `.env`.
 
 ## Install
 
@@ -49,13 +49,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests and opening pull reques
 │                                                      │
 │  Part E — Extras (optional)                         │
 │  Drop *.md files in prompts/extras/                 │
+│                                                      │
+│  Part F — Stakeholder Pulse (optional)              │
+│  One card per name in STAKEHOLDERS (.env)           │
 └──────────────────────────────────────────────────────┘
 ```
 
 Section letters (A, B, C, …) are assigned **dynamically**: dashboards from
 `prompts/dashboards/*.md` come first (sorted by filename), then PR Queue,
-My Queue, and Extras fill the remaining letters. With zero dashboards
-configured, PR Queue is Part A.
+My Queue, Extras, and (when configured) **Stakeholder Pulse** fill the
+remaining letters. With zero dashboards configured, PR Queue is Part A.
+Stakeholder Pulse is omitted entirely when `STAKEHOLDERS` is empty or unset.
 
 ---
 
@@ -71,11 +75,14 @@ prompts/
   extras/                   ← drop-in plugin folder for extra task cards
     _example.md             ← format reference (tracked by git, skipped by renderer)
     *.md                    ← your extras (local only, gitignored)
+  stakeholders/             ← agent-written Stakeholder Pulse cards (Glean → Slack)
+    _example.md             ← format reference (tracked by git, skipped by renderer)
+    *.md                    ← regenerated each run when STAKEHOLDERS is set (gitignored)
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
   render_daily_dashboard_html.py ← builds the HTML scorecard
-  extras_plugin.py               ← discovers + renders prompts/extras/*.md as cards
+  extras_plugin.py               ← discovers + renders extras & stakeholder *.md cards
   github_prs.py                  ← fetches PR review queue via GitHub GraphQL
   todo.py                        ← Todoist-backed tasks & reading queue
   send_report_smtp.py            ← sends HTML report via SMTP
@@ -121,6 +128,7 @@ You need:
 - **GitHub** — Personal Access Token with `repo` (read) + `read:org` scopes
 - **Gmail SMTP** — App Password (2FA must be enabled on your Google account)
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
+- **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); configure in Cursor, then set `STAKEHOLDERS` in `.env`
 
 Then add your dashboards using the interactive command in Cursor:
 ```
@@ -168,6 +176,7 @@ make help         # list all targets
 | `SMTP_TO` | yes | Recipient address |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
+| `STAKEHOLDERS` | no | Comma-separated full names or emails for **Stakeholder Pulse** (via Glean MCP in Cursor). Empty/unset skips the section and deletes generated cards. Prefer `Jane Doe,john.smith@example.com` over first names only. |
 
 See `.env.example` for the full template.
 
@@ -262,6 +271,56 @@ User-added dashboards are prefixed with `custom_` by convention to keep things o
 
 ---
 
+## Stakeholder Pulse (optional)
+
+Track what a small set of **named stakeholders** have been doing in **Slack**
+over the past 7 days. The daily dashboard agent (Step 2F in
+`prompts/daily-dashboard.md`) writes one markdown card per name; the HTML
+report picks them up when `STAKEHOLDERS` is set in `.env`.
+
+### Slack data: two possible approaches
+
+| Approach | Status | Best for |
+|----------|--------|----------|
+| **Glean MCP** in Cursor | **Supported today** | Orgs that already use Glean for Slack search — no Slack token in `.env` |
+| **Read-only Slack token** | *Not implemented yet* | Orgs without Glean; a bot/user token with read-only channel history could feed the same card format |
+
+**Today only Glean MCP is wired up** (Step 2F). A direct Slack API path may be
+added later for teams that prefer a readonly token over enterprise search.
+
+### Enable (Glean MCP)
+
+1. **Glean MCP** — add/configure the Glean server in your [Cursor MCP settings](https://docs.cursor.com/context/mcp) (not shipped in this repo).
+2. **`STAKEHOLDERS` in `.env`** — comma-separated names or emails, e.g.  
+   `STAKEHOLDERS=Jane Doe,john.smith@example.com`
+3. Run the dashboard in Cursor: `@prompts/daily-dashboard.md`
+
+### What happens each run
+
+- The agent deletes stale `prompts/stakeholders/*.md` (except `_*.md` templates),
+  then writes one file per name: `prompts/stakeholders/<slug>.md`.
+- Each card has three bullets: **Themes**, **Notable** (with link), **Top links**.
+- The HTML renderer reads `STAKEHOLDERS` from `.env`:
+  - **Empty/unset** — no Stakeholder Pulse section; non-template cards are removed.
+  - **Non-empty** — section appears (placeholder if Step 2F has not run yet).
+
+Cards are **gitignored** (except `prompts/stakeholders/_example.md`). You normally
+do not edit them by hand — change `STAKEHOLDERS` or re-run the dashboard.
+
+Override the folder with `--stakeholders-dir <path>` on
+`render_daily_dashboard_html.py`.
+
+### Scope caveats
+
+- Glean typically indexes **public Slack channels** it has access to — not DMs or
+  private channels.
+- Indexing can lag by a few hours; very recent messages may show up on the next run.
+- Keep the list small (~5 names) to keep agent latency reasonable.
+
+See `prompts/stakeholders/_example.md` for the expected card format.
+
+---
+
 ## Adding extra tasks (drop-in plugin folder)
 
 Beyond Datadog dashboards, you can drop **any markdown file** into
@@ -317,6 +376,8 @@ on your disk only and are never touched by `git pull`.
 | Example template (`_example.md`) | Yes | N/A (reference only) |
 | Your dashboard files (`*.md` in `prompts/dashboards/`) | No (gitignored) | Yes |
 | Your extras files (`*.md` in `prompts/extras/`) | No (gitignored) | Yes |
+| Stakeholder Pulse cards (`*.md` in `prompts/stakeholders/`) | No (gitignored) | Yes |
+| `STAKEHOLDERS` in `.env` | No (untouched) | Yes |
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |
 | `daily-dashboard.md` (workflow) | Yes | N/A (don't edit) |

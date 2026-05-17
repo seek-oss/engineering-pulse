@@ -244,8 +244,15 @@ section is omitted entirely.
 ### Step 2F — Stakeholder Pulse (Slack via Glean MCP)
 
 Track what a small set of named stakeholders have been working on in Slack
-over the past 7 days. Uses the **Glean MCP server** (already configured in
-`.cursor/mcp.json` as `Glean`) — no Slack token required.
+over the past 7 days.
+
+**Data source (today):** **Glean MCP** — search Slack through the Glean server
+in Cursor (often configured in user-level MCP settings as `Glean`). No Slack
+token in `.env` for this step.
+
+**Possible future path:** a **read-only Slack bot/user token** for teams without
+Glean — not implemented in this repo yet; cards would use the same
+`prompts/stakeholders/*.md` format.
 
 **Skip this entire step if `STAKEHOLDERS` is empty or unset.**
 
