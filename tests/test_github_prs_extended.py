@@ -1,15 +1,15 @@
 """Extended tests for scripts/github_prs.py — HTTP helpers and display."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests as req_lib
-
-from scripts.github_prs import gql, get_authenticated_user, print_table
-
+from scripts.github_prs import get_authenticated_user, gql, print_table
 
 # ---------------------------------------------------------------------------
 # gql()
 # ---------------------------------------------------------------------------
+
 
 class TestGql:
     @patch("scripts.github_prs.requests.post")
@@ -60,6 +60,7 @@ class TestGql:
 # get_authenticated_user()
 # ---------------------------------------------------------------------------
 
+
 class TestGetAuthenticatedUser:
     @patch("scripts.github_prs.requests.get")
     def test_returns_login(self, mock_get):
@@ -94,6 +95,7 @@ class TestGetAuthenticatedUser:
 # ---------------------------------------------------------------------------
 # print_table()
 # ---------------------------------------------------------------------------
+
 
 class TestPrintTable:
     def test_empty_list_prints_no_prs_message(self, capsys):

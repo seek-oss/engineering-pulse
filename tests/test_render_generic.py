@@ -1,7 +1,4 @@
 """Tests for the generic dashboard rendering in render_daily_dashboard_html.py."""
-import html as html_mod
-
-import pytest
 
 from scripts.render_daily_dashboard_html import _render_generic_section
 

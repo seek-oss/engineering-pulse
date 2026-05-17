@@ -7,7 +7,7 @@ Each task / reading item gets a stable Todoist web URL. No signing, no worker.
 from __future__ import annotations
 
 import html
-from typing import Any, Dict, List
+from typing import Any
 
 
 def build_view_url(task_id: str) -> str:
@@ -16,9 +16,9 @@ def build_view_url(task_id: str) -> str:
     return f"https://app.todoist.com/app/task/{tid}" if tid else ""
 
 
-def enrich_json_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def enrich_json_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Add ``view_url`` to each row (for ``todo.py list --json``)."""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for row in items:
         r = dict(row)
         tid = str(r.get("id", "")).strip()
@@ -27,7 +27,7 @@ def enrich_json_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-def format_view_action_html(item: Dict[str, Any]) -> str:
+def format_view_action_html(item: dict[str, Any]) -> str:
     """
     Email-safe HTML for Part D Actions column: single **View** link to Todoist.
     """

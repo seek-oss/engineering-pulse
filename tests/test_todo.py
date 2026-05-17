@@ -1,8 +1,8 @@
 """Tests for scripts/todo.py — pure functions and mocked HTTP."""
-import json
-from unittest.mock import MagicMock, patch
 
-import pytest
+import json
+from datetime import UTC
+from unittest.mock import MagicMock, patch
 
 from scripts.todo import (
     PRIORITY_MAP,
@@ -13,15 +13,16 @@ from scripts.todo import (
     build_parser,
 )
 
-
 # ---------------------------------------------------------------------------
 # _age_days
 # ---------------------------------------------------------------------------
 
+
 class TestAgeDays:
     def test_today(self):
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
+        from datetime import datetime
+
+        now = datetime.now(UTC).isoformat()
         assert _age_days(now) == 0
 
     def test_z_suffix(self):
@@ -32,6 +33,7 @@ class TestAgeDays:
 # ---------------------------------------------------------------------------
 # _task_created
 # ---------------------------------------------------------------------------
+
 
 class TestTaskCreated:
     def test_v1_added_at(self):
@@ -49,6 +51,7 @@ class TestTaskCreated:
 # ---------------------------------------------------------------------------
 # _extract_url
 # ---------------------------------------------------------------------------
+
 
 class TestExtractUrl:
     def test_markdown_link(self):
@@ -69,6 +72,7 @@ class TestExtractUrl:
 # Priority maps
 # ---------------------------------------------------------------------------
 
+
 class TestPriorityMaps:
     def test_map_values(self):
         assert PRIORITY_MAP["high"] == 4
@@ -84,6 +88,7 @@ class TestPriorityMaps:
 # ---------------------------------------------------------------------------
 # CLI parser
 # ---------------------------------------------------------------------------
+
 
 class TestParser:
     def test_setup(self):
@@ -213,6 +218,7 @@ class TestCmdAdd:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test", "TODOIST_PROJECT_ID": "proj-123"})
     def test_add_task(self, mock_get, mock_post, capsys):
         from scripts.todo import cmd_add
+
         parser = build_parser()
         args = parser.parse_args(["add", "Hello world", "--priority", "high"])
         cmd_add(args)
@@ -224,6 +230,7 @@ class TestCmdAdd:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test", "TODOIST_PROJECT_ID": "proj-123"})
     def test_add_read(self, mock_get, mock_post, capsys):
         from scripts.todo import cmd_add
+
         parser = build_parser()
         args = parser.parse_args(["add", "Article", "--type", "read", "--url", "https://x.com"])
         cmd_add(args)
@@ -236,6 +243,7 @@ class TestCmdList:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test", "TODOIST_PROJECT_ID": "proj-123"})
     def test_list_json(self, mock_get, capsys):
         from scripts.todo import cmd_list
+
         parser = build_parser()
         args = parser.parse_args(["list", "--json"])
         cmd_list(args)
@@ -252,6 +260,7 @@ class TestCmdList:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test", "TODOIST_PROJECT_ID": "proj-123"})
     def test_list_table(self, mock_get, capsys):
         from scripts.todo import cmd_list
+
         parser = build_parser()
         args = parser.parse_args(["list"])
         cmd_list(args)
@@ -265,6 +274,7 @@ class TestCmdDone:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test"})
     def test_done_with_comment(self, mock_get, mock_post, capsys):
         from scripts.todo import cmd_done
+
         parser = build_parser()
         args = parser.parse_args(["done", "task-001", "--comment", "All good"])
         cmd_done(args)
@@ -278,6 +288,7 @@ class TestCmdCancel:
     @patch.dict("os.environ", {"TODOIST_API_TOKEN": "test"})
     def test_cancel_with_comment(self, mock_get, mock_post, capsys):
         from scripts.todo import cmd_cancel
+
         parser = build_parser()
         args = parser.parse_args(["cancel", "task-001", "--comment", "Not needed"])
         cmd_cancel(args)

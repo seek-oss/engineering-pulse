@@ -17,6 +17,15 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Lint
+
+```bash
+ruff check scripts tests
+ruff format --check scripts tests
+```
+
+Auto-fix where possible: `ruff check scripts tests --fix` and `ruff format scripts tests`.
+
 ## Run tests
 
 Tests use mocked API credentials (see `tests/conftest.py`). No `.env` file is required.
@@ -30,7 +39,7 @@ This matches what [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs in
 ## Pull requests
 
 - Open a PR against `main`.
-- Ensure CI passes (both matrix jobs).
+- Ensure CI passes (lint + both test matrix jobs).
 - Do not commit secrets (`.env`, API keys, SMTP passwords).
 - Keep local-only files out of the PR:
   - `prompts/dashboards/*.md` (except `_example.md`)

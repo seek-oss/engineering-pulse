@@ -5,6 +5,7 @@ Unit-level coverage of `render_extras_section()` lives in
 `render_daily_dashboard_html.main()` end-to-end against minimal fixtures,
 using the same subprocess style as `test_render_dashboards_integration.py`.
 """
+
 from __future__ import annotations
 
 import json
@@ -77,18 +78,14 @@ class TestStakeholderPulseWiring:
         html = _run(tmp_path, stakeholders_dir=tmp_path / "missing")
         assert "Stakeholder Pulse" not in html
 
-    def test_omits_section_when_dir_only_has_underscore_files(
-        self, tmp_path: Path
-    ) -> None:
+    def test_omits_section_when_dir_only_has_underscore_files(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         (sdir / "_example.md").write_text("# example\n", encoding="utf-8")
         html = _run(tmp_path, stakeholders_dir=sdir)
         assert "Stakeholder Pulse" not in html
 
-    def test_deletes_stale_cards_when_stakeholders_env_unset(
-        self, tmp_path: Path
-    ) -> None:
+    def test_deletes_stale_cards_when_stakeholders_env_unset(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         stale = sdir / "jane-doe.md"
@@ -152,9 +149,7 @@ class TestStakeholderPulseWiring:
         assert "Jane Doe" in html
         assert html.index("Part C") < html.index("Part D")
 
-    def test_placeholder_when_stakeholders_set_but_no_cards(
-        self, tmp_path: Path
-    ) -> None:
+    def test_placeholder_when_stakeholders_set_but_no_cards(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         html = _run(

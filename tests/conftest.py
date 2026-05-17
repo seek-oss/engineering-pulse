@@ -3,6 +3,7 @@ Set required environment variables before any script module is imported.
 Module-level code in the scripts (DD_API_KEY, GITHUB_TOKEN checks) runs
 on import, so these must be set before pytest collects tests.
 """
+
 import os
 
 os.environ.setdefault("DD_API_KEY", "test-api-key")
