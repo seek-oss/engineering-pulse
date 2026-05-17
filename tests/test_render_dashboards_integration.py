@@ -46,7 +46,7 @@ def _run(tmp_path: Path, *extra_args: str) -> str:
     out = tmp_path / "report.html"
     (tmp_path / "stakeholders").mkdir(exist_ok=True)
     env = os.environ.copy()
-    env.pop("STAKEHOLDERS", None)
+    env["STAKEHOLDERS"] = ""
     cmd = [
         sys.executable,
         str(SCRIPT),

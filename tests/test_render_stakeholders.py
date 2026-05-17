@@ -43,8 +43,9 @@ def _run(
     _write_todos(tmp_path / "output" / "todos.json")
 
     env = os.environ.copy()
+    # Empty string — load_dotenv() in the renderer would otherwise re-read .env.
     if stakeholders_env is None:
-        env.pop("STAKEHOLDERS", None)
+        env["STAKEHOLDERS"] = ""
     else:
         env["STAKEHOLDERS"] = stakeholders_env
 
@@ -158,4 +159,5 @@ class TestStakeholderPulseWiring:
             stakeholders_env="Jane Doe",
         )
         assert "Part C — Stakeholder Pulse" in html
-        assert "No stakeholder markdown cards yet" in html
+        assert "No cards in" in html
+        assert "output/stakeholders" in html or str(sdir) in html

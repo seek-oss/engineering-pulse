@@ -44,7 +44,7 @@ This matches what [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs in
 - Keep local-only files out of the PR:
   - `prompts/dashboards/*.md` (except `_example.md`)
   - `prompts/extras/*.md` (except `_example.md`)
-  - `prompts/stakeholders/*.md` (except `_example.md`)
+  - `output/stakeholders/*.md` (generated each run; gitignored via `output/`)
   - `output/`
 
 ## Questions

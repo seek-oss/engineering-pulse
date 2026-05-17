@@ -1,14 +1,11 @@
-<!-- SKIP: This is a reference example only. Do NOT include this file in the report. -->
+<!-- SKIP: Format reference only — not used by the renderer. -->
 
 # Example — Stakeholder Pulse card
 
-> **This file is a format reference only.** The renderer skips any file in
-> this directory whose name starts with `_`.
->
-> Real stakeholder cards are written here automatically by the daily
-> dashboard agent — see **Step 2F — Stakeholder Pulse** in
-> `prompts/daily-dashboard.md`. You should not need to edit these files
-> by hand.
+> **This file is a format reference only.** Real cards are written to
+> **`output/stakeholders/`** by the daily dashboard agent (Step 2F in
+> `prompts/daily-dashboard.md`). That folder is gitignored with the rest of
+> `output/`.
 
 ---
 
@@ -17,13 +14,13 @@
 **Slack data today:** Glean MCP in Cursor (Step 2F). **Possible later:**
 read-only Slack token for orgs without Glean — same card files, not wired up yet.
 
-Each `*.md` file in `prompts/stakeholders/` becomes one card under
+Each `*.md` file in `output/stakeholders/` becomes one card under
 **Stakeholder Pulse** (next dynamic Part letter) in the daily report — only
 when `STAKEHOLDERS` in `.env` is non-empty (the HTML renderer enforces that).
 
 - The first `# Heading` is used as the stakeholder's display name.
 - Everything below is rendered as the card body (3-bullet summary).
-- The agent regenerates this folder on every run: any non-`_*.md`
+- The agent regenerates that folder on every run: any non-`_*.md`
   files are deleted first, then one file is written per name in the
   `STAKEHOLDERS` env var.
 

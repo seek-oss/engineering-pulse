@@ -75,9 +75,7 @@ prompts/
   extras/                   ← drop-in plugin folder for extra task cards
     _example.md             ← format reference (tracked by git, skipped by renderer)
     *.md                    ← your extras (local only, gitignored)
-  stakeholders/             ← agent-written Stakeholder Pulse cards (Glean → Slack)
-    _example.md             ← format reference (tracked by git, skipped by renderer)
-    *.md                    ← regenerated each run when STAKEHOLDERS is set (gitignored)
+  _stakeholder-card-example.md  ← Stakeholder Pulse card format (reference only)
 
 scripts/
   datadog_dashboard_extract.py   ← fetches Datadog metrics via API
@@ -297,15 +295,17 @@ added later for teams that prefer a readonly token over enterprise search.
 
 ### What happens each run
 
-- The agent deletes stale `prompts/stakeholders/*.md` (except `_*.md` templates),
-  then writes one file per name: `prompts/stakeholders/<slug>.md`.
+- The agent deletes stale `output/stakeholders/*.md`, then writes one file per
+  name: `output/stakeholders/<slug>.md` (same gitignored `output/` tree as PRs
+  and todos).
 - Each card has three bullets: **Themes**, **Notable** (with link), **Top links**.
 - The HTML renderer reads `STAKEHOLDERS` from `.env`:
   - **Empty/unset** — no Stakeholder Pulse section; non-template cards are removed.
   - **Non-empty** — section appears (placeholder if Step 2F has not run yet).
 
-Cards are **gitignored** (except `prompts/stakeholders/_example.md`). You normally
-do not edit them by hand — change `STAKEHOLDERS` or re-run the dashboard.
+Cards live under **`output/stakeholders/`** (gitignored with the rest of
+`output/`). You normally do not edit them by hand — change `STAKEHOLDERS` or
+re-run the dashboard.
 
 Override the folder with `--stakeholders-dir <path>` on
 `render_daily_dashboard_html.py`.
@@ -317,7 +317,7 @@ Override the folder with `--stakeholders-dir <path>` on
 - Indexing can lag by a few hours; very recent messages may show up on the next run.
 - Keep the list small (~5 names) to keep agent latency reasonable.
 
-See `prompts/stakeholders/_example.md` for the expected card format.
+See `prompts/_stakeholder-card-example.md` for the expected card format.
 
 ---
 
@@ -376,7 +376,7 @@ on your disk only and are never touched by `git pull`.
 | Example template (`_example.md`) | Yes | N/A (reference only) |
 | Your dashboard files (`*.md` in `prompts/dashboards/`) | No (gitignored) | Yes |
 | Your extras files (`*.md` in `prompts/extras/`) | No (gitignored) | Yes |
-| Stakeholder Pulse cards (`*.md` in `prompts/stakeholders/`) | No (gitignored) | Yes |
+| Stakeholder Pulse cards (`output/stakeholders/*.md`) | No (gitignored) | Yes |
 | `STAKEHOLDERS` in `.env` | No (untouched) | Yes |
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |

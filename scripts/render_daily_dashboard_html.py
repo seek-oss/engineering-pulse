@@ -16,8 +16,8 @@ actually present:
   - My Queue (Todoist)
   - Extras cards (from `prompts/extras/*.md`)
   - Stakeholder Pulse — only when `STAKEHOLDERS` in `.env` is non-empty; cards
-    from `prompts/stakeholders/*.md`. When unset/empty, stale `*.md` there are
-    removed (except `_*.md` templates) so the report matches `.env` alone.
+    from `output/stakeholders/*.md` (gitignored). When unset/empty, stale cards
+    there are removed so the report matches `.env` alone.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ import argparse
 import html as html_mod
 import json
 import os
+import re
 import string
 import sys
 from datetime import date
@@ -67,6 +68,12 @@ def _parse_stakeholder_names() -> list[str]:
     if not raw:
         return []
     return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _stakeholder_slug(name: str) -> str:
+    """Filesystem slug for `output/stakeholders/<slug>.md` (Step 2F)."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return slug or "stakeholder"
 
 
 def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
@@ -153,8 +160,8 @@ def main() -> None:
     )
     ap.add_argument(
         "--stakeholders-dir",
-        default="prompts/stakeholders",
-        help="Folder of per-stakeholder *.md cards (default: prompts/stakeholders)",
+        default="output/stakeholders",
+        help="Folder of per-stakeholder *.md cards (default: output/stakeholders)",
     )
     args = ap.parse_args()
 
@@ -238,10 +245,16 @@ def main() -> None:
         if stakeholders_html:
             sections.append((stakeholders_label, stakeholders_html))
         else:
+            expected = ", ".join(
+                f"{args.stakeholders_dir}/{_stakeholder_slug(n)}.md"
+                for n in stakeholder_names
+            )
             placeholder = (
                 f'<div class="section-title">{html_mod.escape(stakeholders_label)}</div>\n    '
-                '<p class="muted">No stakeholder markdown cards yet — run Step 2F '
-                "in the daily dashboard workflow to populate this folder from Glean.</p>"
+                f'<p class="muted">No cards in <code>{html_mod.escape(args.stakeholders_dir)}/</code> yet '
+                f"(expected: {html_mod.escape(expected)}). Run Step 2F in "
+                "<code>prompts/daily-dashboard.md</code> (Glean → write those files) "
+                "before rendering.</p>"
             )
             sections.append((stakeholders_label, placeholder))
 

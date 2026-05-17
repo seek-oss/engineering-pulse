@@ -111,9 +111,9 @@ order, skipping any that have no content:
 4. My Queue
 5. Extras (`prompts/extras/*.md`)
 6. Stakeholder Pulse — **only if `STAKEHOLDERS` in `.env` is non-empty** (the
-   HTML renderer reads this; cards still come from `prompts/stakeholders/*.md`
-   after Step 2F). When `STAKEHOLDERS` is empty or unset, the renderer removes
-   all non-`_` `*.md` in that folder so the report cannot show stale names.
+   HTML renderer reads this; cards come from `output/stakeholders/*.md` after
+   Step 2F). When `STAKEHOLDERS` is empty or unset, the renderer removes stale
+   cards there so the report cannot show old names.
 
 So with zero dashboard `.md` files, PR Queue becomes Part A. With two
 dashboards, PR Queue becomes Part C, and so on.
@@ -252,17 +252,17 @@ token in `.env` for this step.
 
 **Possible future path:** a **read-only Slack bot/user token** for teams without
 Glean — not implemented in this repo yet; cards would use the same
-`prompts/stakeholders/*.md` format.
+`output/stakeholders/*.md` format (see `prompts/_stakeholder-card-example.md`).
 
 **Skip this entire step if `STAKEHOLDERS` is empty or unset.**
 
 **Procedure:**
 
-1. **Clean stale cards.** Delete every file in `prompts/stakeholders/`
-   whose name does **not** start with `_`. This guarantees that removing a
-   name from `STAKEHOLDERS` removes the card on the next run. (The HTML
-   renderer also deletes these files when `STAKEHOLDERS` is empty/unset,
-   so commenting out `.env` alone is enough to drop the section next run.)
+1. **Clean stale cards.** Delete every `*.md` in `output/stakeholders/` whose
+   name does **not** start with `_` (create the directory if needed). This
+   guarantees that removing a name from `STAKEHOLDERS` removes the card on the
+   next run. (The HTML renderer also deletes these files when `STAKEHOLDERS` is
+   empty/unset, so commenting out `.env` alone is enough to drop the section.)
 
 2. **For each name** in `STAKEHOLDERS` (split on `,`, strip whitespace,
    skip empties):
@@ -282,7 +282,7 @@ Glean — not implemented in this repo yet; cards would use the same
       - **Top links:** up to 3 markdown links (channels, threads, key
         messages), comma-separated on a single bullet.
 
-   c. **Write** to `prompts/stakeholders/<slug>.md` where `<slug>` is the
+   c. **Write** to `output/stakeholders/<slug>.md` where `<slug>` is the
       lowercased name with spaces replaced by hyphens (e.g. `Jane Doe` →
       `jane-doe.md`). Use this exact format:
 
@@ -305,7 +305,7 @@ Glean — not implemented in this repo yet; cards would use the same
 
 3. **Renderer reads `STAKEHOLDERS` from `.env`.** When it is **empty or
    unset**, no Stakeholder Pulse section is emitted and all non-`_`
-   `prompts/stakeholders/*.md` files are deleted. When it is **non-empty**,
+   `output/stakeholders/*.md` files are deleted. When it is **non-empty**,
    the section appears (with cards from Step 2F, or a short placeholder if
    no `*.md` files exist yet). Override the folder with `--stakeholders-dir`
    if needed.
