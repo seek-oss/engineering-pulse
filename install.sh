@@ -216,11 +216,13 @@ EOF
 chmod +x "$RUNNER_SCRIPT"
 success "Runner script written to $RUNNER_SCRIPT"
 
-# Add ~/bin to PATH hint
+# Optional interactive-shell convenience hint. The LaunchAgent and quick-reference
+# commands use RUNNER_SCRIPT by absolute path, so PATH is only needed for invoking
+# run-daily-dashboard.sh directly by name.
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-  warn "$BIN_DIR is not in your PATH."
-  warn "Add this to your ~/.zshrc or ~/.bashrc:"
-  warn "  export PATH=\"\$HOME/bin:\$PATH\""
+  info "$BIN_DIR is not in your PATH; scheduled runs still use the absolute runner path."
+  info "Optional: add this to your ~/.zshrc or ~/.bashrc to run 'run-daily-dashboard.sh' directly:"
+  info "  export PATH=\"$BIN_DIR:\$PATH\""
 fi
 
 # ── 5. LaunchAgent (macOS only) ──────────────────────────────────────────────
