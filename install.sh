@@ -201,20 +201,38 @@ show_agent_selector() {
 }
 
 print_banner() {
-  local g="" r="" d="" b=""
+  # Use printf %b so ANSI escapes render (plain %s would print literal \033).
+  local C_G="" C_R=""
   if use_color; then
-    g='\033[32m'
-    r='\033[0m'
-    d='\033[2m'
-    b='\033[1m'
+    C_G=$(printf '\033[32m')
+    C_R=$(printf '\033[0m')
   fi
-  printf '\n'
-  printf '%s  ___          ___%s\n' "$g" "$r"
-  printf '%s /   \\___/\\   /   \\____/\\___________%s\n' "$g" "$r"
-  printf '%s          \\_/%s\n' "$g" "$r"
-  printf '\n'
-  printf '%s  %sENGINEERING PULSE%s\n' "$b" "$g" "$r"
-  printf '%s  Daily engineering dashboard (Datadog + GitHub), scheduled & emailed%s\n' "$d" "$r"
+  printf '\n%b' "$C_G"
+  cat <<'EOF'
++---------------------------------------------------------------------+
+|              >  E N G I N E E R I N G   P U L S E  <                |
+|        daily engineering health — datadog · github · email          |
++---------------------------------------------------------------------+
+
+        ___       .-'''-.       ___
+    ___/   \__..-'   _   '-..__/   \___
+              \  ,-' '-' -.  /
+   _..........''\  \     /  /''.........._
+                '''--''''
+         .:'   pulse waveform   ':.
+
++--------------------------------------+
+| [✓] engine      : online             |
+| [✓] pulse       : steady             |
+| [✓] signal      : strong             |
+| [✓] status      : installing         |
++--------------------------------------+
+
+=======================================================
+ Keep building. Keep pushing. The pulse is alive.
+=======================================================
+EOF
+  printf '%b\n' "$C_R"
   divider
 }
 
