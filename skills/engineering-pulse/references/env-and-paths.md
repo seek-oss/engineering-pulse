@@ -4,6 +4,9 @@
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
+| `AGENT_CLI` | for schedule | Agent CLI: `claude`, `cursor`, or `pi` (set by installer) |
+| `ANTHROPIC_API_KEY` | for Claude automation | API key when using Claude Code for scheduled runs |
+| `PI_API_KEY` | for Pi | Provider API key when `AGENT_CLI=pi` |
 | `DD_API_KEY` | yes | Datadog API key |
 | `DD_APP_KEY` | yes | Datadog application key |
 | `DD_SITE` | no | API host (default `https://api.datadoghq.com`) |

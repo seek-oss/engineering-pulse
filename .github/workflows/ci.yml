@@ -30,6 +30,9 @@ jobs:
       - name: Ruff format
         run: ruff format --check scripts tests
 
+      - name: Agent CLI shell tests
+        run: bash tests/test_agent_cli.sh
+
   test:
     runs-on: ubuntu-latest
     strategy:

@@ -9,3 +9,5 @@ Thin entrypoints that activate `skills/engineering-pulse/` — no duplicated wor
 | [`pi-agent/`](pi-agent/) | Pi Agent (document when manifest format is confirmed) |
 
 **Canonical workflow:** `skills/engineering-pulse/SKILL.md` + `references/`.
+
+**Scheduled runs:** `~/bin/run-daily-dashboard.sh` uses `AGENT_CLI` from `.env` (see `scripts/lib/agent_cli.sh`).

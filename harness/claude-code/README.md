@@ -17,3 +17,5 @@ Clone the full repo (or use `~/.engineering-pulse`) so `scripts/` and `.env` are
 Optional slash-command stubs: copy `harness/claude-code/commands/` into your Claude Code commands directory if your install supports them.
 
 Run by asking Claude to use the **engineering-pulse** skill for a daily dashboard.
+
+**Headless / scheduled:** set `AGENT_CLI=claude` in `.env` and use `bash ~/bin/run-daily-dashboard.sh` (requires `ANTHROPIC_API_KEY` for automation).

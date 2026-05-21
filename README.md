@@ -19,9 +19,21 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 - Print where to edit prompts, customise dashboards, and adjust the LaunchAgent schedule
 - Schedule the report at **09:00, 12:00 and 16:00 Mon–Fri** via macOS LaunchAgent (override times with `SCHEDULE_HOURS` when running the installer)
 
-> **Prerequisites:** Python 3.11+, `git`, and the [Cursor](https://cursor.sh) `agent` CLI in your PATH.
+> **Prerequisites:** Python 3.11+, `git`, and **one** AI agent CLI (installer helps you choose).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests and opening pull requests.
+
+### Agent CLI
+
+Engineering Pulse needs an AI agent CLI to run dashboard prompts. The installer detects which agents you have and lets you pick:
+
+| Agent | Install command | Notes |
+|---|---|---|
+| Claude Code (recommended) | `npm install -g @anthropic-ai/claude-code` | Requires Anthropic API key for automation |
+| Cursor CLI | `curl https://cursor.com/install -fsSL \| bash` | Uses Cursor subscription credits |
+| Pi Agent | `curl -fsSL https://pi.dev/install.sh \| sh` | Multi-provider; bring your own API key |
+
+Your choice is saved in `.env` as `AGENT_CLI`. Change it any time, or re-run `bash install.sh`.
 
 ---
 
@@ -152,7 +164,7 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 **Manually in Cursor** — `/daily-dashboard` (or ask the agent to run the **engineering-pulse** skill).
 
-**From the terminal** (`agent -p` uses the same skill as the schedule):
+**From the terminal** (same skill as the schedule — agent chosen via `AGENT_CLI` in `.env`):
 ```bash
 make run          # run now (foreground)
 make run-bg       # run now (background)

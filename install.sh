@@ -16,6 +16,12 @@
 # ────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/agent_cli.sh
+source "$SCRIPT_DIR/scripts/lib/agent_cli.sh"
+
+SELECTED_AGENT=""
+
 # ── Colours ──────────────────────────────────────────────────────────────────
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -48,7 +54,11 @@ post_install_guide() {
   fi
   echo -e "     ${DIM}GitHub PAT, Datadog API keys, SMTP, optional Todoist — see comments in .env.example.${RESET}"
   echo ""
-  echo -e "  ${BOLD}2) Dashboard workflow (Cursor agent)${RESET}"
+  echo -e "  ${BOLD}2) Agent CLI (required)${RESET}"
+  if [[ -n "${SELECTED_AGENT:-}" ]]; then
+    echo -e "     Selected: ${CYAN}${BOLD}${SELECTED_AGENT}${RESET} ($(agent_label "$SELECTED_AGENT"))"
+  fi
+  echo -e "     Change:   edit ${BOLD}AGENT_CLI${RESET} in .env (options: claude, cursor, pi)"
   echo -e "     Skill the scheduler runs: ${MAGENTA}${BOLD}${INSTALL_DIR}/skills/engineering-pulse/SKILL.md${RESET}"
   echo -e "     ${DIM}In Cursor chat: ${RESET}${CYAN}${BOLD}/daily-dashboard${RESET}"
   echo -e "     ${DIM}Shipped dashboards live in: ${RESET}${MAGENTA}${INSTALL_DIR}/prompts/dashboards/${RESET}"
@@ -85,11 +95,131 @@ PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 LOG_FILE="/tmp/daily-dashboard.log"
 SCHEDULE_HOURS="${SCHEDULE_HOURS:-9 12 16}"  # space-separated
 
+use_color() {
+  [[ -z "${NO_COLOR:-}" ]] && [[ -t 1 ]]
+}
+
+upsert_env_var() {
+  local key="$1" val="$2" file="$3"
+  if grep -q "^${key}=" "$file" 2>/dev/null; then
+    if [[ "$(uname)" == Darwin ]]; then
+      sed -i '' "s/^${key}=.*/${key}=${val}/" "$file"
+    else
+      sed -i "s/^${key}=.*/${key}=${val}/" "$file"
+    fi
+  else
+    printf '\n%s=%s\n' "$key" "$val" >>"$file"
+  fi
+}
+
+ensure_bin_in_path() {
+  local zshrc="$HOME/.zshrc"
+  local line='export PATH="$HOME/bin:$PATH"'
+  if [[ ":$PATH:" == *":$BIN_DIR:"* ]]; then
+    return 0
+  fi
+  touch "$zshrc"
+  if grep -Fq 'HOME/bin' "$zshrc" 2>/dev/null; then
+    return 0
+  fi
+  echo "$line" >>"$zshrc"
+  success "Added ~/bin to PATH in ~/.zshrc"
+}
+
+show_agent_selector() {
+  local default="$1"
+  local detected="$2"
+  declare -A found_map=()
+  local a d
+  for d in $detected; do found_map[$d]=1; done
+
+  divider
+  echo -e "${BOLD}────────────── Choose your AI agent: ──────────────${RESET}"
+  echo ""
+
+  if [[ -z "$detected" ]]; then
+    warn "None detected. We recommend Claude Code:"
+    warn "  $(agent_install_hint claude)"
+    echo ""
+  fi
+
+  local -a menu_labels=()
+  local idx=1
+  local default_idx=1
+  for a in "${AGENT_ORDER[@]}"; do
+    local status="(not found)"
+    [[ -n "${found_map[$a]:-}" ]] && status="(detected)"
+    local rec=""
+    [[ "$a" == "$default" ]] && rec=" ✦ recommended"
+    menu_labels+=("${a}: $(agent_label "$a")  ${status}${rec}")
+    [[ "$a" == "$default" ]] && default_idx=$idx
+    idx=$((idx + 1))
+  done
+
+  if command -v gum &>/dev/null && [[ -t 0 ]]; then
+    local choice
+    choice=$(
+      gum choose "${menu_labels[@]}" \
+        --selected "${menu_labels[$((default_idx - 1))]}" \
+        --height 5 2>/dev/null || true
+    )
+    if [[ -n "$choice" ]]; then
+      echo "${choice%%:*}"
+      return 0
+    fi
+  fi
+
+  if command -v fzf &>/dev/null && [[ -t 0 ]]; then
+    local choice
+    choice=$(
+      printf '%s\n' "${menu_labels[@]}" \
+        | fzf --height=6 --reverse --prompt="Agent> " \
+        --query="${menu_labels[$((default_idx - 1))]}" 2>/dev/null || true
+    )
+    if [[ -n "$choice" ]]; then
+      echo "${choice%%:*}"
+      return 0
+    fi
+  fi
+
+  local i=1 opt
+  for opt in "${menu_labels[@]}"; do
+    echo "  $i) $opt"
+    i=$((i + 1))
+  done
+  echo ""
+  local pick="$default_idx"
+  if [[ -t 0 ]]; then
+    read -r -p "  Select [${default_idx}]: " pick || true
+    pick="${pick:-$default_idx}"
+  fi
+  if [[ "$pick" =~ ^[1-3]$ ]]; then
+    echo "${AGENT_ORDER[$((pick - 1))]}"
+  else
+    echo "$default"
+  fi
+}
+
+print_banner() {
+  local g="" r="" d="" b=""
+  if use_color; then
+    g='\033[32m'
+    r='\033[0m'
+    d='\033[2m'
+    b='\033[1m'
+  fi
+  printf '\n'
+  printf '%s  ___          ___%s\n' "$g" "$r"
+  printf '%s /   \\___/\\   /   \\____/\\___________%s\n' "$g" "$r"
+  printf '%s          \\_/%s\n' "$g" "$r"
+  printf '\n'
+  printf '%s  %sENGINEERING PULSE%s\n' "$b" "$g" "$r"
+  printf '%s  Daily engineering dashboard (Datadog + GitHub), scheduled & emailed%s\n' "$d" "$r"
+  divider
+}
+
 # ── Banner ───────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${BOLD}  Engineering Pulse — Installer${RESET}"
-echo -e "${DIM}  Daily engineering dashboard (Datadog + GitHub), scheduled & emailed${RESET}"
-divider
+print_banner
 
 # ── 1. Prerequisite checks ───────────────────────────────────────────────────
 header "1/5  Checking prerequisites"
@@ -122,14 +252,11 @@ else
   exit 1
 fi
 
-# Cursor agent CLI (optional but warn loudly)
-if command -v agent &>/dev/null; then
-  success "cursor agent CLI  $(command -v agent)"
+DETECTED_AGENTS=$(detect_agents)
+if [[ -n "$DETECTED_AGENTS" ]]; then
+  success "Agent CLI(s) detected: $DETECTED_AGENTS"
 else
-  warn "'agent' CLI not found in PATH"
-  warn "The scheduled runner uses 'agent -p --trust --force ...'"
-  warn "Make sure Cursor's CLI is installed and in PATH before the schedule runs."
-  warn "Usually at: /usr/local/bin/agent  or  /Applications/Cursor.app/.../agent"
+  warn "No agent CLI detected (install Claude Code, Cursor CLI, or Pi Agent)"
 fi
 
 # macOS launchd (expected on macOS only)
@@ -185,6 +312,31 @@ else
   fi
 fi
 
+# Re-source lib from install dir (updated on clone/pull)
+# shellcheck source=scripts/lib/agent_cli.sh
+source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
+
+DEFAULT_AGENT=$(default_agent_choice "$DETECTED_AGENTS")
+if [[ -t 0 ]]; then
+  SELECTED_AGENT=$(show_agent_selector "$DEFAULT_AGENT" "$DETECTED_AGENTS")
+  upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$ENV_FILE"
+  success "Selected agent: $(agent_label "$SELECTED_AGENT") (AGENT_CLI=$SELECTED_AGENT)"
+  if ! agent_is_installed "$SELECTED_AGENT"; then
+    warn "$(agent_label "$SELECTED_AGENT") is not installed yet. Install it:"
+    warn "  $(agent_install_hint "$SELECTED_AGENT")"
+    warn "The schedule will not work until the agent CLI is available."
+  fi
+else
+  if ! grep -q '^AGENT_CLI=' "$ENV_FILE" 2>/dev/null; then
+    SELECTED_AGENT="$DEFAULT_AGENT"
+    upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$ENV_FILE"
+    info "Non-interactive install: set AGENT_CLI=$SELECTED_AGENT (edit .env to change)"
+  else
+    SELECTED_AGENT=$(grep '^AGENT_CLI=' "$ENV_FILE" | head -1 | cut -d= -f2-)
+    info "Keeping existing AGENT_CLI=$SELECTED_AGENT"
+  fi
+fi
+
 # ── 4. Shell runner script ────────────────────────────────────────────────────
 header "4/5  Installing runner script"
 
@@ -193,24 +345,38 @@ mkdir -p "$BIN_DIR"
 # executed by the parent shell if delimiter parsing ever goes wrong.
 qi=$(printf '%q' "$INSTALL_DIR")
 ql=$(printf '%q' "$LOG_FILE")
+qal=$(printf '%q' "$INSTALL_DIR/scripts/lib/agent_cli.sh")
 cat > "$RUNNER_SCRIPT" <<EOF
-#!/bin/zsh
+#!/usr/bin/env zsh
 # run-daily-dashboard.sh — generated by engineering-pulse install.sh
-# Invokes the Cursor agent against the engineering-pulse skill.
+# Invokes the configured agent CLI against the engineering-pulse skill.
 
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$HOME/.local/bin:\$HOME/bin"
 
-cd $qi || exit 1
+INSTALL_DIR=$qi
+LOG_FILE=$ql
+AGENT_LIB=$qal
 
-# Ensure the Python venv is available (scripts are called directly by the prompt)
-source $qi/.venv/bin/activate
+# shellcheck source=scripts/lib/agent_cli.sh
+source "\$AGENT_LIB"
+load_agent_env "\$INSTALL_DIR/.env"
 
-echo "[\$(date)] Starting daily-dashboard run" >> $ql
+cd "\$INSTALL_DIR" || exit 1
+source "\$INSTALL_DIR/.venv/bin/activate"
 
-agent -p --trust --force "\$(cat skills/engineering-pulse/SKILL.md)" >> $ql 2>&1
+PROMPT=\$(cat "\$INSTALL_DIR/skills/engineering-pulse/SKILL.md")
+AGENT=\$(resolve_agent)
+
+echo "[\$(date)] Starting daily-dashboard run (agent=\$AGENT)" >> "\$LOG_FILE"
+
+if ! run_agent "\$AGENT" "\$PROMPT" "\$INSTALL_DIR" >> "\$LOG_FILE" 2>&1; then
+  _ec=\$?
+  echo "[\$(date)] Finished — exit code \$_ec" >> "\$LOG_FILE"
+  exit \$_ec
+fi
 
 _ec=\$?
-echo "[\$(date)] Finished — exit code \$_ec" >> $ql
+echo "[\$(date)] Finished — exit code \$_ec" >> "\$LOG_FILE"
 exit \$_ec
 EOF
 chmod +x "$RUNNER_SCRIPT"
@@ -219,11 +385,7 @@ success "Runner script written to $RUNNER_SCRIPT"
 # Optional interactive-shell convenience hint. The LaunchAgent and quick-reference
 # commands use RUNNER_SCRIPT by absolute path, so PATH is only needed for invoking
 # run-daily-dashboard.sh directly by name.
-if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-  info "$BIN_DIR is not in your PATH; scheduled runs still use the absolute runner path."
-  info "Optional: add this to your ~/.zshrc or ~/.bashrc to run 'run-daily-dashboard.sh' directly:"
-  info "  export PATH=\"$BIN_DIR:\$PATH\""
-fi
+ensure_bin_in_path
 
 # ── 5. LaunchAgent (macOS only) ──────────────────────────────────────────────
 header "5/5  Setting up schedule (LaunchAgent)"

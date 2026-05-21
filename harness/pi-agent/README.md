@@ -9,3 +9,5 @@ ln -sf /path/to/engineering-pulse/skills/engineering-pulse <pi-skills-dir>/engin
 Ensure the agent's workspace is the engineering-pulse repo root (or `~/.engineering-pulse`) so `scripts/` and `.env` resolve.
 
 Document Pi-specific manifest paths here when your Pi Agent version publishes a stable skill layout.
+
+**Headless / scheduled:** set `AGENT_CLI=pi` in `.env` and use `bash ~/bin/run-daily-dashboard.sh` (set `PI_API_KEY` for your provider).

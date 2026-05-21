@@ -15,6 +15,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 | Path | Role |
 |------|------|
 | `scripts/` | Python orchestration (Datadog, GitHub, render, SMTP, Todoist) |
+| `scripts/lib/agent_cli.sh` | Multi-agent CLI abstraction for scheduled runs (`AGENT_CLI`) |
 | `skills/engineering-pulse/` | Canonical daily-dashboard workflow (`SKILL.md` + `references/`) |
 | `prompts/dashboards/*.md` | User dashboard defs (gitignored except `_example.md`) |
 | `prompts/extras/*.md` | Drop-in report cards (gitignored except `_example.md`) |
