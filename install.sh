@@ -126,12 +126,20 @@ ensure_bin_in_path() {
   success "Added ~/bin to PATH in ~/.zshrc"
 }
 
+# Bash 3.2-compatible: macOS ships bash without `declare -A` (associative arrays).
+_detected_has_agent() {
+  local needle="$1"
+  local haystack="$2"
+  local w
+  for w in $haystack; do
+    [[ "$w" == "$needle" ]] && return 0
+  done
+  return 1
+}
+
 show_agent_selector() {
   local default="$1"
   local detected="$2"
-  declare -A found_map=()
-  local a d
-  for d in $detected; do found_map[$d]=1; done
 
   divider
   echo -e "${BOLD}────────────── Choose your AI agent: ──────────────${RESET}"
@@ -148,7 +156,9 @@ show_agent_selector() {
   local default_idx=1
   for a in "${AGENT_ORDER[@]}"; do
     local status="(not found)"
-    [[ -n "${found_map[$a]:-}" ]] && status="(detected)"
+    if _detected_has_agent "$a" "$detected"; then
+      status="(detected)"
+    fi
     local rec=""
     [[ "$a" == "$default" ]] && rec=" ✦ recommended"
     menu_labels+=("${a}: $(agent_label "$a")  ${status}${rec}")
