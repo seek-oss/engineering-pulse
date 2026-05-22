@@ -201,48 +201,52 @@ show_agent_selector() {
 }
 
 print_banner() {
-  # Use printf %b so ANSI escapes render (plain %s would print literal \033).
-  local C_G="" C_R=""
-  if use_color; then
-    C_G=$(printf '\033[32m')
-    C_R=$(printf '\033[0m')
+  local use_color=true
+  if [[ -n "${NO_COLOR:-}" ]] || [[ ! -t 1 ]]; then
+    use_color=false
   fi
-  printf '\n%b' "$C_G"
-  cat <<'EOF'
-+---------------------------------------------------------------------+
-|              >  E N G I N E E R I N G   P U L S E  <                |
-|          real-time pulse for systems that matter                    |
-+---------------------------------------------------------------------+
-
-             __/\__       __/\__       __/\__       __/\__             
-        --^--------+-------^--------+-------^--------+-------^--       
-
-                                      ***         ***                  
-                                 *********   *********                 
-                               ***********************                 
-                            ***************************                
-                               ***********************                 
-                                  *******************                  
-                                     ***************                   
-                                        ***********                    
-                                            *****                      
-                                               *                       
-
-              d a t a d o g  ·  g i t h u b  ·  e m a i l              
-
-+---------------------------------------------------------------------+
-| [✓] engine      : online                                            |
-| [✓] pulse       : steady                                            |
-| [✓] signal      : strong                                            |
-| [✓] status      : installing                                        |
-+---------------------------------------------------------------------+
-
-=======================================================================
-           Keep building. Keep pushing. The pulse is alive.            
-=======================================================================
-EOF
-  printf '%b\n' "$C_R"
-  divider
+ 
+  local C1="" C2="" C3="" C4="" C5="" CG="" CR=""
+  if $use_color; then
+    C1=$'\033[1;36m'   # bright cyan
+    C2=$'\033[0;36m'   # cyan
+    C3=$'\033[1;32m'   # bright green
+    C4=$'\033[0;32m'   # green
+    C5=$'\033[1;37m'   # bright white
+    CG=$'\033[0;32m'   # green (for frame)
+    CR=$'\033[0m'      # reset
+  fi
+ 
+  printf '\n'
+  printf '%s+ ------------------------------------------------------------------- +%s\n' "$CG" "$CR"
+  printf '%s|           >  E N G I N E E R I N G   P U L S E  <                  |%s\n' "$CG" "$CR"
+  printf '%s|             real-time pulse for systems that matter                  |%s\n' "$CG" "$CR"
+  printf '%s+ ------------------------------------------------------------------- +%s\n' "$CG" "$CR"
+  printf '\n'
+ 
+  # Block letter "PULSE" with cyan → green → white gradient
+  printf '%s     ████████  ██    ██  ██         ██████   ████████%s\n' "$C1" "$CR"
+  printf '%s     ██    ██  ██    ██  ██        ██        ██      %s\n' "$C1" "$CR"
+  printf '%s     ██    ██  ██    ██  ██        ██        ██      %s\n' "$C2" "$CR"
+  printf '%s     ████████  ██    ██  ██         ██████   ██████  %s\n' "$C3" "$CR"
+  printf '%s     ██        ██    ██  ██              ██  ██      %s\n' "$C4" "$CR"
+  printf '%s     ██        ██    ██  ██              ██  ██      %s\n' "$C4" "$CR"
+  printf '%s     ██         ██████   ████████   ██████   ████████%s\n' "$C5" "$CR"
+ 
+  printf '\n'
+  printf '%s           d a t a d o g  ·  g i t h u b  ·  e m a i l%s\n' "$CG" "$CR"
+  printf '\n'
+  printf '%s+ -------------------------------------- +%s\n' "$CG" "$CR"
+  printf '%s| [✓] engine      : online               |%s\n' "$CG" "$CR"
+  printf '%s| [✓] pulse       : steady               |%s\n' "$CG" "$CR"
+  printf '%s| [✓] signal      : strong               |%s\n' "$CG" "$CR"
+  printf '%s| [✓] status      : installing           |%s\n' "$CG" "$CR"
+  printf '%s+ -------------------------------------- +%s\n' "$CG" "$CR"
+  printf '\n'
+  printf '%s=====================================================================%s\n' "$CG" "$CR"
+  printf '%s         Keep building. Keep pushing. The pulse is alive.%s\n' "$C5" "$CR"
+  printf '%s=====================================================================%s\n' "$CG" "$CR"
+  printf '\n'
 }
 
 # ── Banner ───────────────────────────────────────────────────────────────────
