@@ -71,8 +71,7 @@ Section letters (A, B, C, …) are assigned **dynamically**: dashboards from
 `prompts/dashboards/*.md` come first (sorted by filename), then PR Queue,
 My Queue, Extras, and (when configured) **Stakeholder Pulse** fill the
 remaining letters. With zero dashboards configured, PR Queue is Part A.
-Stakeholder Pulse is omitted entirely when `STAKEHOLDERS` is empty or unset.
-
+**Stakeholder Pulse** is omitted when the **`STAKEHOLDERS`** line is absent from **`.env`** (or cleared with **`STAKEHOLDERS=`**); the Pulse section renders only once Step 2F has produced the Markdown cards.
 ---
 
 ## Agent skill (multi-harness)
@@ -195,7 +194,7 @@ make help         # list all targets
 | `SMTP_TO` | yes | Recipient address |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
-| `STAKEHOLDERS` | no | Comma-separated full names or emails for **Stakeholder Pulse** (via Glean MCP in Cursor). Empty/unset skips the section and deletes generated cards. Prefer `Jane Doe,john.smith@example.com` over first names only. |
+| `STAKEHOLDERS` | no | Names for Pulse (Glean MCP in Cursor). **Omit this line from `.env` to hide Pulse** (shell `export` alone does not enable it). `STAKEHOLDERS=` explicitly clears tracked names when your dotenv tooling needs an empty value. Prefer `Jane Doe,john.smith@example.com` over first names only. |
 
 See `.env.example` for the full template.
 
@@ -295,8 +294,7 @@ User-added dashboards are prefixed with `custom_` by convention to keep things o
 Track what a small set of **named stakeholders** have been doing in **Slack**
 over the past 7 days. The daily dashboard agent (Step 2F in
 [`skills/engineering-pulse/references/stakeholder-pulse.md`](skills/engineering-pulse/references/stakeholder-pulse.md))
-writes one markdown card per name in `output/stakeholders/`; the HTML report picks
-them up when `STAKEHOLDERS` is set in `.env`.
+writes one markdown card per name in `output/stakeholders/`; the HTML report shows **Stakeholder Pulse** only when `STAKEHOLDERS` is set in `.env` and Step 2F has produced matching Markdown cards (nothing in HTML until then; stderr may hint if cards are missing).
 
 ### Slack data: two possible approaches
 
@@ -321,9 +319,7 @@ added later for teams that prefer a readonly token over enterprise search.
   name: `output/stakeholders/<slug>.md` (same gitignored `output/` tree as PRs
   and todos).
 - Each card has three bullets: **Themes**, **Notable** (with link), **Top links**.
-- The HTML renderer reads `STAKEHOLDERS` from `.env`:
-  - **Empty/unset** — no Stakeholder Pulse section; non-template cards are removed.
-  - **Non-empty** — section appears (placeholder if Step 2F has not run yet).
+- The HTML renderer reads **`STAKEHOLDERS` from your repo `.env` file text**. If **`STAKEHOLDERS` is missing from `.env`** (whole line omitted), Pulse is **off** even when a shell session has `export STAKEHOLDERS=…`. Use **`STAKEHOLDERS=`** on its own line to clear tracked names explicitly if your tooling prefers an empty assignment.
 
 Cards live under **`output/stakeholders/`** (gitignored with the rest of
 `output/`). You normally do not edit them by hand — change `STAKEHOLDERS` or

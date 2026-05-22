@@ -45,8 +45,10 @@ def _run(tmp_path: Path, *extra_args: str) -> str:
     """Invoke the CLI against tmp dirs; return the rendered HTML."""
     out = tmp_path / "report.html"
     (tmp_path / "stakeholders").mkdir(exist_ok=True)
+    sd_stub = tmp_path / "pytest_stakeholders_dotenv.env"
+    sd_stub.write_text("# pytest integration: omit STAKEHOLDERS key\n", encoding="utf-8")
     env = os.environ.copy()
-    env["STAKEHOLDERS"] = ""
+    env.pop("STAKEHOLDERS", None)
     cmd = [
         sys.executable,
         str(SCRIPT),
@@ -64,6 +66,8 @@ def _run(tmp_path: Path, *extra_args: str) -> str:
         str(tmp_path / "extras"),
         "--stakeholders-dir",
         str(tmp_path / "stakeholders"),
+        "--stakeholders-dotenv",
+        str(sd_stub),
         *extra_args,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)

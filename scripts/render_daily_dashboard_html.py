@@ -15,10 +15,11 @@ actually present:
   - PR Review Queue
   - My Queue (Todoist)
   - Extras cards (from `prompts/extras/*.md`)
-  - Stakeholder Pulse — only when `STAKEHOLDERS` in `.env` is non-empty; cards
-    from `output/stakeholders/*.md` (gitignored). When unset/empty, stale cards
-    there are removed so the report matches `.env` alone.
-"""
+  - Stakeholder Pulse — names come from `STAKEHOLDERS` in the repo `.env` **file**.
+    Omit that line entirely to disable Pulse (even if `export STAKEHOLDERS` exists in
+    the shell). Matching cards under `output/stakeholders/*.md` must exist; otherwise
+    the HTML section stays hidden and stderr may warn. When Pulse is disabled, stale
+    generated stakeholder cards (`output/stakeholders/*.md`, except `_*.md`) are removed."""
 
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -62,9 +63,19 @@ def _part_letter(idx: int) -> str:
     return letters[first] + letters[second]
 
 
-def _parse_stakeholder_names() -> list[str]:
-    """Names from `STAKEHOLDERS` env (comma-separated). Empty/unset → []."""
-    raw = (os.environ.get("STAKEHOLDERS") or "").strip()
+def _parse_stakeholder_names(dotenv_override: Path | None = None) -> list[str]:
+    """Comma-separated `STAKEHOLDERS` from a dotenv file (default: repo `.env`)."""
+    path = ROOT / ".env" if dotenv_override is None else dotenv_override
+    raw = ""
+    if path.is_file():
+        vals = dotenv_values(path) or {}
+        if "STAKEHOLDERS" in vals:
+            raw = (vals.get("STAKEHOLDERS") or "").strip()
+        else:
+            # Key omitted → disabled; do not revive from a lingering shell export.
+            raw = ""
+    else:
+        raw = (os.environ.get("STAKEHOLDERS") or "").strip()
     if not raw:
         return []
     return [part.strip() for part in raw.split(",") if part.strip()]
@@ -163,12 +174,25 @@ def main() -> None:
         default="output/stakeholders",
         help="Folder of per-stakeholder *.md cards (default: output/stakeholders)",
     )
+    ap.add_argument(
+        "--stakeholders-dotenv",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=argparse.SUPPRESS,
+    )
     args = ap.parse_args()
 
     load_dotenv(ROOT / ".env")
 
+    stakeholder_dotenv: Path | None = None
+    if args.stakeholders_dotenv is not None:
+        stakeholder_dotenv = args.stakeholders_dotenv.expanduser().resolve()
+
     prs_data = _load(ROOT / args.prs)
     todos = _load(ROOT / args.todos)
+
+    stakeholder_names = _parse_stakeholder_names(stakeholder_dotenv)
 
     output_dir = ROOT / args.output_dir
 
@@ -231,8 +255,8 @@ def main() -> None:
     if extras_html:
         sections.append((extras_label, extras_html))
 
-    # 6) Stakeholder Pulse — gated on `STAKEHOLDERS` in `.env` (single source of truth).
-    stakeholder_names = _parse_stakeholder_names()
+    # 6) Stakeholder Pulse — when `STAKEHOLDERS` is set in `.env` (omit key → off).
+
     stakeholders_dir = ROOT / args.stakeholders_dir
     if not stakeholder_names:
         _clean_stale_stakeholder_cards(stakeholders_dir)
@@ -245,18 +269,15 @@ def main() -> None:
         if stakeholders_html:
             sections.append((stakeholders_label, stakeholders_html))
         else:
-            expected = ", ".join(
-                f"{args.stakeholders_dir}/{_stakeholder_slug(n)}.md" for n in stakeholder_names
+            # configured but no cards yet — omit the HTML section; hint on stderr only
+            warning = ", ".join(
+                f"{n} -> output/stakeholders/{_stakeholder_slug(n)}.md" for n in stakeholder_names
             )
-            placeholder = (
-                f'<div class="section-title">{html_mod.escape(stakeholders_label)}</div>\n    '
-                f'<p class="muted">No cards in <code>{html_mod.escape(args.stakeholders_dir)}/</code> yet '
-                f"(expected: {html_mod.escape(expected)}). Run Step 2F in "
-                "<code>skills/engineering-pulse/references/stakeholder-pulse.md</code> "
-                "(Glean → write those files) "
-                "before rendering.</p>"
+            print(
+                f"Warning: STAKEHOLDERS set ({warning}) but Step 2F produced no stakeholder "
+                "cards yet — see skills/engineering-pulse/references/stakeholder-pulse.md.",
+                file=sys.stderr,
             )
-            sections.append((stakeholders_label, placeholder))
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()

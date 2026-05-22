@@ -26,14 +26,24 @@ def _write_todos(path: Path) -> None:
     path.write_text(json.dumps([]), encoding="utf-8")
 
 
+def _stub_stakeholders_dotenv(tmp_path: Path, stakeholders_env: str | None) -> Path:
+    """Hermetic `.env` fragment controlling only `STAKEHOLDERS` for subprocess runs."""
+    p = tmp_path / "pytest_stakeholders_dotenv.env"
+    if stakeholders_env is None:
+        p.write_text("# pytest: STAKEHOLDERS key deliberately omitted → off\n", encoding="utf-8")
+    else:
+        p.write_text(f"STAKEHOLDERS={stakeholders_env}\n", encoding="utf-8")
+    return p
+
+
 def _run(
     tmp_path: Path,
     *,
     stakeholders_dir: Path,
     extras_dir: Path | None = None,
     stakeholders_env: str | None = None,
-) -> str:
-    """Run the renderer CLI; `stakeholders_env=None` clears `STAKEHOLDERS` for a hermetic run."""
+) -> tuple[str, str]:
+    """Invoke renderer CLI; ``stakeholders_env=None`` means no STAKEHOLDERS row in stub dotenv."""
     out = tmp_path / "report.html"
     extras = extras_dir if extras_dir is not None else tmp_path / "extras"
     (tmp_path / "dashboards").mkdir(exist_ok=True)
@@ -41,13 +51,10 @@ def _run(
     extras.mkdir(exist_ok=True)
     _write_prs(tmp_path / "output" / "github_prs.json")
     _write_todos(tmp_path / "output" / "todos.json")
+    sd_stub = _stub_stakeholders_dotenv(tmp_path, stakeholders_env)
 
     env = os.environ.copy()
-    # Empty string — load_dotenv() in the renderer would otherwise re-read .env.
-    if stakeholders_env is None:
-        env["STAKEHOLDERS"] = ""
-    else:
-        env["STAKEHOLDERS"] = stakeholders_env
+    env.pop("STAKEHOLDERS", None)
 
     cmd = [
         sys.executable,
@@ -66,24 +73,26 @@ def _run(
         str(extras),
         "--stakeholders-dir",
         str(stakeholders_dir),
+        "--stakeholders-dotenv",
+        str(sd_stub),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env)
     assert result.returncode == 0, (
         f"renderer failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
-    return out.read_text(encoding="utf-8")
+    return out.read_text(encoding="utf-8"), result.stderr
 
 
 class TestStakeholderPulseWiring:
     def test_omits_section_when_dir_missing(self, tmp_path: Path) -> None:
-        html = _run(tmp_path, stakeholders_dir=tmp_path / "missing")
+        html, _ = _run(tmp_path, stakeholders_dir=tmp_path / "missing")
         assert "Stakeholder Pulse" not in html
 
     def test_omits_section_when_dir_only_has_underscore_files(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         (sdir / "_example.md").write_text("# example\n", encoding="utf-8")
-        html = _run(tmp_path, stakeholders_dir=sdir)
+        html, _ = _run(tmp_path, stakeholders_dir=sdir)
         assert "Stakeholder Pulse" not in html
 
     def test_deletes_stale_cards_when_stakeholders_env_unset(self, tmp_path: Path) -> None:
@@ -92,7 +101,7 @@ class TestStakeholderPulseWiring:
         stale = sdir / "jane-doe.md"
         stale.write_text("# Jane Doe\n\n- old\n", encoding="utf-8")
         (sdir / "_keep.md").write_text("# keep\n", encoding="utf-8")
-        html = _run(tmp_path, stakeholders_dir=sdir, stakeholders_env=None)
+        html, _ = _run(tmp_path, stakeholders_dir=sdir, stakeholders_env=None)
         assert "Stakeholder Pulse" not in html
         assert not stale.is_file()
         assert (sdir / "_keep.md").is_file()
@@ -103,7 +112,7 @@ class TestStakeholderPulseWiring:
         (sdir / "jane-doe.md").write_text(
             "# Jane Doe\n\n- **Themes:** orchestrator work\n", encoding="utf-8"
         )
-        html = _run(
+        html, _ = _run(
             tmp_path,
             stakeholders_dir=sdir,
             stakeholders_env="Jane Doe",
@@ -119,7 +128,7 @@ class TestStakeholderPulseWiring:
         sdir.mkdir()
         (sdir / "jane-doe.md").write_text("# Jane Doe\n\n- A\n", encoding="utf-8")
         (sdir / "john-smith.md").write_text("# John Smith\n\n- B\n", encoding="utf-8")
-        html = _run(
+        html, _ = _run(
             tmp_path,
             stakeholders_dir=sdir,
             stakeholders_env="Jane Doe, John Smith",
@@ -138,7 +147,7 @@ class TestStakeholderPulseWiring:
         sdir.mkdir()
         (sdir / "jane-doe.md").write_text("# Jane Doe\n\n- A\n", encoding="utf-8")
 
-        html = _run(
+        html, _ = _run(
             tmp_path,
             stakeholders_dir=sdir,
             extras_dir=edir,
@@ -150,14 +159,14 @@ class TestStakeholderPulseWiring:
         assert "Jane Doe" in html
         assert html.index("Part C") < html.index("Part D")
 
-    def test_placeholder_when_stakeholders_set_but_no_cards(self, tmp_path: Path) -> None:
+    def test_omits_html_section_but_warns_stderr_when_cards_missing(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
-        html = _run(
+        html, stderr = _run(
             tmp_path,
             stakeholders_dir=sdir,
             stakeholders_env="Jane Doe",
         )
-        assert "Part C — Stakeholder Pulse" in html
-        assert "No cards in" in html
-        assert "output/stakeholders" in html or str(sdir) in html
+        assert "Stakeholder Pulse" not in html
+        assert "Warning: STAKEHOLDERS set" in stderr
+        assert "jane-doe.md" in stderr

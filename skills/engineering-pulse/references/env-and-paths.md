@@ -14,7 +14,7 @@
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
-| `STAKEHOLDERS` | no | Comma-separated names/emails for Stakeholder Pulse (Glean). Empty/unset skips Step 2F. Prefer full name or email. Soft-cap ~5 names. |
+| `STAKEHOLDERS` | no | Pulse names (Glean). **Leave this key out** of `.env` to omit Pulse entirely (ignored if only set via shell `export`). |
 | `GITHUB_TOKEN` | for PRs | PAT with `repo` (read) + `read:org` |
 | `GITHUB_ORG` / `GITHUB_TEAM` | for PRs | Org and team slugs |
 
