@@ -198,9 +198,18 @@ show_agent_selector() {
     i=$((i + 1))
   done
   echo ""
+
+  local default_pick_name=""
+  default_pick_name=$(agent_label "${AGENT_ORDER[$((default_idx - 1))]}")
+  echo -e "${BOLD}  How to choose:${RESET}"
+  echo -e "    ${DIM}• Type${RESET} ${BOLD}1${RESET}${DIM},${RESET} ${BOLD}2${RESET}${DIM}, or${RESET} ${BOLD}3${RESET} ${DIM}and press Enter${RESET}"
+  echo -e "    ${DIM}• Or press Enter alone for the default:${RESET} ${BOLD}${default_idx}${RESET}${DIM} =${RESET} ${BOLD}${default_pick_name}${RESET}"
+  echo -e "  ${DIM}(1 = Claude Code · 2 = Cursor CLI · 3 = Pi Agent)${RESET}"
+  echo ""
+
   local pick="$default_idx"
   if [[ -t 0 ]]; then
-    read -r -p "  Select [${default_idx}]: " pick || true
+    read -r -p "  Your choice (1–3) [Enter = ${default_idx}] › " pick || true
     pick="${pick:-$default_idx}"
   fi
   if [[ "$pick" =~ ^[1-3]$ ]]; then
@@ -356,6 +365,12 @@ fi
 # Re-source lib from install dir (updated on clone/pull)
 # shellcheck source=scripts/lib/agent_cli.sh
 source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
+
+if [[ -t 0 ]]; then
+  echo ""
+  info "Next: choose which AI command-line agent runs scheduled dashboard runs."
+  echo -e "  ${DIM}(This saves ${BOLD}AGENT_CLI${DIM} in .env — different from Datadog/GitHub SMTP keys you edit afterward.)${RESET}"
+fi
 
 DEFAULT_AGENT=$(default_agent_choice "$DETECTED_AGENTS")
 if [[ -t 0 ]]; then
