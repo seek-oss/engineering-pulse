@@ -18,8 +18,8 @@ help:
 	@echo ""
 	@echo "  engineering-pulse — available targets"
 	@echo ""
-	@echo "  make run          Run the dashboard right now (foreground)"
-	@echo "  make run-bg       Run the dashboard in the background"
+	@echo "  make run          Run now (foreground: stream logs to terminal + /tmp/log)"
+	@echo "  make run-bg       Run in background (log file only)"
 	@echo "  make status       Show LaunchAgent status"
 	@echo "  make logs         Tail the run log"
 	@echo "  make logs-launchd Tail the launchd stdout/stderr"
@@ -34,8 +34,8 @@ help:
 # ── Run ──────────────────────────────────────────────────────────────────────
 .PHONY: run
 run:
-	@echo "→  Running daily dashboard (foreground)…"
-	@bash $(RUNNER)
+	@echo "→  Running daily dashboard (foreground → terminal + append $(LOG_FILE))…"
+	@ENGINEERING_PULSE_RUN_FG=1 bash $(RUNNER)
 
 .PHONY: run-bg
 run-bg:

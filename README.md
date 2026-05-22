@@ -166,8 +166,8 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 **From the terminal** (same skill as the schedule — agent chosen via `AGENT_CLI` in `.env`):
 ```bash
-make run          # run now (foreground)
-make run-bg       # run now (background)
+make run          # foreground: stream logs to your terminal AND append /tmp/daily-dashboard.log
+make run-bg       # background: append log only (use `make logs` or `tail -f`)
 make logs         # tail the log
 make status       # check the schedule
 make update       # pull latest + reinstall deps
