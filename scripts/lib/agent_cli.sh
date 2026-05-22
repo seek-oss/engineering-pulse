@@ -111,13 +111,14 @@ run_agent() {
 
   case "$agent" in
     pi)
-      (cd "$workdir" && pi -p --trust --force "$prompt")
+      # -- ends option parsing so SKILL.md frontmatter ('---') is not mistaken for flags
+      (cd "$workdir" && pi -p --trust --force -- "$prompt")
       ;;
     claude)
-      (cd "$workdir" && claude -p "$prompt")
+      (cd "$workdir" && claude -p -- "$prompt")
       ;;
     cursor)
-      (cd "$workdir" && agent -p --trust --force "$prompt")
+      (cd "$workdir" && agent -p --trust --force -- "$prompt")
       ;;
     *)
       echo "ERROR: Unknown AGENT_CLI='$agent' (expected: claude, cursor, pi)." >&2
