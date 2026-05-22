@@ -201,15 +201,22 @@ show_agent_selector() {
 
   local default_pick_name=""
   default_pick_name=$(agent_label "${AGENT_ORDER[$((default_idx - 1))]}")
-  echo -e "${BOLD}  How to choose:${RESET}"
-  echo -e "    ${DIM}• Type${RESET} ${BOLD}1${RESET}${DIM},${RESET} ${BOLD}2${RESET}${DIM}, or${RESET} ${BOLD}3${RESET} ${DIM}and press Enter${RESET}"
-  echo -e "    ${DIM}• Or press Enter alone for the default:${RESET} ${BOLD}${default_idx}${RESET}${DIM} =${RESET} ${BOLD}${default_pick_name}${RESET}"
-  echo -e "  ${DIM}(1 = Claude Code · 2 = Cursor CLI · 3 = Pi Agent)${RESET}"
+  local l1 l2 l3
+  l1=$(agent_label "${AGENT_ORDER[0]}")
+  l2=$(agent_label "${AGENT_ORDER[1]}")
+  l3=$(agent_label "${AGENT_ORDER[2]}")
+
+  echo -e "${BOLD}  What the numbers mean:${RESET}"
+  echo -e "    ${BOLD}1${RESET} → ${l1}   ${DIM}(command on disk:${RESET} ${BOLD}claude${RESET}${DIM})${RESET}"
+  echo -e "    ${BOLD}2${RESET} → ${l2}   ${DIM}(command on disk:${RESET} ${BOLD}agent${RESET}${DIM})${RESET}"
+  echo -e "    ${BOLD}3${RESET} → ${l3}   ${DIM}(command on disk:${RESET} ${BOLD}pi${RESET}${DIM})${RESET}"
+  echo ""
+  echo -e "  ${DIM}Type${RESET} ${BOLD}1${RESET}${DIM},${RESET} ${BOLD}2${RESET}${DIM}, or${RESET} ${BOLD}3${RESET} ${DIM}then Enter. Just${RESET} ${BOLD}Enter${RESET} ${DIM}alone =${RESET} ${BOLD}${default_idx}${RESET} ${DIM}(${default_pick_name}).${RESET}"
   echo ""
 
   local pick="$default_idx"
   if [[ -t 0 ]]; then
-    read -r -p "  Your choice (1–3) [Enter = ${default_idx}] › " pick || true
+    read -r -p "  Type 1, 2, or 3 — or press Enter for ${default_idx} (${default_pick_name}) › " pick || true
     pick="${pick:-$default_idx}"
   fi
   if [[ "$pick" =~ ^[1-3]$ ]]; then
@@ -368,8 +375,8 @@ source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
 
 if [[ -t 0 ]]; then
   echo ""
-  info "Next: choose which AI command-line agent runs scheduled dashboard runs."
-  echo -e "  ${DIM}(This saves ${BOLD}AGENT_CLI${DIM} in .env — different from Datadog/GitHub SMTP keys you edit afterward.)${RESET}"
+  info "Which installed AI tool should run the scheduled dashboard? (Pick 1, 2, or 3 below.)"
+  echo -e "  ${DIM}We save that as${RESET} ${BOLD}AGENT_CLI${DIM} in .env — separate from your Datadog / GitHub / SMTP keys in the same file.${RESET}"
 fi
 
 DEFAULT_AGENT=$(default_agent_choice "$DETECTED_AGENTS")
