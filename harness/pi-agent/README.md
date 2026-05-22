@@ -10,4 +10,4 @@ Ensure the agent's workspace is the engineering-pulse repo root (or `~/.engineer
 
 Document Pi-specific manifest paths here when your Pi Agent version publishes a stable skill layout.
 
-**Headless / scheduled:** set `AGENT_CLI=pi` in `.env` and use `bash ~/bin/run-daily-dashboard.sh` (set `PI_API_KEY` for your provider).
+**Headless / scheduled:** set `AGENT_CLI=pi` in `.env` and run `~/bin/run-daily-dashboard.sh` (set `PI_API_KEY` for your provider).

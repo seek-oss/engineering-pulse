@@ -35,12 +35,12 @@ help:
 .PHONY: run
 run:
 	@echo "→  Running daily dashboard (foreground → terminal + append $(LOG_FILE))…"
-	@ENGINEERING_PULSE_RUN_FG=1 bash $(RUNNER)
+	@ENGINEERING_PULSE_RUN_FG=1 "$(RUNNER)"
 
 .PHONY: run-bg
 run-bg:
 	@echo "→  Running daily dashboard (background)…"
-	@bash $(RUNNER) &
+	@"$(RUNNER)" &
 	@echo "   Logs: tail -f $(LOG_FILE)"
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
