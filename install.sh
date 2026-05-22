@@ -79,7 +79,7 @@ post_install_guide() {
   echo ""
   echo -e "  ${BOLD}6) Run once after .env is filled${RESET}"
   echo -e "     ${CYAN}bash ${RUNNER_SCRIPT}${RESET}"
-  echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET} ${DIM}(cleared at run start if over LOG_MAX_MB MiB — default 50, see .env.example)${RESET}"
+  echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET} ${DIM}(cleared at run start if over 50 MiB)${RESET}"
   echo ""
   divider
 }
@@ -414,15 +414,12 @@ AGENT_LIB=$qal
 source "\$AGENT_LIB"
 load_agent_env "\$INSTALL_DIR/.env"
 
-# Cap run log growth (MiB): set LOG_MAX_MB in .env, default 50.
-: \${LOG_MAX_MB:=50}
-[[ "\$LOG_MAX_MB" =~ ^[0-9]+$ ]] || LOG_MAX_MB=50
-
+# Cap run log: clear if over 50 MiB (hardcoded; avoids unbounded growth).
 if [[ -f "\$LOG_FILE" ]]; then
   sz=\$(wc -c <"\$LOG_FILE" | tr -d ' ')
-  maxb=\$(( LOG_MAX_MB * 1024 * 1024 ))
+  maxb=\$(( 50 * 1024 * 1024 ))
   if (( sz > maxb )); then
-    print -r "[\$(date)] Log cleared: previous size was \${sz} bytes (> \${LOG_MAX_MB} MiB LOG_MAX_MB)" >"\$LOG_FILE"
+    print -r "[\$(date)] Log cleared: previous size was \${sz} bytes (> 50 MiB)" >"\$LOG_FILE"
   fi
 fi
 
