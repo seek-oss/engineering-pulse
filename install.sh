@@ -44,9 +44,7 @@ MAGENTA=$'\033[0;35m'
 post_install_guide() {
   local ex="$INSTALL_DIR/.env.example"
   echo ""
-  echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════════════════════════════════════════╗${RESET}"
-  echo -e "${YELLOW}${BOLD}║  NEXT — finish setup (no secrets were prompted; curl | bash cannot ask you) ║${RESET}"
-  echo -e "${YELLOW}${BOLD}╚══════════════════════════════════════════════════════════════════════════════╝${RESET}"
+  echo -e "${BOLD}Next steps${RESET}"
   echo ""
   echo -e "  ${BOLD}1) Credentials & API keys${RESET} ${CYAN}(required)${RESET}"
   echo -e "     Edit: ${MAGENTA}${BOLD}${ENV_FILE}${RESET}"
