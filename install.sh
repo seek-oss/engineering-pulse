@@ -23,13 +23,14 @@ source "$SCRIPT_DIR/scripts/lib/agent_cli.sh"
 SELECTED_AGENT=""
 
 # ── Colours ──────────────────────────────────────────────────────────────────
-BOLD="\033[1m"
-DIM="\033[2m"
-RED="\033[0;31m"
-GREEN="\033[0;32m"
-YELLOW="\033[0;33m"
-CYAN="\033[0;36m"
-RESET="\033[0m"
+# Use ANSI-C quoting so codes are real ESC bytes (echo -e and read prompts work).
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+CYAN=$'\033[0;36m'
+RESET=$'\033[0m'
 
 info()    { echo -e "  ${CYAN}→${RESET}  $*"; }
 success() { echo -e "  ${GREEN}✓${RESET}  $*"; }
@@ -39,7 +40,7 @@ header()  { echo -e "\n${BOLD}$*${RESET}"; }
 divider() { echo -e "${DIM}────────────────────────────────────────────────────${RESET}"; }
 
 # Vivid “what to do next” (works when stdin is a pipe — e.g. curl | bash)
-MAGENTA="\033[0;35m"
+MAGENTA=$'\033[0;35m'
 post_install_guide() {
   local ex="$INSTALL_DIR/.env.example"
   echo ""
@@ -208,23 +209,13 @@ show_agent_selector() {
 
   local default_pick_name=""
   default_pick_name=$(agent_label "${AGENT_ORDER[$((default_idx - 1))]}")
-  local l1 l2 l3
-  l1=$(agent_label "${AGENT_ORDER[0]}")
-  l2=$(agent_label "${AGENT_ORDER[1]}")
-  l3=$(agent_label "${AGENT_ORDER[2]}")
 
-  echo -e "${BOLD}  What to type:${RESET}" >&2
-  echo -e "    ${BOLD}1${RESET}${DIM} →${RESET} ${l1}${DIM}  (runs the ${RESET}${BOLD}claude${RESET}${DIM} command)${RESET}" >&2
-  echo -e "    ${BOLD}2${RESET}${DIM} →${RESET} ${l2}${DIM}  (runs the Cursor ${RESET}${BOLD}agent${RESET}${DIM} CLI)${RESET}" >&2
-  echo -e "    ${BOLD}3${RESET}${DIM} →${RESET} ${l3}${DIM}  (runs the ${RESET}${BOLD}pi${RESET}${DIM} command)${RESET}" >&2
   echo "" >&2
-  echo -e "  ${DIM}Press${RESET} ${BOLD}Enter${RESET} ${DIM}without typing anything to accept the default:${RESET} ${BOLD}${default_idx}${RESET} ${DIM}= ${default_pick_name}${RESET}" >&2
-  echo "" >&2
+  printf '  Type 1-3, or press Enter for default %s (%s).\n  › ' "$default_idx" "$default_pick_name" >&2
 
   local pick="$default_idx"
   if [[ -t 0 ]]; then
-    # Prompt on stderr (-p); read from terminal (works under $(…) capture).
-    read -r -p "  Type ${BOLD}1${RESET}, ${BOLD}2${RESET}, or ${BOLD}3${RESET}; or Enter for default (${default_idx}) › " pick || true
+    read -r pick || true
     pick="${pick:-$default_idx}"
   fi
   if [[ "$pick" =~ ^[1-3]$ ]]; then
