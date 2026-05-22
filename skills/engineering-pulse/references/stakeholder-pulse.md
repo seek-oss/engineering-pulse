@@ -34,8 +34,9 @@ read-only Slack token (not implemented). Card format: `prompts/_stakeholder-card
 
    d. No hits → single bullet: `No Slack activity in the last 7 days.`
 
-3. Run `render_daily_dashboard_html.py` **after** cards exist (renderer default:
-   `output/stakeholders/`).
+3. Run `render_daily_dashboard_html.py` **after** cards exist. Defaults:
+   stakeholder cards read from `output/stakeholders/`; HTML at
+   `output/daily_dashboard_report.html`.
 
 ## Caveats
 

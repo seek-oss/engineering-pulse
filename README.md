@@ -231,6 +231,8 @@ After running both Datadog extractions, GitHub PRs, and `todo.py list --json`:
 python3 scripts/render_daily_dashboard_html.py
 ```
 
+By default this writes **`output/daily_dashboard_report.html`** (override with `--out`).
+
 To include custom dashboards beyond Part A/B:
 
 ```bash

@@ -2,7 +2,7 @@
 """Run the dashboard end-to-end without an agent (schedule / ~/bin/runner).
 
 Loads `.env`, extracts each declared Datadog dashboard, refreshes Todoist JSON,
-GitHub PRs, renders HTML at repo root, and sends SMTP (unless --no-email).
+GitHub PRs, renders HTML under `output/`, and sends SMTP (unless --no-email).
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ def main() -> int:
         print(f"ERROR: render_daily_dashboard_html failed: {e}", file=sys.stderr, flush=True)
         return int(e.returncode or 1)
 
-    report = ROOT / "daily_dashboard_report.html"
+    report = OUT / "daily_dashboard_report.html"
     if not report.is_file():
         print(f"ERROR: expected report missing: {report}", file=sys.stderr, flush=True)
         return 1

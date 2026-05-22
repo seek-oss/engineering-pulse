@@ -36,6 +36,8 @@ python3 scripts/github_prs.py                             # Step 2C
 python3 scripts/render_daily_dashboard_html.py
 ```
 
+Writes `output/daily_dashboard_report.html` by default (override with `--out`).
+
 The renderer reads `prompts/dashboards/*.md` + matching `output/<slug>_metric_results.json`,
 `output/github_prs.json`, `output/todos.json`, `prompts/extras/*.md`, and
 `output/stakeholders/*.md` when `STAKEHOLDERS` is set.
@@ -103,7 +105,7 @@ Override: `--extras-dir prompts/extras`.
 ```bash
 python3 scripts/send_report_smtp.py \
   "Daily dashboard — <team> — $(date +%Y-%m-%d)" \
-  daily_dashboard_report.html
+  output/daily_dashboard_report.html
 ```
 
 Confirm `Sent to <SMTP_TO>`. Do not mark complete until send succeeds.

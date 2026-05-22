@@ -55,7 +55,8 @@ SMTP_TO=recipient@example.com
 
 **Extract:** `scripts/datadog_dashboard_extract.py` → `output/<slug>_metric_results.json`
 
-**Render:** `scripts/render_daily_dashboard_html.py` — args: `--out`, `--dashboards-dir`,
+**Render:** `scripts/render_daily_dashboard_html.py` — default HTML at
+`output/daily_dashboard_report.html`; args include `--out`, `--dashboards-dir`,
 `--output-dir`, `--prs`, `--todos`, `--extras-dir`, `--stakeholders-dir`, `--extra LABEL:FILE`
 
 | Argument (`datadog_dashboard_extract.py`) | Default | Purpose |

@@ -27,7 +27,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 ## Rules
 
 - **Credentials:** `.env` via python-dotenv only — never hardcode tokens or org URLs in tracked files.
-- **Output:** HTML/JSON under `output/`; report at repo root as `daily_dashboard_report.html`.
+- **Output:** HTML/JSON under `output/` (`output/daily_dashboard_report.html`).
 - **Config:** No hardcoded org/team names — use env vars (`DATADOG_TEAMS`, `GITHUB_ORG`, etc.).
 - **Scripts:** Thin orchestration in `scripts/`; workflow prose lives in the skill references.
 
@@ -37,7 +37,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 |--------|---------|
 | `datadog_dashboard_extract.py` | Dashboard metrics → `output/<slug>_metric_results.json` |
 | `github_prs.py` | PR review queue → `output/github_prs.json` |
-| `render_daily_dashboard_html.py` | Build `daily_dashboard_report.html` |
+| `render_daily_dashboard_html.py` | Build `output/daily_dashboard_report.html` |
 | `send_report_smtp.py` | Email the report |
 | `todo.py` | Todoist tasks / reading queue |
 

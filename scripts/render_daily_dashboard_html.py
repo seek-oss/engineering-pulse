@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build daily_dashboard_report.html from per-dashboard Datadog snapshots,
+Build `output/daily_dashboard_report.html` (default) from per-dashboard Datadog snapshots,
 GitHub PRs, Todoist tasks, and drop-in extras cards.
 
 Dashboards are discovered from `prompts/dashboards/*.md` (skipping `_*.md`
@@ -143,7 +143,11 @@ def _render_generic_section(label: str, data: dict[str, Any]) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="daily_dashboard_report.html", help="Output HTML path")
+    ap.add_argument(
+        "--out",
+        default="output/daily_dashboard_report.html",
+        help="Output HTML path (default: output/daily_dashboard_report.html)",
+    )
     ap.add_argument(
         "--dashboards-dir",
         default="prompts/dashboards",

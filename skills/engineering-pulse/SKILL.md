@@ -51,3 +51,4 @@ paths, and script reference.
 - Extras: `prompts/extras/*.md`
 - Stakeholder cards (generated): `output/stakeholders/*.md`
 - Snapshots: `output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`
+- HTML scorecard (default render): `output/daily_dashboard_report.html`
