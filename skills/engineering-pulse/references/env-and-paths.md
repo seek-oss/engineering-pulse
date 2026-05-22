@@ -15,6 +15,7 @@
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Comma-separated names/emails for Stakeholder Pulse (Glean). Empty/unset skips Step 2F. Prefer full name or email. Soft-cap ~5 names. |
+| `LOG_MAX_MB` | no | Max size (MiB) of `/tmp/daily-dashboard.log` before it is cleared at run start — default **50** |
 | `GITHUB_TOKEN` | for PRs | PAT with `repo` (read) + `read:org` |
 | `GITHUB_ORG` / `GITHUB_TEAM` | for PRs | Org and team slugs |
 
