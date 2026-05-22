@@ -148,7 +148,6 @@ show_agent_selector() {
   divider >&2
   echo "" >&2
   echo -e "  ${CYAN}→${RESET}  ${BOLD}Pick the AI tool for scheduled runs${RESET} (saved as ${BOLD}AGENT_CLI${RESET} in .env)." >&2
-  echo -e "  ${DIM}This is not your Datadog / GitHub / SMTP secrets — only which program runs the dashboard on a timer.${RESET}" >&2
   echo "" >&2
   echo -e "${BOLD}────────────── Choose your AI agent: ──────────────${RESET}" >&2
   echo "" >&2
