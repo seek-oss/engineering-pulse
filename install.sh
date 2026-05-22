@@ -138,17 +138,24 @@ _detected_has_agent() {
 }
 
 show_agent_selector() {
+  # NOTE: This function is often called as $(show_agent_selector ...). Command
+  # substitution only shows stderr to the user — everything except the final
+  # agent id must go to >&2.
   local default="$1"
   local detected="$2"
 
-  divider
-  echo -e "${BOLD}────────────── Choose your AI agent: ──────────────${RESET}"
-  echo ""
+  divider >&2
+  echo "" >&2
+  echo -e "  ${CYAN}→${RESET}  ${BOLD}Pick the AI tool for scheduled runs${RESET} (saved as ${BOLD}AGENT_CLI${RESET} in .env)." >&2
+  echo -e "  ${DIM}This is not your Datadog / GitHub / SMTP secrets — only which program runs the dashboard on a timer.${RESET}" >&2
+  echo "" >&2
+  echo -e "${BOLD}────────────── Choose your AI agent: ──────────────${RESET}" >&2
+  echo "" >&2
 
   if [[ -z "$detected" ]]; then
-    warn "None detected. We recommend Claude Code:"
-    warn "  $(agent_install_hint claude)"
-    echo ""
+    warn "None detected. We recommend Claude Code:" >&2
+    warn "  $(agent_install_hint claude)" >&2
+    echo "" >&2
   fi
 
   local -a menu_labels=()
@@ -194,10 +201,10 @@ show_agent_selector() {
 
   local i=1 opt
   for opt in "${menu_labels[@]}"; do
-    echo "  $i) $opt"
+    echo "  $i) $opt" >&2
     i=$((i + 1))
   done
-  echo ""
+  echo "" >&2
 
   local default_pick_name=""
   default_pick_name=$(agent_label "${AGENT_ORDER[$((default_idx - 1))]}")
@@ -206,17 +213,18 @@ show_agent_selector() {
   l2=$(agent_label "${AGENT_ORDER[1]}")
   l3=$(agent_label "${AGENT_ORDER[2]}")
 
-  echo -e "${BOLD}  What the numbers mean:${RESET}"
-  echo -e "    ${BOLD}1${RESET} → ${l1}   ${DIM}(command on disk:${RESET} ${BOLD}claude${RESET}${DIM})${RESET}"
-  echo -e "    ${BOLD}2${RESET} → ${l2}   ${DIM}(command on disk:${RESET} ${BOLD}agent${RESET}${DIM})${RESET}"
-  echo -e "    ${BOLD}3${RESET} → ${l3}   ${DIM}(command on disk:${RESET} ${BOLD}pi${RESET}${DIM})${RESET}"
-  echo ""
-  echo -e "  ${DIM}Type${RESET} ${BOLD}1${RESET}${DIM},${RESET} ${BOLD}2${RESET}${DIM}, or${RESET} ${BOLD}3${RESET} ${DIM}then Enter. Just${RESET} ${BOLD}Enter${RESET} ${DIM}alone =${RESET} ${BOLD}${default_idx}${RESET} ${DIM}(${default_pick_name}).${RESET}"
-  echo ""
+  echo -e "${BOLD}  What to type:${RESET}" >&2
+  echo -e "    ${BOLD}1${RESET}${DIM} →${RESET} ${l1}${DIM}  (runs the ${RESET}${BOLD}claude${RESET}${DIM} command)${RESET}" >&2
+  echo -e "    ${BOLD}2${RESET}${DIM} →${RESET} ${l2}${DIM}  (runs the Cursor ${RESET}${BOLD}agent${RESET}${DIM} CLI)${RESET}" >&2
+  echo -e "    ${BOLD}3${RESET}${DIM} →${RESET} ${l3}${DIM}  (runs the ${RESET}${BOLD}pi${RESET}${DIM} command)${RESET}" >&2
+  echo "" >&2
+  echo -e "  ${DIM}Press${RESET} ${BOLD}Enter${RESET} ${DIM}without typing anything to accept the default:${RESET} ${BOLD}${default_idx}${RESET} ${DIM}= ${default_pick_name}${RESET}" >&2
+  echo "" >&2
 
   local pick="$default_idx"
   if [[ -t 0 ]]; then
-    read -r -p "  Type 1, 2, or 3 — or press Enter for ${default_idx} (${default_pick_name}) › " pick || true
+    # Prompt on stderr (-p); read from terminal (works under $(…) capture).
+    read -r -p "  Type ${BOLD}1${RESET}, ${BOLD}2${RESET}, or ${BOLD}3${RESET}; or Enter for default (${default_idx}) › " pick || true
     pick="${pick:-$default_idx}"
   fi
   if [[ "$pick" =~ ^[1-3]$ ]]; then
@@ -372,12 +380,6 @@ fi
 # Re-source lib from install dir (updated on clone/pull)
 # shellcheck source=scripts/lib/agent_cli.sh
 source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
-
-if [[ -t 0 ]]; then
-  echo ""
-  info "Which installed AI tool should run the scheduled dashboard? (Pick 1, 2, or 3 below.)"
-  echo -e "  ${DIM}We save that as${RESET} ${BOLD}AGENT_CLI${DIM} in .env — separate from your Datadog / GitHub / SMTP keys in the same file.${RESET}"
-fi
 
 DEFAULT_AGENT=$(default_agent_choice "$DETECTED_AGENTS")
 if [[ -t 0 ]]; then
