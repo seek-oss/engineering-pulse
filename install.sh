@@ -241,32 +241,27 @@ print_banner() {
  
   printf '\n'
   printf '%s+ ------------------------------------------------------------------- +%s\n' "$CG" "$CR"
-  printf '%s|           >  E N G I N E E R I N G   P U L S E  <                  |%s\n' "$CG" "$CR"
-  printf '%s|             real-time pulse for systems that matter                  |%s\n' "$CG" "$CR"
+  printf '%s|        >  E N G I N E E R I N G   P U L S E  <  ·  real-time pulse  |%s\n' "$CG" "$CR"
   printf '%s+ ------------------------------------------------------------------- +%s\n' "$CG" "$CR"
   printf '\n'
- 
-  # Block letter "PULSE" with cyan → green → white gradient
+
+  # Block "PULSE" — compact height (merged duplicate stroke rows)
   printf '%s     ████████  ██    ██  ██         ██████   ████████%s\n' "$C1" "$CR"
-  printf '%s     ██    ██  ██    ██  ██        ██        ██      %s\n' "$C1" "$CR"
   printf '%s     ██    ██  ██    ██  ██        ██        ██      %s\n' "$C2" "$CR"
   printf '%s     ████████  ██    ██  ██         ██████   ██████  %s\n' "$C3" "$CR"
   printf '%s     ██        ██    ██  ██              ██  ██      %s\n' "$C4" "$CR"
-  printf '%s     ██        ██    ██  ██              ██  ██      %s\n' "$C4" "$CR"
   printf '%s     ██         ██████   ████████   ██████   ████████%s\n' "$C5" "$CR"
- 
+
   printf '\n'
-  printf '%s           d a t a d o g  ·  g i t h u b  ·  e m a i l%s\n' "$CG" "$CR"
+  printf '%s        d a t a d o g  ·  g i t h u b  ·  e m a i l%s\n' "$CG" "$CR"
   printf '\n'
   printf '%s+ -------------------------------------- +%s\n' "$CG" "$CR"
-  printf '%s| [✓] engine      : online               |%s\n' "$CG" "$CR"
-  printf '%s| [✓] pulse       : steady               |%s\n' "$CG" "$CR"
-  printf '%s| [✓] signal      : strong               |%s\n' "$CG" "$CR"
-  printf '%s| [✓] status      : installing           |%s\n' "$CG" "$CR"
+  printf '%s| [✓] engine  : online  pulse : steady   |%s\n' "$CG" "$CR"
+  printf '%s| [✓] signal    : ok   ·   installing …  |%s\n' "$CG" "$CR"
   printf '%s+ -------------------------------------- +%s\n' "$CG" "$CR"
   printf '\n'
   printf '%s=====================================================================%s\n' "$CG" "$CR"
-  printf '%s         Keep building. Keep pushing. The pulse is alive.%s\n' "$C5" "$CR"
+  printf '%s      Keep building. Keep pushing. The pulse is alive.%s\n' "$C5" "$CR"
   printf '%s=====================================================================%s\n' "$CG" "$CR"
   printf '\n'
 }
