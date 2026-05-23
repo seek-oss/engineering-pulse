@@ -165,6 +165,7 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 **From the terminal** (same skill as the schedule — agent chosen via `AGENT_CLI` in `.env`):
 ```bash
+cd ~/.engineering-pulse
 make run          # foreground: stream logs to your terminal AND append /tmp/daily-dashboard.log
 make run-bg       # background: append log only (use `make logs` or `tail -f`)
 make logs         # tail the log
@@ -401,4 +402,3 @@ on your disk only and are never touched by `git pull`.
 | Scripts (`scripts/*.py`) | Yes | N/A |
 | `.env` (your credentials) | No (untouched) | Yes |
 | `skills/engineering-pulse/` (workflow) | Yes | N/A (don't edit) |
-

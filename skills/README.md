@@ -19,7 +19,7 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 | **skills.sh** | `skills add` from this git repo with path `skills/engineering-pulse` (per [skills.sh](https://skills.sh) docs) |
 | **ai-toolkit** | Fetch subtree `skills/engineering-pulse` from GitHub |
 | **Pi Agent** | See [`harness/pi-agent/README.md`](../harness/pi-agent/README.md) |
-| **Scheduled (no agent)** | `web-install.sh` + LaunchAgent / `make run` — not skill-based |
+| **Scheduled** | `web-install.sh` + LaunchAgent / `make run` — uses `AGENT_CLI` from `.env` |
 
 ## Run
 

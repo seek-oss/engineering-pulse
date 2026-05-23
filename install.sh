@@ -79,6 +79,7 @@ post_install_guide() {
   echo ""
   echo -e "  ${BOLD}6) Run once after .env is filled${RESET}"
   echo -e "     ${CYAN}${RUNNER_SCRIPT}${RESET}"
+  echo -e "     ${DIM}Or:${RESET} ${CYAN}cd ${INSTALL_DIR} && make run${RESET}"
   echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET} ${DIM}(cleared at run start if over 50 MiB)${RESET}"
   echo ""
   divider
