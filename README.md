@@ -29,7 +29,7 @@ Engineering Pulse needs an AI agent CLI to run dashboard prompts. The installer 
 
 | Agent | Install command | Notes |
 |---|---|---|
-| Claude Code (recommended) | `npm install -g @anthropic-ai/claude-code` | Requires Anthropic API key for automation |
+| Claude Code (recommended) | `npm install -g @anthropic-ai/claude-code` | Requires Anthropic API key for automation; scheduled runs bypass interactive permissions |
 | Cursor CLI | `curl https://cursor.com/install -fsSL \| bash` | Uses Cursor subscription credits |
 | Pi Agent | `curl -fsSL https://pi.dev/install.sh \| sh` | Multi-provider; bring your own API key |
 

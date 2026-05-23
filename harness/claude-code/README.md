@@ -19,3 +19,5 @@ Optional slash-command stubs: copy `harness/claude-code/commands/` into your Cla
 Run by asking Claude to use the **engineering-pulse** skill for a daily dashboard.
 
 **Headless / scheduled:** set `AGENT_CLI=claude` in `.env` and run `~/bin/run-daily-dashboard.sh` (requires `ANTHROPIC_API_KEY` for automation).
+
+The generated runner invokes Claude Code with `--permission-mode bypassPermissions` so file reads and Bash commands do not block on an approval UI that is unavailable during `make run` / LaunchAgent execution. Use this only from a trusted clone with credentials kept in `.env`.

@@ -115,7 +115,7 @@ run_agent() {
       (cd "$workdir" && pi -p --trust --force -- "$prompt")
       ;;
     claude)
-      (cd "$workdir" && claude -p -- "$prompt")
+      (cd "$workdir" && claude -p --permission-mode bypassPermissions -- "$prompt")
       ;;
     cursor)
       (cd "$workdir" && agent -p --trust --force -- "$prompt")

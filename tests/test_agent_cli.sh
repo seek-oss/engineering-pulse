@@ -32,6 +32,22 @@ detected=$(detect_agents)
 assert_eq "$detected" "cursor" "detect cursor only"
 rm -rf "$MOCK_BIN"
 
+# Claude Code headless runs must not wait for permission prompts that cannot
+# reach LaunchAgent / make-run users.
+MOCK_BIN="$(mktemp -d)"
+MOCK_LOG="$(mktemp)"
+cat >"$MOCK_BIN/claude" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >"$MOCK_LOG"
+SH
+chmod +x "$MOCK_BIN/claude"
+PATH="$MOCK_BIN:/usr/bin:/bin"
+export MOCK_LOG
+run_agent claude "test prompt" "$ROOT"
+assert_eq "$(cat "$MOCK_LOG")" "-p --permission-mode bypassPermissions -- test prompt" "claude bypasses headless permission prompts"
+rm -rf "$MOCK_BIN"
+rm -f "$MOCK_LOG"
+
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures test(s) failed" >&2
   exit 1
