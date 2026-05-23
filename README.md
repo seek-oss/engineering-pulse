@@ -19,13 +19,13 @@ Use **`web-install.sh`**, not `install.sh`, in the pipe — it clones the repo t
 - Print where to edit prompts, customise dashboards, and adjust the LaunchAgent schedule
 - Schedule the report at **09:00, 12:00 and 16:00 Mon–Fri** via macOS LaunchAgent (override times with `SCHEDULE_HOURS` when running the installer)
 
-> **Prerequisites:** Python 3.11+, `git`, and **one** AI agent CLI (installer helps you choose).
+> **Prerequisites:** Python 3.11+ and `git`. An AI agent CLI is optional for manual skill runs and agent-only extras.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests and opening pull requests.
 
 ### Agent CLI
 
-Engineering Pulse needs an AI agent CLI to run dashboard prompts. The installer detects which agents you have and lets you pick:
+Scheduled runs use the Python pipeline by default. An AI agent CLI is only needed when you run the dashboard as a prompt/skill, or when you opt into agent-driven scheduled runs with `RUN_WITH_AGENT=1`:
 
 | Agent | Install command | Notes |
 |---|---|---|
@@ -163,7 +163,7 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 **Manually in Cursor** — `/daily-dashboard` (or ask the agent to run the **engineering-pulse** skill).
 
-**From the terminal** (same skill as the schedule — agent chosen via `AGENT_CLI` in `.env`):
+**From the terminal** (Python pipeline by default; set `RUN_WITH_AGENT=1` to route through `AGENT_CLI`):
 ```bash
 cd ~/.engineering-pulse
 make run          # foreground: stream logs to your terminal AND append /tmp/daily-dashboard.log
@@ -174,7 +174,7 @@ make update       # pull latest + reinstall deps
 make help         # list all targets
 ```
 
-**On a schedule** — the installer sets up a macOS LaunchAgent (default 9:00, 12:00, 16:00 Mon–Fri). After upgrading the repo, re-run `bash install.sh` from `~/.engineering-pulse` so `~/bin/run-daily-dashboard.sh` points at `skills/engineering-pulse/SKILL.md`.
+**On a schedule** — the installer sets up a macOS LaunchAgent (default 9:00, 12:00, 16:00 Mon–Fri). After upgrading the repo, re-run `bash install.sh` from `~/.engineering-pulse` so `~/bin/run-daily-dashboard.sh` is regenerated.
 
 ---
 
