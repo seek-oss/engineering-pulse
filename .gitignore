@@ -45,6 +45,16 @@ dist/
 *.swo
 *~
 
+# Local Cursor helper skills; not part of the product.
+.cursor/skills/*
+!.cursor/skills/engineering-pulse
+
+# Local Cursor helper commands; not part of the product.
+.cursor/commands/*
+!.cursor/commands/add-dashboard.md
+!.cursor/commands/daily-dashboard.md
+!.cursor/commands/todo.md
+
 # Customer-specific dashboard definitions (contain real Datadog URLs — local only).
 # Underscore-prefixed files are reference templates and stay in the repo.
 prompts/dashboards/*.md
