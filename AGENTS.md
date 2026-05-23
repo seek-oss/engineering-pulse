@@ -10,6 +10,21 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 
 **Harness entrypoints:** [`harness/`](harness/) (Cursor `/daily-dashboard`, Claude Code, Pi Agent).
 
+## Product invariants
+
+- The canonical daily-dashboard workflow is Markdown guidance:
+  `skills/engineering-pulse/SKILL.md` plus `skills/engineering-pulse/references/`.
+- `make run` and scheduled runs must stay agent-driven through `AGENT_CLI`; do not
+  replace product execution with a direct Python-only pipeline.
+- `scripts/` contains callable tools for the agent-guided workflow. Keep workflow
+  decisions and prose in the skill references.
+- `scripts/run_daily_dashboard.py` is a helper/debug path for running the toolchain
+  directly; it is not the primary product runtime.
+- Installed `~/.engineering-pulse` clones normally track `main`. Feature branch
+  checkout is a maintainer testing workflow, not normal user guidance.
+- Claude Code headless runs need explicit non-interactive permission handling in the
+  runner; keep that behavior aligned with Cursor/Pi trust/force execution.
+
 ## Layout
 
 | Path | Role |
