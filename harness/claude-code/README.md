@@ -18,4 +18,4 @@ Optional slash-command stubs: copy `harness/claude-code/commands/` into your Cla
 
 Run by asking Claude to use the **engineering-pulse** skill for a daily dashboard.
 
-**Headless / scheduled through Claude:** set `RUN_WITH_AGENT=1` and `AGENT_CLI=claude` in `.env`, then run `~/bin/run-daily-dashboard.sh` (requires `ANTHROPIC_API_KEY` for automation). The default scheduled runner uses Python without Claude.
+**Headless / scheduled:** set `AGENT_CLI=claude` in `.env` and run `~/bin/run-daily-dashboard.sh` (requires `ANTHROPIC_API_KEY` for automation).

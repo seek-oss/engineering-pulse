@@ -10,4 +10,4 @@ Ensure the agent's workspace is the engineering-pulse repo root (or `~/.engineer
 
 Document Pi-specific manifest paths here when your Pi Agent version publishes a stable skill layout.
 
-**Headless / scheduled through Pi:** set `RUN_WITH_AGENT=1` and `AGENT_CLI=pi` in `.env`, then run `~/bin/run-daily-dashboard.sh` (set `PI_API_KEY` for your provider). The default scheduled runner uses Python without Pi.
+**Headless / scheduled:** set `AGENT_CLI=pi` in `.env` and run `~/bin/run-daily-dashboard.sh` (set `PI_API_KEY` for your provider).
