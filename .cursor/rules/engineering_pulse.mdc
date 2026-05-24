@@ -10,4 +10,4 @@ See [AGENTS.md](../../AGENTS.md) for repo layout, scripts, and development comma
 
 **Daily dashboard:** [`skills/engineering-pulse/SKILL.md`](../../skills/engineering-pulse/SKILL.md) ([Agent Skills spec](https://agentskills.io/specification)).
 
-**Shortcuts / harness docs:** Cursor commands in [`harness/cursor/commands/`](../../harness/cursor/commands/) (e.g. **`/daily-dashboard`**); Claude Code and Pi notes in [`harness/`](../../harness/).
+**Shortcuts / harness docs:** Cursor commands in [`harness/cursor/commands/`](../../harness/cursor/commands/) (e.g. **`/daily-dashboard`**); Claude Code notes in [`harness/`](../../harness/) (Pi [in progress](../../harness/pi-agent/README.md)).

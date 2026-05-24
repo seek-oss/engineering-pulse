@@ -6,7 +6,7 @@ Thin entrypoints that activate `skills/engineering-pulse/` — no duplicated wor
 |-----------|---------|
 | [`cursor/commands/`](cursor/commands/) | Cursor slash commands |
 | [`claude-code/`](claude-code/) | Claude Code install notes |
-| [`pi-agent/`](pi-agent/) | Pi Agent (document when manifest format is confirmed) |
+| [`pi-agent/`](pi-agent/) | Pi Agent **(in progress)** — manifest / skill layout TBD |
 
 **Canonical workflow:** `skills/engineering-pulse/SKILL.md` + `references/`.
 

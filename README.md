@@ -4,7 +4,7 @@
 
 An **agent- and skill-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
-Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — driven interactively (**Claude Code**, **Cursor** with the **`/daily-dashboard`** command, **Pi**) or headlessly (`make run` / LaunchAgent via `AGENT_CLI`). Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP where your editor exposes it — e.g. Cursor) for names you list in `.env`.
+Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — driven interactively (**Claude Code** or **Cursor** with **`/daily-dashboard`**) or headlessly (`make run` / LaunchAgent via `AGENT_CLI`: **`claude`** or **`cursor`**). Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP where your editor exposes it — e.g. Cursor) for names you list in `.env`. **Pi Agent** support is **[in progress](harness/pi-agent/)** (experimental `AGENT_CLI=pi`).
 
 ## Install
 
@@ -31,9 +31,9 @@ Engineering Pulse needs an AI agent CLI to run dashboard prompts. The installer 
 |---|---|---|
 | Claude Code (recommended) | `npm install -g @anthropic-ai/claude-code` | Requires Anthropic API key for automation; scheduled runs bypass interactive permissions |
 | Cursor CLI | `curl https://cursor.com/install -fsSL \| bash` | Uses Cursor subscription credits |
-| Pi Agent | `curl -fsSL https://pi.dev/install.sh \| sh` | Multi-provider; bring your own API key |
+| Pi Agent *(in progress)* | `curl -fsSL https://pi.dev/install.sh \| sh` | Experimental; see [`harness/pi-agent/README.md`](harness/pi-agent/README.md) |
 
-Your choice is saved in `.env` as `AGENT_CLI`. Change it any time, or re-run `bash install.sh`.
+Your choice is saved in `.env` as `AGENT_CLI` (`claude` or `cursor` today; **`pi` experimental**). Change it any time, or re-run `bash install.sh`.
 
 ---
 
@@ -80,10 +80,10 @@ The daily workflow lives in a portable **[Agent Skill](https://agentskills.io/sp
 
 - **Canonical:** [`skills/engineering-pulse/SKILL.md`](skills/engineering-pulse/SKILL.md) + [`references/`](skills/engineering-pulse/references/)
 - **Install matrix:** [`skills/README.md`](skills/README.md) (Cursor, Claude Code, skills.sh, ai-toolkit)
-- **Harness adapters:** [`harness/`](harness/) — thin Cursor / Claude Code / Pi entrypoints
+- **Harness adapters:** [`harness/`](harness/) — Cursor / Claude Code entrypoints (Pi: [in progress](harness/pi-agent/))
 - **Repo context:** [`AGENTS.md`](AGENTS.md) — always-on rules for agents in this tree
 
-**Run interactively:** invoke the **engineering-pulse** skill (`SKILL.md`) from **Claude Code**, **Cursor** (`/daily-dashboard`), or **Pi** ([`harness/`](harness/)). **Scheduled / headless:** `make run`, `~/bin/run-daily-dashboard.sh`, or LaunchAgent (see below).
+**Run interactively:** invoke the **engineering-pulse** skill (`SKILL.md`) from **Claude Code** or **Cursor** (`/daily-dashboard`) — see [`harness/`](harness/) (**Pi** [in progress](harness/pi-agent/)). **Scheduled / headless:** `make run`, `~/bin/run-daily-dashboard.sh`, or LaunchAgent (see below).
 
 ## Architecture
 
@@ -151,7 +151,7 @@ You need:
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
 - **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); add it wherever your toolchain supports MCP (commonly Cursor), then set `STAKEHOLDERS` in `.env`
 
-Then add your dashboards using **`/add-dashboard`** in Cursor (or the equivalent flow in Claude Code / Pi — see [`harness/`](harness/)):
+Then add your dashboards using **`/add-dashboard`** in Cursor (or the equivalent flow in **Claude Code** — see [`harness/`](harness/)):
 ```
 /add-dashboard add my dashboard at https://app.datadoghq.com/dashboard/...
 ```
@@ -161,7 +161,7 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 ### Running the dashboard
 
-**Interactively:** run the **engineering-pulse** skill — e.g. **Cursor:** **`/daily-dashboard`** · **Claude Code / Pi:** see [`skills/README.md`](skills/README.md) and [`harness/`](harness/).
+**Interactively:** run the **engineering-pulse** skill — e.g. **Cursor:** **`/daily-dashboard`** · **Claude Code:** see [`skills/README.md`](skills/README.md) and [`harness/`](harness/).
 
 **From the terminal** (same **`SKILL.md`** payload as LaunchAgent — agent chosen via `AGENT_CLI` in `.env`):
 ```bash
@@ -275,7 +275,7 @@ python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.h
 
 You can add any Datadog dashboard to the daily report without editing existing files:
 
-1. Run **`/add-dashboard`** where your harness exposes it (**Cursor** snippet below; see [`harness/`](harness/) for Claude Code / Pi).
+1. Run **`/add-dashboard`** where your harness exposes it (**Cursor** snippet below; see [`harness/`](harness/) for **Claude Code**).
    ```
    /add-dashboard add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
    ```
@@ -314,7 +314,7 @@ added later for teams that prefer a readonly token over enterprise search.
 1. **Glean MCP** — add/configure Glean MCP in your editor (**Cursor:** [Cursor MCP settings](https://docs.cursor.com/context/mcp); others — see [`harness/`](harness/)). *(Not shipped in this repo.)*
 2. **`STAKEHOLDERS` in `.env`** — comma-separated names or emails, e.g.  
    `STAKEHOLDERS=Jane Doe,john.smith@example.com`
-3. Run the dashboard (e.g. Cursor **`/daily-dashboard`**, or invoke **`engineering-pulse`** in Claude Code / Pi — see [`harness/`](harness/)).
+3. Run the dashboard (e.g. Cursor **`/daily-dashboard`**, or invoke **`engineering-pulse`** in **Claude Code** — see [`harness/`](harness/)).
 
 ### What happens each run
 

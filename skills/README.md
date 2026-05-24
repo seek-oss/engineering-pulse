@@ -19,9 +19,9 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 | **skills.sh** | `skills add` from this git repo with path `skills/engineering-pulse` (per [skills.sh](https://skills.sh) docs) |
 | **ai-toolkit** | Fetch subtree `skills/engineering-pulse` from GitHub |
 | **Pi Agent** *(in progress)* | Early notes: [`harness/pi-agent/README.md`](../harness/pi-agent/README.md) |
-| **Scheduled runner** | `web-install.sh` + LaunchAgent or `make run`; runs `~/bin/run-daily-dashboard.sh` with `AGENT_CLI` (`claude` / `cursor`; experimental `pi`) |
+| **Scheduled runner** | `web-install.sh` + LaunchAgent or `make run`; runs `~/bin/run-daily-dashboard.sh` with `AGENT_CLI` (`claude` or `cursor`; experimental `pi`) |
 
 - **Run:**
   - **Cursor:** `/daily-dashboard` (or invoke skill by name).
   - **Claude Code** / **skills.sh** / **ai-toolkit:** invoke **engineering-pulse** from your harness (see [`harness/`](harness/)).
-  - **Scheduled / LaunchAgent:** `~/bin/run-daily-dashboard.sh` + `AGENT_CLI` (`claude` / `cursor`; experimental `pi`).
+  - **Scheduled / LaunchAgent:** `~/bin/run-daily-dashboard.sh` + `AGENT_CLI` (`claude` or `cursor`; experimental `pi`).
