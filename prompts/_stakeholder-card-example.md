@@ -11,7 +11,7 @@
 
 ## How it works
 
-**Slack data today:** Glean MCP in Cursor (Step 2F). **Possible later:**
+**Slack data today:** Glean MCP where your editor exposes it (commonly Cursor; Step 2F). **Possible later:**
 read-only Slack token for orgs without Glean — same card files, not wired up yet.
 
 Each `*.md` file in `output/stakeholders/` becomes one card under

@@ -8,7 +8,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 **Product skill (portable):** [`skills/engineering-pulse/`](skills/engineering-pulse/) per
 [Agent Skills](https://agentskills.io/specification).
 
-**Harness entrypoints:** [`harness/`](harness/) (Cursor `/daily-dashboard`, Claude Code, Pi Agent).
+**Harness entrypoints:** [`harness/`](harness/) — **Claude Code**, **Cursor** (e.g. **`/daily-dashboard`**), **Pi Agent**, plus scheduled / headless runs via [`scripts/lib/agent_cli.sh`](scripts/lib/agent_cli.sh).
 
 ## Product invariants
 

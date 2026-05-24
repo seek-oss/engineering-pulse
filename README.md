@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml)
 
-A **Cursor prompt-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
+An **agent- and skill-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
-Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — triggered manually in Cursor or automatically on a schedule. Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP) for names you list in `.env`.
+Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — driven interactively (**Claude Code**, **Cursor** with the **`/daily-dashboard`** command, **Pi**) or headlessly (`make run` / LaunchAgent via `AGENT_CLI`). Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP where your editor exposes it — e.g. Cursor) for names you list in `.env`.
 
 ## Install
 
@@ -83,7 +83,7 @@ The daily workflow lives in a portable **[Agent Skill](https://agentskills.io/sp
 - **Harness adapters:** [`harness/`](harness/) — thin Cursor / Claude Code / Pi entrypoints
 - **Repo context:** [`AGENTS.md`](AGENTS.md) — always-on rules for agents in this tree
 
-**Run in Cursor:** `/daily-dashboard` — or scheduled via `make run` / LaunchAgent (see below).
+**Run interactively:** invoke the **engineering-pulse** skill (`SKILL.md`) from **Claude Code**, **Cursor** (`/daily-dashboard`), or **Pi** ([`harness/`](harness/)). **Scheduled / headless:** `make run`, `~/bin/run-daily-dashboard.sh`, or LaunchAgent (see below).
 
 ## Architecture
 
@@ -149,9 +149,9 @@ You need:
 - **GitHub** — Personal Access Token with `repo` (read) + `read:org` scopes
 - **Gmail SMTP** — App Password (2FA must be enabled on your Google account)
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
-- **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); configure in Cursor, then set `STAKEHOLDERS` in `.env`
+- **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); add it wherever your toolchain supports MCP (commonly Cursor), then set `STAKEHOLDERS` in `.env`
 
-Then add your dashboards using the interactive command in Cursor:
+Then add your dashboards using **`/add-dashboard`** in Cursor (or the equivalent flow in Claude Code / Pi — see [`harness/`](harness/)):
 ```
 /add-dashboard add my dashboard at https://app.datadoghq.com/dashboard/...
 ```
@@ -161,9 +161,9 @@ Dashboard files are **gitignored** so your Datadog URLs stay local.
 
 ### Running the dashboard
 
-**Manually in Cursor** — `/daily-dashboard` (or ask the agent to run the **engineering-pulse** skill).
+**Interactively:** run the **engineering-pulse** skill — e.g. **Cursor:** **`/daily-dashboard`** · **Claude Code / Pi:** see [`skills/README.md`](skills/README.md) and [`harness/`](harness/).
 
-**From the terminal** (same skill as the schedule — agent chosen via `AGENT_CLI` in `.env`):
+**From the terminal** (same **`SKILL.md`** payload as LaunchAgent — agent chosen via `AGENT_CLI` in `.env`):
 ```bash
 cd ~/.engineering-pulse
 make run          # foreground: stream logs to your terminal AND append /tmp/daily-dashboard.log
@@ -195,7 +195,7 @@ make help         # list all targets
 | `SMTP_TO` | yes | Recipient address |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
-| `STAKEHOLDERS` | no | Names for Pulse (Glean MCP in Cursor). **Omit this line from `.env` to hide Pulse** (shell `export` alone does not enable it). `STAKEHOLDERS=` explicitly clears tracked names when your dotenv tooling needs an empty value. Prefer `Jane Doe,john.smith@example.com` over first names only. |
+| `STAKEHOLDERS` | no | Names for Pulse (Glean MCP; typically wired through an MCP-capable editor such as Cursor). **Omit this line from `.env` to hide Pulse** (shell `export` alone does not enable it). `STAKEHOLDERS=` explicitly clears tracked names when your dotenv tooling needs an empty value. Prefer `Jane Doe,john.smith@example.com` over first names only. |
 
 See `.env.example` for the full template.
 
@@ -222,7 +222,7 @@ python3 scripts/todo.py done <task-id> --comment "Merged"
 python3 scripts/todo.py cancel <task-id> --comment "No longer needed"
 ```
 
-Or use `/todo` in Cursor: `remind me to review the EKS upgrade`
+Or use **`/todo`** in Cursor (if available): `remind me to review the EKS upgrade`
 
 ### Daily dashboard HTML
 
@@ -275,7 +275,7 @@ python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.h
 
 You can add any Datadog dashboard to the daily report without editing existing files:
 
-1. **Run the add-dashboard command in Cursor:**
+1. Run **`/add-dashboard`** where your harness exposes it (**Cursor** snippet below; see [`harness/`](harness/) for Claude Code / Pi).
    ```
    /add-dashboard add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate
    ```
@@ -303,7 +303,7 @@ writes one markdown card per name in `output/stakeholders/`; the HTML report sho
 
 | Approach | Status | Best for |
 |----------|--------|----------|
-| **Glean MCP** in Cursor | **Supported today** | Orgs that already use Glean for Slack search — no Slack token in `.env` |
+| **Glean MCP** (via an MCP-capable editor, commonly **Cursor**) | **Supported today** | Orgs that already use Glean for Slack search — no Slack token in `.env` |
 | **Read-only Slack token** | *Not implemented yet* | Orgs without Glean; a bot/user token with read-only channel history could feed the same card format |
 
 **Today only Glean MCP is wired up** (Step 2F). A direct Slack API path may be
@@ -311,10 +311,10 @@ added later for teams that prefer a readonly token over enterprise search.
 
 ### Enable (Glean MCP)
 
-1. **Glean MCP** — add/configure the Glean server in your [Cursor MCP settings](https://docs.cursor.com/context/mcp) (not shipped in this repo).
+1. **Glean MCP** — add/configure Glean MCP in your editor (**Cursor:** [Cursor MCP settings](https://docs.cursor.com/context/mcp); others — see [`harness/`](harness/)). *(Not shipped in this repo.)*
 2. **`STAKEHOLDERS` in `.env`** — comma-separated names or emails, e.g.  
    `STAKEHOLDERS=Jane Doe,john.smith@example.com`
-3. Run the dashboard in Cursor: `/daily-dashboard`
+3. Run the dashboard (e.g. Cursor **`/daily-dashboard`**, or invoke **`engineering-pulse`** in Claude Code / Pi — see [`harness/`](harness/)).
 
 ### What happens each run
 

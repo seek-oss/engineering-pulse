@@ -5,7 +5,7 @@
 > **This file is a format reference only.** The agent skips any file in this
 > directory whose name starts with `_`.
 >
-> To add a real dashboard, use the **add-dashboard** command in Cursor:
+> To add a real dashboard, run **`/add-dashboard`** (**Cursor**) or follow your harness (**Claude Code** / **Pi** — [`harness/`](../../harness/)):
 >
 > ```
 > /add-dashboard add my DORA dashboard at https://app.datadoghq.com/dashboard/xyz-123, I care about deploy rate

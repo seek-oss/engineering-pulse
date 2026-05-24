@@ -18,10 +18,10 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 | **Claude Code** | Copy/symlink to `~/.claude/skills/engineering-pulse` — see [`harness/claude-code/README.md`](../harness/claude-code/README.md) |
 | **skills.sh** | `skills add` from this git repo with path `skills/engineering-pulse` (per [skills.sh](https://skills.sh) docs) |
 | **ai-toolkit** | Fetch subtree `skills/engineering-pulse` from GitHub |
-| **Pi Agent** | See [`harness/pi-agent/README.md`](../harness/pi-agent/README.md) |
-| **Scheduled** | `web-install.sh` + LaunchAgent / `make run` — uses `AGENT_CLI` from `.env` |
+| **Pi Agent** *(in progress)* | Early notes: [`harness/pi-agent/README.md`](../harness/pi-agent/README.md) |
+| **Scheduled runner** | `web-install.sh` + LaunchAgent or `make run`; runs `~/bin/run-daily-dashboard.sh` with `AGENT_CLI` (`claude` / `cursor`; experimental `pi`) |
 
-## Run
-
-- Cursor: `/daily-dashboard` (or invoke the **engineering-pulse** skill by name)
-- Any harness: invoke skill by description; agent reads `SKILL.md` then `references/daily-workflow.md`
+- **Run:**
+  - **Cursor:** `/daily-dashboard` (or invoke skill by name).
+  - **Claude Code** / **skills.sh** / **ai-toolkit:** invoke **engineering-pulse** from your harness (see [`harness/`](harness/)).
+  - **Scheduled / LaunchAgent:** `~/bin/run-daily-dashboard.sh` + `AGENT_CLI` (`claude` / `cursor`; experimental `pi`).
