@@ -139,8 +139,8 @@ def _render_stakeholder_section(
             "</div>"
         )
 
-    section = (
-        f'<div class="section-title">{html_mod.escape(label)}</div>\n    ' + "\n    ".join(cards)
+    section = f'<div class="section-title">{html_mod.escape(label)}</div>\n    ' + "\n    ".join(
+        cards
     )
     return section, missing
 
