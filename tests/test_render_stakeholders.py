@@ -159,7 +159,7 @@ class TestStakeholderPulseWiring:
         assert "Jane Doe" in html
         assert html.index("Part C") < html.index("Part D")
 
-    def test_omits_html_section_but_warns_stderr_when_cards_missing(self, tmp_path: Path) -> None:
+    def test_renders_placeholder_and_warns_when_card_missing(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         html, stderr = _run(
@@ -167,6 +167,27 @@ class TestStakeholderPulseWiring:
             stakeholders_dir=sdir,
             stakeholders_env="Jane Doe",
         )
-        assert "Stakeholder Pulse" not in html
+        # A configured name always gets a slot, even before Step 2F writes its card.
+        assert "Part C — Stakeholder Pulse" in html
+        assert "Jane Doe" in html
+        assert "No card generated yet" in html
         assert "Warning: STAKEHOLDERS set" in stderr
         assert "jane-doe.md" in stderr
+
+    def test_renders_card_and_placeholder_together(self, tmp_path: Path) -> None:
+        # Mixed case: one generated card + one not-yet-generated name.
+        sdir = tmp_path / "stakeholders"
+        sdir.mkdir()
+        (sdir / "jane-doe.md").write_text("# Jane Doe\n\n- A\n", encoding="utf-8")
+        html, stderr = _run(
+            tmp_path,
+            stakeholders_dir=sdir,
+            stakeholders_env="Jane Doe, John Smith",
+        )
+        assert html.count('<div class="extra-card">') == 2
+        assert "Jane Doe" in html
+        assert "John Smith" in html
+        assert "No card generated yet" in html
+        # Only the missing name is reported.
+        assert "john-smith.md" in stderr
+        assert "jane-doe.md" not in stderr

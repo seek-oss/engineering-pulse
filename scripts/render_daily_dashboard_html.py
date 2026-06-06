@@ -17,9 +17,11 @@ actually present:
   - Extras cards (from `prompts/extras/*.md`)
   - Stakeholder Pulse — names come from `STAKEHOLDERS` in the repo `.env` **file**.
     Omit that line entirely to disable Pulse (even if `export STAKEHOLDERS` exists in
-    the shell). Matching cards under `output/stakeholders/*.md` must exist; otherwise
-    the HTML section stays hidden and stderr may warn. When Pulse is disabled, stale
-    generated stakeholder cards (`output/stakeholders/*.md`, except `_*.md`) are removed."""
+    the shell). The section is driven entirely by the configured names: every name
+    gets one card slot, in `.env` order, mapped to `output/stakeholders/<slug>.md`.
+    A name whose card is missing renders a visible placeholder and is reported on
+    stderr (so a newly added stakeholder is never silently dropped). When Pulse is
+    disabled, stale generated cards (`output/stakeholders/*.md`, except `_*.md`) are removed."""
 
 from __future__ import annotations
 
@@ -44,7 +46,7 @@ from dashboards_plugin import (  # noqa: E402
     load_snapshot,
     parse_dashboard,
 )
-from extras_plugin import render_extras_section  # noqa: E402
+from extras_plugin import parse_extra, render_extras_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
 
 
@@ -100,6 +102,47 @@ def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
                     f"Warning: could not remove stale stakeholder card {path}: {exc}",
                     file=sys.stderr,
                 )
+
+
+def _render_stakeholder_section(
+    stakeholders_dir: Path, names: list[str], label: str
+) -> tuple[str, list[str]]:
+    """Render one card per configured stakeholder, in `STAKEHOLDERS` order.
+
+    Driven solely by the names list — nothing is hardcoded. Each name maps to
+    `output/stakeholders/<slug>.md`. A name with an existing card renders that
+    card; a name without one renders a visible placeholder and is collected into
+    the returned ``missing`` list so the caller can warn. This guarantees that
+    adding a name to `STAKEHOLDERS` always surfaces a slot in the report, even
+    before Step 2F has generated its Glean card.
+    """
+    cards: list[str] = []
+    missing: list[str] = []
+    for name in names:
+        slug = _stakeholder_slug(name)
+        card_path = stakeholders_dir / f"{slug}.md"
+        if card_path.is_file():
+            extra = parse_extra(card_path)
+            title = extra.title or name
+            body = extra.body_html
+        else:
+            missing.append(name)
+            title = name
+            body = (
+                '<p class="muted">No card generated yet — Step 2F did not write '
+                f"<code>output/stakeholders/{slug}.md</code> for this stakeholder.</p>"
+            )
+        cards.append(
+            '<div class="extra-card">'
+            f'<div class="extra-title">{html_mod.escape(title)}</div>'
+            f'<div class="extra-body">{body}</div>'
+            "</div>"
+        )
+
+    section = (
+        f'<div class="section-title">{html_mod.escape(label)}</div>\n    ' + "\n    ".join(cards)
+    )
+    return section, missing
 
 
 # ── Section renderers ──────────────────────────────────────────────────────
@@ -266,20 +309,18 @@ def main() -> None:
         _clean_stale_stakeholder_cards(stakeholders_dir)
     else:
         stakeholders_label = f"Part {_part_letter(len(sections))} — Stakeholder Pulse"
-        stakeholders_html = render_extras_section(
-            stakeholders_dir,
-            label=stakeholders_label,
+        stakeholders_html, missing = _render_stakeholder_section(
+            stakeholders_dir, stakeholder_names, stakeholders_label
         )
-        if stakeholders_html:
-            sections.append((stakeholders_label, stakeholders_html))
-        else:
-            # configured but no cards yet — omit the HTML section; hint on stderr only
+        sections.append((stakeholders_label, stakeholders_html))
+        if missing:
             warning = ", ".join(
-                f"{n} -> output/stakeholders/{_stakeholder_slug(n)}.md" for n in stakeholder_names
+                f"{n} -> output/stakeholders/{_stakeholder_slug(n)}.md" for n in missing
             )
             print(
-                f"Warning: STAKEHOLDERS set ({warning}) but Step 2F produced no stakeholder "
-                "cards yet — see skills/engineering-pulse/references/stakeholder-pulse.md.",
+                f"Warning: STAKEHOLDERS set but Step 2F produced no card for: {warning}. "
+                "Each name rendered a placeholder; generate the missing cards per "
+                "skills/engineering-pulse/references/stakeholder-pulse.md.",
                 file=sys.stderr,
             )
 
