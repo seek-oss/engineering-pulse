@@ -40,7 +40,19 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Reference: `.specify/memory/constitution.md` (Engineering Pulse v1.0.0).
+
+| Principle | Gate | Pass criteria |
+|-----------|------|---------------|
+| I. Agent-and-Skill-First | Scheduled/runtime path | Feature does not replace `make run` / LaunchAgent / `AGENT_CLI` with Python-only orchestration; workflow prose stays in `skills/engineering-pulse/references/` |
+| II. Thin Scripts | Script vs skill split | New logic in `scripts/` is CLI I/O only; no workflow decisions duplicated in Python |
+| III. Portable Skill | Harness neutrality | No single-vendor lock-in; harness adapters only under `harness/` / `.cursor/skills/` |
+| IV. Secrets Hygiene | Tracked files | No tokens, org URLs, or real PII in repo; fixtures use fictional data; no `.env`/`output/` in PR |
+| V. Quality Gates | CI readiness | `ruff` + `pytest` pass; behaviour changes include tests; new deps justified |
+
+Confirm no regression to read-only briefing behaviour (demo/fixture paths),
+agent-driven scheduled runs, secrets hygiene, or privacy-safe demo/dev workflows.
+Document any justified exceptions in Complexity Tracking below.
 
 ## Project Structure
 

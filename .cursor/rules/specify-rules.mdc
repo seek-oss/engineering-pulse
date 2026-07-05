@@ -3,6 +3,8 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+For non-negotiable project rules, read `.specify/memory/constitution.md`.
+For technologies, project structure, shell commands, and feature context, read
+the current plan under `specs/<branch-id>/plan.md` when present; otherwise
+`AGENTS.md` and `README.md`.
 <!-- SPECKIT END -->
