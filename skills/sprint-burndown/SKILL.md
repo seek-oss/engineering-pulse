@@ -1,6 +1,6 @@
 ---
 name: sprint-burndown
-description: "Build an evidence-based remaining-vs-ideal sprint burndown from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Configured via one free-form SPRINT_BOARD sentence in .env. Use for sprint burndown charts, remaining-work reports, scope-change analysis, or sprint delivery progress."
+description: "Build an evidence-based sprint progress report from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Produces both a burn-up chart (primary, SDD-friendly) and a burn-down chart with a rolling-scope expectation line, plus event ledger and per-ticket table. Configured via one free-form SPRINT_BOARD sentence in .env. Use for sprint delivery tracking, scope-change analysis, remaining-work reports, and daily/scheduled progress email."
 ---
 
 # Sprint Burndown
@@ -127,6 +127,15 @@ If board mapping is unavailable, use an explicit team definition when supplied. 
 
 Use a deterministic calculation over chronological events, not a visual guess or manually invented daily values. For each issue, reconstruct initial state plus every relevant change. Use both `from` and `to` values and verified creation state; sprint membership may already exist at creation. Do not equate creation time with join time without evidence.
 
+### Two-tier changelog scan (mandatory)
+
+Fetch the full changelog via `getJiraIssue` with `expand=changelog` for **every** ticket in these two tiers:
+
+1. **Tier 1 — every currently-Done ticket in scope.** Needed for exact completion timestamps and to detect any reopen/rejoin events.
+2. **Tier 2 — every ticket whose current Sprint field lists more than one sprint id, OR whose `created` timestamp is on or after `t0`.** Needed to distinguish original commitments from carryover, bulk-load additions, out-of-plan (OPM) session additions, and post-`t0` creation.
+
+Do not approximate sprint-join timestamps from `created` when the changelog is fetchable — approximation is only acceptable when MCP blocks the changelog (Bedrock guardrail, throttling, etc.). Affected tickets must be flagged as "partial history" in the ticket table and coverage labelled partial. If any Tier-1 changelog is blocked, do not assume the current `resolutiondate` is the completion time — it may reflect a reopen. Disclose.
+
 Track all join, remove and rejoin events, status transitions including reopenings, estimate changes, and scope-membership changes. Match the target sprint by ID within the sprint-ID set; a change mentioning an old sprint is not automatically a new join.
 
 Let `eligible(issue, t)` mean: the issue exists, is an included standard-level delivery ticket, belongs to the target sprint and team/board scope at `t`, and is not explicitly excluded.
@@ -148,13 +157,17 @@ Stop observations at now for an active sprint and at `completeDate` for a closed
 
 Never copy another ticket's join time, estimate or status history. Captioning a guess does not make it historical evidence.
 
-## 5. Ideal line, timing and interpretation
+## 5. Charts, timing and interpretation
 
-Freeze the ideal baseline B. Subsequent additions, removals, estimate changes or completions must not reset it.
+The report includes **two charts** for the same underlying evidence: a **burn-up** (primary — see §5b) and a **burn-down** (secondary — see §5a). Both share the baseline `B`, the event ledger, and the pace calculations defined in §5c.
+
+### 5a. Burn-down chart (secondary)
+
+Freeze the ideal baseline `B`. Subsequent additions, removals, estimate changes or completions must not reset `B`.
 
 Define the target endpoint from explicit team dates when provided, otherwise Jira's planned `endDate`. For date-only team windows use the end of the last working day. Disclose the exact endpoint and any difference from Jira. A closed sprint's actual endpoint is its completion timestamp; retain the original ideal target rather than recalculating the ideal to fit early/late closure.
 
-Let N be the number of included working-day intervals between `t0` and the target endpoint. Each included date is one unit; if the first/last date is partial, count its available interval as one unit and disclose this daily-granularity convention.
+Let `N` be the number of included working-day intervals between `t0` and the target endpoint. Each included date is one unit; if the first/last date is partial, count its available interval as one unit and disclose this daily-granularity convention.
 
 ```text
 Start:                  ideal(0) = B
@@ -163,13 +176,60 @@ Completed-day delta:    actual(k) - ideal(k)
 Original average pace:  B / N
 ```
 
-Plot the explicit Start point plus daily endpoints. Example: B=20, N=10 gives Start=20, end of day 1=18, day 2=16, day 10=0. Reject N=0 as an invalid ideal window; do not divide by zero.
+Plot the explicit Start point plus daily endpoints. Example: `B=20`, `N=10` gives Start=20, end of day 1=18, day 2=16, day 10=0. Reject `N=0` as an invalid ideal window; do not divide by zero.
 
-Use the latest completed working-day observation for the headline daily comparison. Optionally show a separate live point labelled “as of [timestamp]”; do not compare a morning live actual against an evening target as if the day had ended. If no working day has finished, report baseline and live remaining without a daily pace verdict.
+**Rolling-scope expectation line (SDD-friendly overlay).** A frozen ideal is misleading when total scope grows substantially after `t0` — actuals exceed the ideal by construction, not by delivery performance, which is common under Spec-Driven Development. Alongside the frozen ideal, plot a **piecewise-linear expectation line**:
 
-Calculate required average pace from the same completed-day cutoff: remaining at that cutoff divided by working days left until the target. If none remain, report “target reached” when remaining is zero, or “unfinished at target” otherwise. Do not calculate an infinite/undefined pace. For an active sprint beyond target, extend actual observations through now, keep ideal at zero after the original endpoint, and label overdue work. Do not stretch the ideal.
+- At `t0`, the expectation starts at `B` and drops linearly to `0` at the endpoint.
+- **On every scope-add event of ≥1 unit**, the expectation resets: from that date's `(now, current_remaining)`, draw a fresh linear drop to `(endpoint, 0)`.
+- Completions do **not** reset the line (they move the actual line down against a stable target, so good news is visible as "below expectation").
+- Scope-removals do **not** reset the line (removing work already in flight must not create a false credit).
 
-Use “above,” “at,” or “below the ideal line.” Do not mechanically convert that result into “delivery on track.” Explain original-scope completion, scope added/removed, reopenings, estimate changes and known blockers. Any delivery-confidence assessment is qualitative and must be separated from the arithmetic. Ticket-count pace measures ticket throughput, not equal-sized effort or individual productivity.
+The result is a stepped line with upward jumps at scope adds and flat descents between. Actual vs. expectation measures true delivery pace at each moment: above = falling behind the running commitment; below = ahead of it. The frozen `B` remains in the header for the audit trail.
+
+Use "above," "at," or "below the ideal line." Do not mechanically convert that result into "delivery on track." Explain original-scope completion, scope added/removed, reopenings, estimate changes and known blockers. Any delivery-confidence assessment is qualitative and must be separated from the arithmetic. Ticket-count pace measures ticket throughput, not equal-sized effort or individual productivity.
+
+### 5b. Burn-up chart (primary)
+
+Plot two cumulative lines from `t0` to the endpoint:
+
+- **Total scope** — number of eligible tickets in scope at each observation (rises with adds, dips with removes, ignores completions).
+- **Completed** — cumulative completions of tickets that were in scope at the moment of completion.
+
+Fill the area between the two lines lightly to visualise remaining work at each date.
+
+**Reading rules.**
+
+- Delivery pace = slope of the completed line.
+- Scope stability = slope of the scope line.
+- Remaining work = vertical gap between the lines.
+- Sprint is delivered when the two lines meet; the x-coordinate of the intersection is the delivery date.
+
+**Two "on-track" overlays are required.**
+
+1. **Projection lines** (dashed, faint) from today's marker:
+   - Extend the **completed line** at trailing-`M`-working-day pace (default `M=5`; drop to `M=3` if fewer than 5 completed working days have elapsed).
+   - Extend the **scope line** flat at its current value (assumes no further scope changes).
+   - Where they cross is the projected delivery date. If they do not cross within the plotted window, state so explicitly.
+2. **Pace ratio** (headline tile, not a chart line):
+
+   ```text
+   recent_pace   = completions in trailing M working days / M
+   required_pace = (current_scope − current_completed) / working_days_left_to_endpoint
+   ratio         = recent_pace / required_pace
+   ```
+
+   Report `ratio`, both raw paces, and a qualitative bucket: **`≥1.0 = on pace`, `0.8–1.0 = watch`, `<0.8 = intervene`**. Do not convert "watch" or "intervene" into an unqualified "off track" verdict — it is a pace call, not a delivery call.
+
+Optionally overlay a **target reference line** from `(t0, 0)` to `(endpoint, current_scope)` — the linear ideal completion trajectory for the current committed scope. If drawn, note that this line swings upward as scope grows (so it is not comparable across days at different scope levels).
+
+Do not use "above/below the ideal" language for the burn-up itself; the pace ratio and projection intersection carry that signal instead.
+
+### 5c. Shared calculations
+
+Use the latest completed working-day observation for the headline daily comparison in both charts. Optionally show a separate live point labelled "as of [timestamp]"; do not compare a morning live actual against an evening target as if the day had ended. If no working day has finished, report baseline and live remaining without a daily pace verdict.
+
+Calculate required average pace from the completed-day cutoff: remaining at that cutoff divided by working days left until the target. If none remain, report "target reached" when remaining is zero, or "unfinished at target" otherwise. Do not calculate an infinite/undefined pace. For an active sprint beyond target, extend actual observations through now, keep the burn-down ideal at zero after the original endpoint, and label overdue work. Do not stretch the ideal.
 
 Reconcile remaining changes with an event ledger:
 
@@ -186,29 +246,36 @@ Record both gross scope changes (including already-Done additions/removals) and 
 
 ## 6. Report and files
 
-Fetch data anew for each run; never reuse a previous report as evidence. Produce a readable report with:
+Fetch data anew for each run; never reuse a previous report as evidence.
 
-- Sprint, board, prefix, team window, baseline timestamp, target, as-of time, timezone, unit and completion rule.
-- Coverage label: complete for stated scope, partial, or snapshot only; enumerate missing history and approximations.
-- Baseline, current in-scope Done/unfinished counts, carryover, additions, removals and unestimated coverage where applicable. Distinguish current Done inventory from completion events during this sprint.
-- Actual versus ideal chart; no future actual zeroes, no smoothed invented values, and visible gaps for unknowns.
-- Latest completed-day comparison, required pace and a separate live count if useful.
-- Completion versus scope/estimate/reopening breakdown; status mix and remaining by epic.
-- Tickets completed while in scope during this sprint, identifying any subsequently reopened or removed. Do not include pre-sprint Done tickets as this sprint's delivery.
-- Ticket table: linked key, summary, epic, current status, assignee, estimate if relevant, known membership intervals, carryover/added/removed flags and history limitations. Link keys with the `<Jira host>/browse/{key}` pattern.
-- Methods caption and explicit exclusions. List date/filter/mapping differences from Jira's native report.
+### Required layout (top to bottom)
+
+Produce a single HTML file with these sections in this exact order:
+
+1. **Header** — sprint, board, prefix, team window, baseline timestamp, target, as-of time, timezone, unit, completion rule, and coverage label (complete / partial / snapshot-only). Enumerate missing history and approximations here or in Methods.
+2. **At-a-glance tile row** — 5–6 stat tiles prominent at the top, before any chart. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
+3. **Sprint calendar strip** — one visible cell per calendar day from sprint start to end. Weekends greyed. Public holidays flagged with location and emoji. Today highlighted. Each cell shows date and per-day team capacity where applicable (e.g. `4/6` on a holiday for one location).
+4. **Burn-up chart** (primary, per §5b) with the two required overlays (projection lines + pace ratio referenced from the at-a-glance tile).
+5. **Burn-down chart** (secondary, per §5a) with the frozen ideal and the rolling-scope expectation line overlaid.
+6. **Event ledger** — every scope-add / removal / completion / reopening in chronological order, with columns: timestamp (AEST or configured tz), event description, delta, running scope, running completed.
+7. **Ticket table** — all in-scope tickets. Columns: linked key (using `<Jira host>/browse/{key}`), current status pill (colour by status category), epic (linked), summary, assignee, estimate if relevant, membership interval, flags (`carryover` / `added after t0` / `removed/rejoined` / `done in sprint` / `inferred join` / `partial history`).
+8. **Methods and exclusions** — data source (MCP tools used), JQL used for epics and ticket membership, sanity-check outcome (cross-check with an inverted-order or name-based JQL, per §2), approximations and their scope, and excluded epics with the literal-prefix rationale.
+
+Do not include a "current Done inventory" figure without distinguishing it from completions-while-in-scope-this-sprint (a pre-sprint-Done ticket that joined mid-sprint is not this sprint's delivery). Distinguish current Done inventory from in-sprint completion events.
+
+Both charts must show visible gaps for unknown observations, no future actual zeroes, and no smoothed invented values.
 
 ### Output
 
 Always write a **self-contained standalone HTML file** to `output/burndown-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
 
-- Inline SVG for the chart, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
-- Include the sections listed above (calendar strip, headline stats, chart, event ledger, ticket table, methods).
+- The `burndown-` filename prefix is retained for scheduled-runner compatibility (the runner globs for `output/burndown-*-<YYYY-MM-DD>.html`); the file itself now leads with the burn-up chart and includes the burn-down as secondary.
+- Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
 
 The scheduled runner emails the same file via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint burndown report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
 
-Include a CSV of the daily series when useful, with timestamps, actual, ideal, delta and coverage; leave unknown/future actuals blank. Provide an event CSV when needed to make scope changes auditable. For Slack sharing, offer a PNG export. Do not send messages, publish externally or write to Confluence/SharePoint without authorization.
+Include a CSV of the daily series when useful, with timestamps, scope, completed, remaining, ideal, expectation, delta and coverage; leave unknown/future actuals blank. Provide an event CSV when needed to make scope changes auditable. For Slack sharing, offer a PNG export. Do not send messages, publish externally or write to Confluence/SharePoint without authorization.
 
 ## Validation before delivery
 
@@ -216,7 +283,9 @@ Include a CSV of the daily series when useful, with timestamps, actual, ideal, d
 - Verify baseline includes selected unfinished carryover, and excludes already-Done and explicitly excluded administrative work.
 - Verify a completed/reopened ticket re-enters remaining and a removed/rejoined ticket follows both membership intervals.
 - Verify added work never changes B, removals never count as completion, and point changes affect only their effective historical periods.
-- Verify Start=B and the ideal reaches zero at the original target; no future actuals and no post-close activity.
+- **Burn-down checks.** Verify Start=B and the frozen ideal reaches zero at the original target; no future actuals and no post-close activity. Verify the rolling-scope expectation line resets only on scope-add events (not on completions or removals), and that its most recent segment terminates at `(endpoint, 0)`.
+- **Burn-up checks.** Verify the total-scope line ends at `current_scope` on the as-of date, the completed line ends at `current_completed`, and the gap equals `remaining_today`. Verify the projection uses the declared trailing-M-day window and no data from before that window. Verify pace-ratio bucket matches the numeric ratio.
 - **Sanity-check the ticket count against team scale.** For a team of N engineers ~40% through a two-week sprint, a total ticket count in single digits with zero completions is a strong hint the query missed results. Cross-check by re-running the query with a different JQL shape (e.g. swap `sprint = <id>` for `sprint = "<sprint name>"`, or invert the `AND` order); the two must agree. If they disagree, trust the larger set and disclose the discrepancy.
+- **Two-tier changelog coverage.** Confirm every currently-Done ticket has a fetched changelog. Confirm every ticket with multiple sprint ids on the current Sprint field, or `created ≥ t0`, either has a fetched changelog or is flagged "partial history" in the ticket table.
 - Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results rather than invent values to force reconciliation.
 - Keep credentials, tokens and `.env` contents out of generated files.
