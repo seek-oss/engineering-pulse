@@ -19,20 +19,22 @@ Every value the agent resolves is captured in the run's report so subsequent run
 
 ## Jira access and metadata
 
+**Atlassian MCP only.** Do not open Jira in the IDE browser, do not use CDP, do not prompt the user to log in to Jira, and do not call Jira REST from a browser session. MCP is already authenticated. The IDE browser is a different, usually logged-out session — opening the board there is what triggers a login prompt.
+
+If a needed Agile/REST endpoint is not an MCP tool, reconstruct from MCP issue search/get (sprint field on issues, `expand=changelog`, `statusCategory` fallback) and disclose the approximation. Never treat a missing Agile API as a reason to open a login tab. If MCP is unavailable or returns auth errors, stop and tell the user to reconnect the **Atlassian MCP** server.
+
 Discover per-instance identifiers at runtime — do not hard-code them into the skill.
 
-- Prefer available Atlassian MCP tools, including `searchJiraIssuesUsingJql` and `getJiraIssue`.
-- Host and `cloudId`: parse the host from the board URL in the Quick start template; fetch `cloudId` via Atlassian MCP `getAccessibleAtlassianResources` or `GET https://<host>/_edge/tenant_info`.
-- REST search: `POST /rest/api/3/search/jql`.
-- Issue: `GET /rest/api/3/issue/{key}`.
-- Full issue history: `GET /rest/api/3/issue/{key}/changelog`, following pagination. Do not assume `expand=changelog` includes every entry.
-- Sprints: `GET /rest/agile/1.0/board/{id}/sprint?state=active,future,closed`, following pagination.
-- Board configuration: `GET /rest/agile/1.0/board/{id}/configuration`; resolve its saved filter, column mappings and estimation settings.
-- Custom-field ids: look up via `GET /rest/api/3/field` (Sprint is commonly `customfield_10018`; story points are commonly `customfield_10024` or `customfield_10025`). Verify against the board's estimation config. Choose one point field for the report, not a per-ticket mixture.
+- Use Atlassian MCP: `getAccessibleAtlassianResources`, `searchJiraIssuesUsingJql`, `getJiraIssue`, and any other Jira MCP tools that are present. Do not invent HTTP calls to make up for tools that are absent.
+- Host and `cloudId`: parse the host from the board URL; fetch `cloudId` via `getAccessibleAtlassianResources`. Pass the site hostname (e.g. `example.atlassian.net`) or the UUID as `cloudId`.
+- Search: `searchJiraIssuesUsingJql` (Jira `POST /rest/api/3/search/jql`). Paginate with `nextPageToken` until `isLast`.
+- Issue: `getJiraIssue`.
+- History: `getJiraIssue` with `expand=changelog`. If the payload is truncated, label coverage partial — do not open a browser to paginate `/changelog`.
+- Sprints: resolve from the Sprint custom field on issues (commonly `customfield_10018`) returned by MCP search. Collect unique sprint objects (`id`, `name`, `state`, `startDate`, `endDate`, `completeDate`) from those fields. Do not call `/rest/agile/1.0/board/{id}/sprint`.
+- Board configuration: if no MCP tool returns column mappings or estimation settings, use `statusCategory = Done` as the completion fallback and label it. Do not fetch `/rest/agile/1.0/board/{id}/configuration` via browser.
+- Custom-field ids: infer from issue payloads (`*all` or known sprint/points fields). Sprint is commonly `customfield_10018`; story points are commonly `customfield_10024` or `customfield_10025`. Choose one point field for the report, not a per-ticket mixture.
 
-Use only capabilities actually available. If permitted by the host environment, an authenticated Jira browser session may provide same-origin REST access; in Cursor this may use an available CDP connection. Do not assume CDP, a browser session or an API token exists. Follow the environment's browser/authentication rules. If access is unavailable or expired, explain the concrete access need. Never bypass access restrictions.
-
-Paginate searches and histories completely, split large JQL, and respect throttling. Request summary, issue type, status/id/category, assignee, parent/epic relationship, labels, sprint, selected point field and creation time. Fetch relevant sprint, status, point, parent and scope-field history. Capture retrieval time and source provenance; avoid inconsistent snapshots if tickets change during retrieval.
+Paginate searches completely, split large JQL, and respect throttling. Request summary, issue type, status/id/category, assignee, parent/epic relationship, labels, sprint, selected point field and creation time. Fetch relevant sprint, status, point, parent and scope-field history via MCP. Capture retrieval time and source provenance; avoid inconsistent snapshots if tickets change during retrieval.
 
 ## Workflow
 
@@ -68,8 +70,8 @@ Validate that the endpoint is after `t0`. If a future sprint has no actual start
 Never invent a sprint. When the board has multiple active sprints (common on mixed boards), narrow candidates to sprints containing at least one ticket under a prefix-matched epic; if more than one still fits, ask the user which one before proceeding.
 **Always resolve to a specific sprint id before querying tickets.** Do not use `sprint in openSprints()` in the ticket-membership query. On mixed boards, that JQL function can silently return a truncated ticket set (its per-project resolution and pagination interact badly with `parent in (...)` compound queries — sometimes marking `isLast: true` well before all matches are returned). The correct two-step pattern is:
 
-1. Fetch active sprints once: `GET /rest/agile/1.0/board/{id}/sprint?state=active`, and resolve the target `<sprintId>` from that list.
-2. Query tickets with the specific id: `sprint = <sprintId> AND parent in (<freshEpicKeys>) ORDER BY key ASC`. Paginate to `isLast: true`.
+1. Discover active sprint objects from the Sprint custom field on a small MCP search under prefix-matched epics (request `customfield_10018` / the sprint field). Resolve the target `<sprintId>` from those objects. If more than one active sprint still fits, ask which one.
+2. Query tickets with the specific id via `searchJiraIssuesUsingJql`: `sprint = <sprintId> AND parent in (<freshEpicKeys>) ORDER BY key ASC`. Paginate to `isLast: true`.
 
 Re-query epics every run. Never keep a hard-coded epic-key list. Use JQL to retrieve candidates, then verify that the returned summary literally starts with the configured prefix; text search is not an exact prefix test.
 
@@ -202,7 +204,7 @@ Always write a **self-contained standalone HTML file** to `output/burndown-<safe
 
 - Inline SVG for the chart, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
 - Include the sections listed above (calendar strip, headline stats, chart, event ledger, ticket table, methods).
-- Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open it in a browser when running interactively.
+- Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
 
 The scheduled runner emails the same file via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint burndown report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
 
