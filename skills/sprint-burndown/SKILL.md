@@ -31,7 +31,7 @@ Discover per-instance identifiers at runtime — do not hard-code them into the 
 - Host and `cloudId`: parse the host from the board URL; fetch `cloudId` via `getAccessibleAtlassianResources`. Pass the site hostname (e.g. `example.atlassian.net`) or the UUID as `cloudId`.
 - Search: `searchJiraIssuesUsingJql` (Jira `POST /rest/api/3/search/jql`). Paginate with `nextPageToken` until `isLast`.
 - Issue: `getJiraIssue`.
-- History: `getJiraIssue` with `expand=changelog`. If the payload is truncated, label coverage partial — do not open a browser to paginate `/changelog`.
+- History: `getJiraIssue` with `expand=changelog`. If the payload is truncated, record the affected tickets in the Methods "Coverage limits" sub-block (per §6) and flag them "partial history" in the ticket table — do not open a browser to paginate `/changelog`, and do not add a top-of-page coverage banner.
 - Sprints: resolve from the Sprint custom field on issues (commonly `customfield_10018`) returned by MCP search. Collect unique sprint objects (`id`, `name`, `state`, `startDate`, `endDate`, `completeDate`) from those fields. Do not call `/rest/agile/1.0/board/{id}/sprint`.
 - Board configuration: if no MCP tool returns column mappings or estimation settings, use `statusCategory = Done` as the completion fallback and label it. Do not fetch `/rest/agile/1.0/board/{id}/configuration` via browser.
 - Custom-field ids: infer from issue payloads (`*all` or known sprint/points fields). Sprint is commonly `customfield_10018`; story points are commonly `customfield_10024` or `customfield_10025`. Choose one point field for the report, not a per-ticket mixture.
@@ -105,7 +105,7 @@ Prefer an available authoritative sprint report/export containing original, adde
 
 Reconstruct membership in the target sprint and epic scope at each timestamp. Treat moves into/out of this team's epics as scope changes. Retrieve historical parent epics and relevant summary history where necessary; a rename must not silently rewrite the whole report. If historical board-filter membership cannot be evaluated, disclose the current-filter approximation and its consequences. Never silently treat current parent/filter/prefix membership as historical fact.
 
-List deleted, inaccessible or otherwise unrecoverable issues when known. If complete historical discovery cannot be established, label coverage partial; do not claim a complete historical burndown solely because all currently visible tickets were fetched.
+List deleted, inaccessible or otherwise unrecoverable issues when known. If complete historical discovery cannot be established, record the affected tickets in the Methods "Coverage limits" sub-block (per §6) — do not add a top-of-page banner or coloured pill. Do not claim a complete historical burndown solely because all currently visible tickets were fetched.
 
 ## 3. Completion and units
 
@@ -136,7 +136,7 @@ Fetch the full changelog via `getJiraIssue` with `expand=changelog` for **every*
 1. **Tier 1 — every currently-Done ticket in scope.** Needed for exact completion timestamps and to detect any reopen/rejoin events.
 2. **Tier 2 — every ticket whose current Sprint field lists more than one sprint id, OR whose `created` timestamp is on or after `t0`.** Needed to distinguish original commitments from carryover, bulk-load additions, out-of-plan (OPM) session additions, and post-`t0` creation.
 
-Do not approximate sprint-join timestamps from `created` when the changelog is fetchable — approximation is only acceptable when MCP blocks the changelog (Bedrock guardrail, throttling, etc.). Affected tickets must be flagged as "partial history" in the ticket table and coverage labelled partial. If any Tier-1 changelog is blocked, do not assume the current `resolutiondate` is the completion time — it may reflect a reopen. Disclose.
+Do not approximate sprint-join timestamps from `created` when the changelog is fetchable — approximation is only acceptable when MCP blocks the changelog (Bedrock guardrail, throttling, etc.). Affected tickets must be flagged as "partial history" in the ticket table **and listed in the Methods "Coverage limits" sub-block (per §6) — never surfaced as a top-of-page banner or coloured pill**. If any Tier-1 changelog is blocked, do not assume the current `resolutiondate` is the completion time — it may reflect a reopen. Disclose in Methods.
 
 Track all join, remove and rejoin events, status transitions including reopenings, estimate changes, and scope-membership changes. Match the target sprint by ID within the sprint-ID set; a change mentioning an old sprint is not automatically a new join.
 
@@ -250,22 +250,34 @@ Record both gross scope changes (including already-Done additions/removals) and 
 
 Fetch data anew for each run; never reuse a previous report as evidence.
 
-### Required layout (top to bottom)
+### Required layout (strict schema)
 
-Produce a single HTML file with these sections in this exact order:
+The HTML report contains **exactly these 8 sections, in this order, and no others**:
 
-1. **Header** — sprint, board, prefix, team window, baseline timestamp, target, as-of time, timezone, unit, completion rule, and coverage label (complete / partial / snapshot-only). Enumerate missing history and approximations here or in Methods.
-2. **At-a-glance tile row** — 5–6 stat tiles prominent at the top, before any chart. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
+1. **Header** — sprint name, board link, epic prefix, team window, baseline timestamp, target endpoint, as-of time, timezone, unit, completion rule, and a **one-line coverage byline** (see below).
+2. **At-a-glance tile row** — 5–6 stat tiles, no chart yet. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
 3. **Sprint calendar strip** — one visible cell per calendar day from sprint start to end. Weekends greyed. Public holidays flagged with location and emoji. Today highlighted. Each cell shows date and per-day team capacity where applicable (e.g. `4/6` on a holiday for one location).
 4. **Burn-up chart** (primary, per §5b) with the two required overlays (projection lines + pace ratio referenced from the at-a-glance tile).
 5. **Burn-down chart** (secondary, per §5a) with the frozen ideal and the rolling-scope expectation line overlaid.
 6. **Event ledger** — every scope-add / removal / completion / reopening in chronological order, with columns: timestamp (AEST or configured tz), event description, delta, running scope, running completed.
 7. **Ticket table** — all in-scope tickets. Columns: linked key (using `<Jira host>/browse/{key}`), current status pill (colour by status category), epic (linked), summary, assignee, estimate if relevant, membership interval, flags (`carryover` / `added after t0` / `removed/rejoined` / `done in sprint` / `inferred join` / `partial history`).
-8. **Methods and exclusions** — data source (MCP tools used), JQL used for epics and ticket membership, sanity-check outcome (cross-check with an inverted-order or name-based JQL, per §2), approximations and their scope, and excluded epics with the literal-prefix rationale.
+8. **Methods and exclusions** — data source (MCP tools used), JQL used for epics and ticket membership, sanity-check outcome (cross-check with an inverted-order or name-based JQL, per §2), excluded epics with the literal-prefix rationale, and a **`Coverage limits` sub-block** (see below).
 
-Do not include a "current Done inventory" figure without distinguishing it from completions-while-in-scope-this-sprint (a pre-sprint-Done ticket that joined mid-sprint is not this sprint's delivery). Distinguish current Done inventory from in-sprint completion events.
+**Forbidden additions.** Do not add: top-of-page cover banners, coloured coverage pills, danger/warning/info alert boxes above the header, "note" or "assessment" callouts between required sections, sidebars, watermarks, or "draft"/"partial"/"unreliable" overlays on the charts. Do not add any 9th section. If a required signal cannot be computed for a run, its section still appears with the value shown as `—`; do not replace or supplement the section with a substitute banner. Both charts render with the same visual weight.
 
-Both charts must show visible gaps for unknown observations, no future actual zeroes, and no smoothed invented values.
+**Coverage byline (in Header, item 1).** One greyed line in the header meta area, in the same muted tone as the timezone. Exactly one of:
+
+- `Coverage: complete for stated scope.`
+- `Coverage: partial — N ticket(s) with limited history; see Methods.`
+- `Coverage: snapshot only — no historical reconstruction; see Methods.`
+
+No coloured pill. No red-tinted background. The byline reports the state; the story lives in Methods.
+
+**Coverage limits sub-block (in Methods, item 8).** When coverage is not `complete`, a subsection titled `Coverage limits` lists each affected ticket with: the ticket key, what was blocked (MCP guardrail / throttling / access), what was inferred (join timestamp from `created`, etc.), and the concrete downstream effect on the report (e.g. "remaining through Fri 18 is a lower bound"). When coverage is `complete`, this sub-block is omitted.
+
+**Distinguish current Done inventory from completions-while-in-scope-this-sprint.** A pre-sprint-Done ticket that joined mid-sprint is not this sprint's delivery. Never conflate the two in the tiles or ledger.
+
+**Chart data rules.** Both charts must show visible gaps for unknown observations, no future actual zeroes, and no smoothed invented values.
 
 ### Output
 
@@ -289,5 +301,6 @@ Include a CSV of the daily series when useful, with timestamps, scope, completed
 - **Burn-up checks.** Verify the total-scope line ends at `current_scope` on the as-of date, the completed line ends at `current_completed`, and the gap equals `remaining_today`. Verify the projection uses the declared trailing-M-day window and no data from before that window. Verify pace-ratio bucket matches the numeric ratio.
 - **Sanity-check the ticket count against team scale.** For a team of N engineers ~40% through a two-week sprint, a total ticket count in single digits with zero completions is a strong hint the query missed results. Cross-check by re-running the query with a different JQL shape (e.g. swap `sprint = <id>` for `sprint = "<sprint name>"`, or invert the `AND` order); the two must agree. If they disagree, trust the larger set and disclose the discrepancy.
 - **Two-tier changelog coverage.** Confirm every currently-Done ticket has a fetched changelog. Confirm every ticket with multiple sprint ids on the current Sprint field, or `created ≥ t0`, either has a fetched changelog or is flagged "partial history" in the ticket table.
-- Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results rather than invent values to force reconciliation.
+- **Schema adherence.** Confirm the report contains exactly the 8 sections defined in §6 in order, with no additional banners, alert callouts, coverage pills, sidebars, or extra sections. Confirm coverage disclosure appears only as the greyed header byline plus the Methods `Coverage limits` sub-block — never as a top-of-page banner.
+- Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results in Methods rather than invent values to force reconciliation.
 - Keep credentials, tokens and `.env` contents out of generated files.
