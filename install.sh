@@ -454,27 +454,27 @@ run_skill_step() {
 run_skill_step "daily-dashboard" "\$PROMPT"
 _ec=\$?
 
-# ── Step 2: sprint burndown (only if SPRINT_BOARD is configured). ───────────
-# Agent writes output/burndown-*-<YYYY-MM-DD>.html; the runner then emails the
-# newest match via send_report_smtp.py, reusing SMTP_* from .env with a
+# ── Step 2: sprint report (only if SPRINT_BOARD is configured). ────────────
+# Agent writes output/sprint-report-*-<YYYY-MM-DD>.html; the runner then emails
+# the newest match via send_report_smtp.py, reusing SMTP_* from .env with a
 # team-agnostic subject. Runs independently of the daily-dashboard exit code.
-BURNDOWN_SKILL="\$INSTALL_DIR/skills/sprint-burndown/SKILL.md"
-if [[ -n \${SPRINT_BOARD:-} && -f "\$BURNDOWN_SKILL" ]]; then
-  BURNDOWN_PROMPT=\$(cat "\$BURNDOWN_SKILL")
-  run_skill_step "sprint-burndown" "\$BURNDOWN_PROMPT" || true
+SPRINT_SKILL="\$INSTALL_DIR/skills/sprint-report/SKILL.md"
+if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]]; then
+  SPRINT_PROMPT=\$(cat "\$SPRINT_SKILL")
+  run_skill_step "sprint-report" "\$SPRINT_PROMPT" || true
   today=\$(date +%Y-%m-%d)
-  latest=\$(ls -t "\$INSTALL_DIR/output/burndown-"*"-\$today.html" 2>/dev/null | head -1)
+  latest=\$(ls -t "\$INSTALL_DIR/output/sprint-report-"*"-\$today.html" 2>/dev/null | head -1)
   if [[ -n "\$latest" ]]; then
-    printf '%s\n' "[\$(date)] Emailing burndown: \$latest" >> "\$LOG_FILE"
+    printf '%s\n' "[\$(date)] Emailing sprint report: \$latest" >> "\$LOG_FILE"
     if "\$INSTALL_DIR/.venv/bin/python" \
         "\$INSTALL_DIR/scripts/send_report_smtp.py" \
-        "Sprint burndown report — \$today" "\$latest" >>"\$LOG_FILE" 2>&1; then
-      printf '%s\n' "[\$(date)] Burndown email sent" >> "\$LOG_FILE"
+        "Sprint report — \$today" "\$latest" >>"\$LOG_FILE" 2>&1; then
+      printf '%s\n' "[\$(date)] Sprint-report email sent" >> "\$LOG_FILE"
     else
-      printf '%s\n' "[\$(date)] Burndown email failed (see log)" >> "\$LOG_FILE"
+      printf '%s\n' "[\$(date)] Sprint-report email failed (see log)" >> "\$LOG_FILE"
     fi
   else
-    printf '%s\n' "[\$(date)] No burndown HTML found for \$today; skipping email" >> "\$LOG_FILE"
+    printf '%s\n' "[\$(date)] No sprint-report HTML found for \$today; skipping email" >> "\$LOG_FILE"
   fi
 fi
 

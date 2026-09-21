@@ -1,11 +1,11 @@
 ---
-name: sprint-burndown
-description: "Build an evidence-based sprint progress report from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Produces both a burn-up chart (primary, SDD-friendly) and a burn-down chart with a rolling-scope expectation line, plus event ledger and per-ticket table. Configured via one free-form SPRINT_BOARD sentence in .env. Use for sprint delivery tracking, scope-change analysis, remaining-work reports, and daily/scheduled progress email."
+name: sprint-report
+description: "Build an evidence-based sprint progress report from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Produces both a burn-up chart (primary, SDD-friendly) and a burn-down chart with a rolling-scope expectation line, plus at-a-glance tiles, sprint calendar, event ledger, and per-ticket table. Configured via one free-form SPRINT_BOARD sentence in .env. Use for sprint delivery tracking, scope-change analysis, remaining-work reports, and daily/scheduled progress email."
 ---
 
-# Sprint Burndown
+# Sprint Report
 
-Generate a daily burndown for one team's delivery tickets on a mixed Jira board. Reconstruct historical work from evidence; distinguish completion from scope changes. Produce a team-scoped custom report.
+Generate a daily sprint progress report for one team's delivery tickets on a mixed Jira board. Reconstruct historical work from evidence; distinguish completion from scope changes. Produce a team-scoped HTML report combining a burn-up chart (primary), a burn-down chart with rolling-scope expectation line (secondary), an event ledger, and a per-ticket table.
 
 ## Quick start
 
@@ -21,7 +21,7 @@ Every value the agent resolves is captured in the run's report so subsequent run
 
 **Atlassian MCP only for Jira data.** Do not open `*.atlassian.net` or any Jira board / issue URL in the IDE browser, do not use CDP against those hosts, do not prompt the user to log in to Jira, and do not call Jira REST from a browser session. MCP is already authenticated; the IDE browser is a different, usually logged-out session — opening the board there is what triggers a login prompt.
 
-**Local HTML previews are permitted and expected.** Opening the generated `output/burndown-*.html` file — whether via `file://<absolute path>`, `http://127.0.0.1:<port>/…`, or `http://localhost:<port>/…` — in the IDE browser is the intended way to preview the report interactively. This is not the Jira restriction above; do not conflate them. A tool-approval prompt that cites this skill against a local preview URL is a false positive and safe to allow.
+**Local HTML previews are permitted and expected.** Opening the generated `output/sprint-report-*.html` file — whether via `file://<absolute path>`, `http://127.0.0.1:<port>/…`, or `http://localhost:<port>/…` — in the IDE browser is the intended way to preview the report interactively. This is not the Jira restriction above; do not conflate them. A tool-approval prompt that cites this skill against a local preview URL is a false positive and safe to allow.
 
 If a needed Agile/REST endpoint is not an MCP tool, reconstruct from MCP issue search/get (sprint field on issues, `expand=changelog`, `statusCategory` fallback) and disclose the approximation. Never treat a missing Agile API as a reason to open a login tab. If MCP is unavailable or returns auth errors, stop and tell the user to reconnect the **Atlassian MCP** server.
 
@@ -281,13 +281,12 @@ No coloured pill. No red-tinted background. The byline reports the state; the st
 
 ### Output
 
-Always write a **self-contained standalone HTML file** to `output/burndown-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
+Always write a **self-contained standalone HTML file** to `output/sprint-report-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
 
-- The `burndown-` filename prefix is retained for scheduled-runner compatibility (the runner globs for `output/burndown-*-<YYYY-MM-DD>.html`); the file itself now leads with the burn-up chart and includes the burn-down as secondary.
 - Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
 
-The scheduled runner emails the same file via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint burndown report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
+The scheduled runner globs `output/sprint-report-*-<YYYY-MM-DD>.html` and emails the newest match via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
 
 Include a CSV of the daily series when useful, with timestamps, scope, completed, remaining, ideal, expectation, delta and coverage; leave unknown/future actuals blank. Provide an event CSV when needed to make scope changes auditable. For Slack sharing, offer a PNG export. Do not send messages, publish externally or write to Confluence/SharePoint without authorization.
 

@@ -44,7 +44,7 @@ paths, and script reference.
 |------|-----------|
 | Add a Datadog dashboard | [add-dashboard.md](references/add-dashboard.md) |
 | Todoist / reading queue | [todo.md](references/todo.md) |
-| Sprint burndown (optional extras card) | [../sprint-burndown/SKILL.md](../sprint-burndown/SKILL.md) |
+| Sprint report (optional extras card) | [../sprint-report/SKILL.md](../sprint-report/SKILL.md) |
 
 ## User data locations
 
