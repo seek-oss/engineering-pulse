@@ -431,21 +431,53 @@ AGENT=\$(resolve_agent)
 
 set -o pipefail
 
-if [[ -n \${ENGINEERING_PULSE_RUN_FG:-} ]]; then
-  printf '%s\n' "[\$(date)] Starting daily-dashboard run (agent=\$AGENT)" | tee -a "\$LOG_FILE"
-  run_agent "\$AGENT" "\$PROMPT" "\$INSTALL_DIR" 2>&1 | tee -a "\$LOG_FILE"
-  _ec=\$?
-  printf '%s\n' "[\$(date)] Finished — exit code \$_ec" | tee -a "\$LOG_FILE"
-else
-  printf '%s\n' "[\$(date)] Starting daily-dashboard run (agent=\$AGENT)" >> "\$LOG_FILE"
-  if ! run_agent "\$AGENT" "\$PROMPT" "\$INSTALL_DIR" >>"\$LOG_FILE" 2>&1; then
-    _ec=\$?
-    printf '%s\n' "[\$(date)] Finished — exit code \$_ec" >> "\$LOG_FILE"
-    exit \$_ec
+# ── Helper: run one skill through the agent, tee to log in FG mode. ─────────
+run_skill_step() {
+  local label="\$1"
+  local prompt="\$2"
+  local ec
+  if [[ -n \${ENGINEERING_PULSE_RUN_FG:-} ]]; then
+    printf '%s\n' "[\$(date)] Starting \$label run (agent=\$AGENT)" | tee -a "\$LOG_FILE"
+    run_agent "\$AGENT" "\$prompt" "\$INSTALL_DIR" 2>&1 | tee -a "\$LOG_FILE"
+    ec=\$?
+    printf '%s\n' "[\$(date)] \$label finished — exit code \$ec" | tee -a "\$LOG_FILE"
+  else
+    printf '%s\n' "[\$(date)] Starting \$label run (agent=\$AGENT)" >> "\$LOG_FILE"
+    run_agent "\$AGENT" "\$prompt" "\$INSTALL_DIR" >>"\$LOG_FILE" 2>&1
+    ec=\$?
+    printf '%s\n' "[\$(date)] \$label finished — exit code \$ec" >> "\$LOG_FILE"
   fi
-  _ec=\$?
-  printf '%s\n' "[\$(date)] Finished — exit code \$_ec" >> "\$LOG_FILE"
+  return \$ec
+}
+
+# ── Step 1: daily dashboard (always runs). ──────────────────────────────────
+run_skill_step "daily-dashboard" "\$PROMPT"
+_ec=\$?
+
+# ── Step 2: sprint burndown (only if SPRINT_BOARD is configured). ───────────
+# Agent writes output/burndown-*-<YYYY-MM-DD>.html; the runner then emails the
+# newest match via send_report_smtp.py, reusing SMTP_* from .env with a
+# team-agnostic subject. Runs independently of the daily-dashboard exit code.
+BURNDOWN_SKILL="\$INSTALL_DIR/skills/sprint-burndown/SKILL.md"
+if [[ -n \${SPRINT_BOARD:-} && -f "\$BURNDOWN_SKILL" ]]; then
+  BURNDOWN_PROMPT=\$(cat "\$BURNDOWN_SKILL")
+  run_skill_step "sprint-burndown" "\$BURNDOWN_PROMPT" || true
+  today=\$(date +%Y-%m-%d)
+  latest=\$(ls -t "\$INSTALL_DIR/output/burndown-"*"-\$today.html" 2>/dev/null | head -1)
+  if [[ -n "\$latest" ]]; then
+    printf '%s\n' "[\$(date)] Emailing burndown: \$latest" >> "\$LOG_FILE"
+    if "\$INSTALL_DIR/.venv/bin/python" \
+        "\$INSTALL_DIR/scripts/send_report_smtp.py" \
+        "Sprint burndown report — \$today" "\$latest" >>"\$LOG_FILE" 2>&1; then
+      printf '%s\n' "[\$(date)] Burndown email sent" >> "\$LOG_FILE"
+    else
+      printf '%s\n' "[\$(date)] Burndown email failed (see log)" >> "\$LOG_FILE"
+    fi
+  else
+    printf '%s\n' "[\$(date)] No burndown HTML found for \$today; skipping email" >> "\$LOG_FILE"
+  fi
 fi
+
 exit \$_ec
 EOF
 chmod +x "$RUNNER_SCRIPT"

@@ -48,6 +48,7 @@ dist/
 # Local Cursor helper skills; not part of the product.
 .cursor/skills/*
 !.cursor/skills/engineering-pulse
+!.cursor/skills/sprint-burndown
 
 # Local Cursor helper commands; not part of the product.
 .cursor/commands/*

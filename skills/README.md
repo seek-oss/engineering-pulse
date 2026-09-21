@@ -10,11 +10,23 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 
 **Requires:** cloned repo (or `~/.engineering-pulse`) with `scripts/`, `.env`, and user `prompts/dashboards/*.md`.
 
+## `sprint-burndown`
+
+Sprint burndown (remaining vs holiday-adjusted ideal) for one team's delivery
+tickets on a Jira board — configured via one free-form `SPRINT_BOARD` sentence
+in `.env` describing the board URL and epic-summary prefix. Produces a
+self-contained HTML report suitable for browsers, Gmail and Outlook.
+
+**Path:** `skills/sprint-burndown/SKILL.md` (single file)
+
+**Requires:** Atlassian MCP or an authenticated Jira session; no repo Python
+scripts. The scheduled runner emails the HTML via `scripts/send_report_smtp.py`.
+
 ## Install
 
 | Harness | How |
 |---------|-----|
-| **Cursor** | Symlink or copy `skills/engineering-pulse` → `.cursor/skills/engineering-pulse`; use commands from `harness/cursor/commands/` |
+| **Cursor** | Symlink or copy `skills/engineering-pulse` → `.cursor/skills/engineering-pulse` (and optional `skills/sprint-burndown`); use commands from `harness/cursor/commands/` |
 | **Claude Code** | Copy/symlink to `~/.claude/skills/engineering-pulse` — see [`harness/claude-code/README.md`](../harness/claude-code/README.md) |
 | **skills.sh** | `skills add` from this git repo with path `skills/engineering-pulse` (per [skills.sh](https://skills.sh) docs) |
 | **ai-toolkit** | Fetch subtree `skills/engineering-pulse` from GitHub |
