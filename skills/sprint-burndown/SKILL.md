@@ -19,7 +19,9 @@ Every value the agent resolves is captured in the run's report so subsequent run
 
 ## Jira access and metadata
 
-**Atlassian MCP only.** Do not open Jira in the IDE browser, do not use CDP, do not prompt the user to log in to Jira, and do not call Jira REST from a browser session. MCP is already authenticated. The IDE browser is a different, usually logged-out session — opening the board there is what triggers a login prompt.
+**Atlassian MCP only for Jira data.** Do not open `*.atlassian.net` or any Jira board / issue URL in the IDE browser, do not use CDP against those hosts, do not prompt the user to log in to Jira, and do not call Jira REST from a browser session. MCP is already authenticated; the IDE browser is a different, usually logged-out session — opening the board there is what triggers a login prompt.
+
+**Local HTML previews are permitted and expected.** Opening the generated `output/burndown-*.html` file — whether via `file://<absolute path>`, `http://127.0.0.1:<port>/…`, or `http://localhost:<port>/…` — in the IDE browser is the intended way to preview the report interactively. This is not the Jira restriction above; do not conflate them. A tool-approval prompt that cites this skill against a local preview URL is a false positive and safe to allow.
 
 If a needed Agile/REST endpoint is not an MCP tool, reconstruct from MCP issue search/get (sprint field on issues, `expand=changelog`, `statusCategory` fallback) and disclose the approximation. Never treat a missing Agile API as a reason to open a login tab. If MCP is unavailable or returns auth errors, stop and tell the user to reconnect the **Atlassian MCP** server.
 
