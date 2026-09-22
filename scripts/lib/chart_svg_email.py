@@ -9,12 +9,20 @@ from __future__ import annotations
 
 import base64
 import io
+import math
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 SVG_TAG_RE = re.compile(r"<svg\b[\s\S]*?</svg>", re.IGNORECASE)
+EMAIL_CHART_WRAP = (
+    '<div style="background:#fff;border:1px solid #eaecf0;border-radius:8px;'
+    'padding:8px 8px 4px;margin:8px 0;">{img}</div>'
+)
+
+_FONT_CACHE: dict[int, ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
 
 
 def _local(tag: str) -> str:
@@ -42,6 +50,28 @@ def _parse_color(value: str | None, default: str = "#000000") -> str:
     return default
 
 
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    color = _parse_color(color)
+    if len(color) == 4:
+        r = int(color[1] * 2, 16)
+        g = int(color[2] * 2, 16)
+        b = int(color[3] * 2, 16)
+        return r, g, b
+    return int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+
+
+def _blend(fg: str, bg: str, alpha: float) -> str:
+    if alpha >= 1.0:
+        return _parse_color(fg)
+    fr, fg_g, fb = _hex_to_rgb(fg)
+    br, bg_g, bb = _hex_to_rgb(bg)
+    t = max(0.0, min(1.0, alpha))
+    r = int(fr * t + br * (1 - t))
+    g = int(fg_g * t + bg_g * (1 - t))
+    b = int(fb * t + bb * (1 - t))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def _parse_points(raw: str) -> list[tuple[float, float]]:
     nums = [p for p in re.split(r"[\s,]+", raw.strip()) if p]
     pts: list[tuple[float, float]] = []
@@ -64,7 +94,6 @@ def _parse_path_d(d: str) -> list[tuple[float, float]]:
     pts: list[tuple[float, float]] = []
     i = 0
     cmd = "M"
-    cur = (0.0, 0.0)
     while i < len(tokens):
         letter, num = tokens[i]
         if letter:
@@ -84,10 +113,93 @@ def _parse_path_d(d: str) -> list[tuple[float, float]]:
         if not num2:
             break
         y = float(num2)
-        cur = (x, y)
-        pts.append(cur)
+        pts.append((x, y))
         i += 2
     return pts
+
+
+def _parse_dash(raw: str | None) -> tuple[float, float] | None:
+    if not raw:
+        return None
+    parts = [float(p) for p in raw.replace(",", " ").split() if p]
+    if len(parts) >= 2:
+        return parts[0], parts[1]
+    if len(parts) == 1:
+        return parts[0], parts[0]
+    return None
+
+
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    if size in _FONT_CACHE:
+        return _FONT_CACHE[size]
+    candidates = [
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+    for path in candidates:
+        if Path(path).is_file():
+            font = ImageFont.truetype(path, size=size)
+            _FONT_CACHE[size] = font
+            return font
+    font = ImageFont.load_default(size=size)
+    _FONT_CACHE[size] = font
+    return font
+
+
+def _polyline_length(pts: list[tuple[float, float]]) -> float:
+    total = 0.0
+    for i in range(1, len(pts)):
+        dx = pts[i][0] - pts[i - 1][0]
+        dy = pts[i][1] - pts[i - 1][1]
+        total += math.hypot(dx, dy)
+    return total
+
+
+def _point_at(pts: list[tuple[float, float]], dist: float) -> tuple[float, float]:
+    if dist <= 0:
+        return pts[0]
+    walked = 0.0
+    for i in range(1, len(pts)):
+        dx = pts[i][0] - pts[i - 1][0]
+        dy = pts[i][1] - pts[i - 1][1]
+        seg = math.hypot(dx, dy)
+        if walked + seg >= dist:
+            t = (dist - walked) / seg if seg else 0
+            return pts[i - 1][0] + dx * t, pts[i - 1][1] + dy * t
+        walked += seg
+    return pts[-1]
+
+
+def _draw_stroked_polyline(
+    draw: ImageDraw.ImageDraw,
+    pts: list[tuple[float, float]],
+    fill: str,
+    width: int,
+    dash: tuple[float, float] | None,
+    opacity: float,
+) -> None:
+    if len(pts) < 2:
+        return
+    color = fill
+    if opacity < 1.0:
+        color = _blend(fill, "#ffffff", opacity)
+    if not dash:
+        draw.line(pts, fill=color, width=width, joint="curve")
+        return
+    on, off = dash
+    total = _polyline_length(pts)
+    dist = 0.0
+    drawing = True
+    while dist < total:
+        seg_len = on if drawing else off
+        start = _point_at(pts, dist)
+        end = _point_at(pts, min(dist + seg_len, total))
+        if drawing:
+            draw.line([start, end], fill=color, width=width)
+        dist += seg_len
+        drawing = not drawing
 
 
 def _svg_size(root: ET.Element) -> tuple[int, int]:
@@ -106,7 +218,7 @@ def _svg_size(root: ET.Element) -> tuple[int, int]:
     return max(1, int(w)), max(1, int(h))
 
 
-def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
+def rasterize_svg_markup(svg_markup: str, scale: float = 3.0) -> bytes:
     """Return PNG bytes for one inline SVG fragment."""
     root = ET.fromstring(svg_markup)
     w, h = _svg_size(root)
@@ -118,13 +230,33 @@ def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
     sx = out_w / w
     sy = out_h / h
 
+    bg = "#ffffff"
+    for child in root:
+        if _local(child.tag) == "rect":
+            rw = child.get("width", "")
+            if rw.endswith("%") or rw == "100%":
+                fill = child.get("fill")
+                if fill and fill != "none":
+                    bg = fill
+    draw.rectangle([0, 0, out_w, out_h], fill=_parse_color(bg, "#ffffff"))
+
     def scaled_draw_element(el: ET.Element) -> None:
         tag = _local(el.tag)
+        if tag == "style":
+            return
         if tag == "rect":
             x = _parse_float(el.get("x")) * sx
             y = _parse_float(el.get("y")) * sy
-            rw = _parse_float(el.get("width"), w) * sx
-            rh = _parse_float(el.get("height"), h) * sy
+            rw_attr = el.get("width", "")
+            rh_attr = el.get("height", "")
+            if rw_attr.endswith("%"):
+                rw = out_w * float(rw_attr[:-1]) / 100.0
+            else:
+                rw = _parse_float(rw_attr, w) * sx
+            if rh_attr.endswith("%"):
+                rh = out_h * float(rh_attr[:-1]) / 100.0
+            else:
+                rh = _parse_float(rh_attr, h) * sy
             fill = el.get("fill")
             if fill and fill != "none":
                 draw.rectangle([x, y, x + rw, y + rh], fill=_parse_color(fill, "#fafafa"))
@@ -132,30 +264,35 @@ def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
         if tag == "line":
             stroke = _parse_color(el.get("stroke"), "#000000")
             width = max(1, int(_parse_float(el.get("stroke-width"), 1.0) * scale))
+            opacity = _parse_float(el.get("opacity"), 1.0)
             x1 = _parse_float(el.get("x1")) * sx
             y1 = _parse_float(el.get("y1")) * sy
             x2 = _parse_float(el.get("x2")) * sx
             y2 = _parse_float(el.get("y2")) * sy
-            draw.line([x1, y1, x2, y2], fill=stroke, width=width)
+            dash = _parse_dash(el.get("stroke-dasharray"))
+            _draw_stroked_polyline(draw, [(x1, y1), (x2, y2)], stroke, width, dash, opacity)
             return
         if tag == "polyline":
             pts = [(px * sx, py * sy) for px, py in _parse_points(el.get("points", ""))]
-            if len(pts) < 2:
-                return
             stroke = _parse_color(el.get("stroke"), "#000000")
             width = max(1, int(_parse_float(el.get("stroke-width"), 1.0) * scale))
-            draw.line(pts, fill=stroke, width=width, joint="curve")
+            opacity = _parse_float(el.get("opacity"), 1.0)
+            dash = _parse_dash(el.get("stroke-dasharray"))
+            _draw_stroked_polyline(draw, pts, stroke, width, dash, opacity)
             return
         if tag == "path":
             d = el.get("d", "")
             fill = el.get("fill")
             stroke = el.get("stroke")
             pts = [(px * sx, py * sy) for px, py in _parse_path_d(d)]
+            fill_opacity = _parse_float(el.get("fill-opacity"), 1.0)
             if fill and fill != "none" and len(pts) >= 3:
-                draw.polygon(pts, fill=_parse_color(fill, "#d1e9ff"))
+                color = _blend(fill, bg, fill_opacity)
+                draw.polygon(pts, fill=color)
             elif stroke and stroke != "none" and len(pts) >= 2:
                 width = max(1, int(_parse_float(el.get("stroke-width"), 1.0) * scale))
-                draw.line(pts, fill=_parse_color(stroke), width=width)
+                dash = _parse_dash(el.get("stroke-dasharray"))
+                _draw_stroked_polyline(draw, pts, _parse_color(stroke), width, dash, 1.0)
             return
         if tag == "circle":
             cx = _parse_float(el.get("cx")) * sx
@@ -171,8 +308,8 @@ def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
             if not text:
                 return
             fill = _parse_color(el.get("fill"), "#444444")
-            size = max(8, int(_parse_float(el.get("font-size"), 11.0) * scale))
-            font = ImageFont.load_default(size=size)
+            size = max(9, int(_parse_float(el.get("font-size"), 11.0) * scale))
+            font = _load_font(size)
             anchor = el.get("text-anchor", "start")
             if anchor == "middle":
                 bbox = draw.textbbox((0, 0), text, font=font)
@@ -180,24 +317,13 @@ def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
             elif anchor == "end":
                 bbox = draw.textbbox((0, 0), text, font=font)
                 x -= bbox[2] - bbox[0]
-            draw.text((x, y - size), text, fill=fill, font=font)
+            draw.text((x, y - size * 0.85), text, fill=fill, font=font)
             return
-        if tag in ("style", "defs"):
-            return
-        for child in el:
-            scaled_draw_element(child)
 
-    # Background from root rect or default
-    bg = root.get("fill") or "#ffffff"
-    for child in root:
-        if _local(child.tag) == "rect" and child.get("width") in ("100%", None):
-            bg_el = child.get("fill")
-            if bg_el:
-                bg = bg_el
-    draw.rectangle([0, 0, out_w, out_h], fill=_parse_color(bg, "#ffffff"))
-
-    for child in root:
-        scaled_draw_element(child)
+    for el in root.iter():
+        if el is root:
+            continue
+        scaled_draw_element(el)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
@@ -206,11 +332,12 @@ def rasterize_svg_markup(svg_markup: str, scale: float = 2.0) -> bytes:
 
 def _img_tag(png_bytes: bytes, width: int, height: int, alt: str) -> str:
     b64 = base64.b64encode(png_bytes).decode("ascii")
-    return (
+    img = (
         f'<img src="data:image/png;base64,{b64}" '
         f'width="{width}" height="{height}" alt="{alt}" '
         f'style="max-width:100%;height:auto;display:block;border:0;" />'
     )
+    return EMAIL_CHART_WRAP.format(img=img)
 
 
 def _svg_display_size(svg_markup: str) -> tuple[int, int]:

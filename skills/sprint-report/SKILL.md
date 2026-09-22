@@ -294,6 +294,18 @@ No coloured pill. No red-tinted background. The byline reports the state; the st
 
 **Chart data rules.** Both charts must show visible gaps for unknown observations, no future actual zeroes, and no smoothed invented values.
 
+**Chart SVG minimum (both charts).** Email delivery rasterizes SVG to PNG; sparse SVGs look poor in mail. Each chart `<svg>` must include:
+
+- `viewBox="0 0 720 280"` and `width="100%"` inside a `.chart` wrapper (white background, 1px border).
+- Plot area axes: left and bottom border lines; horizontal grid lines with **Y tick labels** (unit counts); **X tick labels** for each calendar day in the sprint window (weekends muted).
+- **Today** marker: vertical dashed line at the as-of working day.
+- Primary series: `stroke-width` ≥ 2, round caps/joins; **marker circles** at each plotted day.
+- Top legend labels naming each series (scope / completed / ideal / expectation as applicable).
+- Burn-up: scope line, completed line, grey target reference, dashed projections from today.
+- Burn-down: frozen ideal from **B**, actual remaining, rolling-scope expectation (resets on scope-add only).
+
+Do not ship title-only SVGs (a heading plus legend text with no axes or grid).
+
 ### Output
 
 Always write a **self-contained standalone HTML file** to `output/sprint-report-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
