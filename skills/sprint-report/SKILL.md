@@ -294,6 +294,26 @@ No coloured pill. No red-tinted background. The byline reports the state; the st
 
 **Chart data rules.** Both charts must show visible gaps for unknown observations, no future actual zeroes, and no smoothed invented values.
 
+**Chart rendering style.** Both charts share one visual grammar so they read side by side:
+
+- **Categorical working-day x-axis.** Give every included working day an
+  equal-width slot and omit weekends entirely. Label each slot on two lines:
+  day-of-month above, weekday abbreviation below. Position an event within its
+  slot by its fraction of the working day, so sub-day ordering stays visible; a
+  weekend event takes the opening edge of the next working day's slot. Never map
+  the x-axis proportionally to elapsed calendar time — that stretches weekends
+  into dead width and flattens the ideal line's slope across them.
+- **Markers at every plotted observation.** A filled circle (r ≈ 3.5) on each
+  series at each working-day slot, so individual values are readable. Omit the
+  marker where an observation is unknown.
+- **Today marker.** A vertical dashed line at the current working-day slot in
+  the accent colour, labelled `Today (<day>)` above the plot area.
+- **Y axis.** Gridlines at round intervals, plus one extra gridline pinned to
+  the baseline `B` so the chart opens exactly at the baseline value.
+- **Palette.** One colour per series and a single accent reserved for the today
+  marker. Stroke width ≥ 2 with round caps and joins.
+- **Legend.** Centred directly beneath the chart, naming each series.
+
 ### Output
 
 Always write a **new self-contained standalone HTML file** to
@@ -339,6 +359,7 @@ Include a CSV of the daily series when useful, with timestamps, scope, completed
 - **Sanity-check the ticket count against team scale.** For a team of N engineers ~40% through a two-week sprint, a total ticket count in single digits with zero completions is a strong hint the query missed results. Cross-check by re-running the query with a different JQL shape (e.g. swap `sprint = <id>` for `sprint = "<sprint name>"`, or invert the `AND` order); the two must agree. If they disagree, trust the larger set and disclose the discrepancy.
 - **Two-tier changelog coverage.** Confirm every currently-Done ticket has a fetched changelog. Confirm every ticket with multiple sprint ids on the current Sprint field, or `created ≥ t0`, either has a fetched changelog or is flagged "partial history" in the ticket table.
 - **Schema adherence.** Confirm the report contains exactly the 8 sections defined in §6 in order, with no additional banners, alert callouts, coverage pills, sidebars, or extra sections. Confirm coverage disclosure appears only as the greyed header byline plus the Methods `Coverage limits` sub-block — never as a top-of-page banner.
+- **Rendering style.** Confirm both charts use the equal-width working-day x-axis with weekends omitted and two-line day labels, carry markers at each plotted observation, show the labelled today line, and pin a y gridline to `B`. A chart whose x-axis spans calendar time proportionally fails this check.
 - Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results in Methods rather than invent values to force reconciliation.
 - Keep credentials, tokens and `.env` contents out of generated files.
 - Run `python scripts/validate_sprint_report.py <new-report-path>` and do not
