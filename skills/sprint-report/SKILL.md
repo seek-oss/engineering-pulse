@@ -296,10 +296,33 @@ No coloured pill. No red-tinted background. The byline reports the state; the st
 
 ### Output
 
-Always write a **self-contained standalone HTML file** to `output/sprint-report-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
+Always write a **new self-contained standalone HTML file** to
+`output/sprint-report-<safe-prefix>-sprint<sprintId>-run<HHMMSS>-<YYYY-MM-DD>.html`.
+The run time is in the configured timezone. Never overwrite or edit an earlier
+report, including another report generated on the same date; earlier reports
+are outputs, not rendering templates or evidence. Keeping the date last
+preserves the scheduled runner's `output/sprint-report-*-<YYYY-MM-DD>.html`
+glob.
 
 - Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
+- Give the eight required sections these ids, in order: `header`,
+  `at-a-glance`, `calendar`, `burn-up`, `burn-down`, `event-ledger`,
+  `ticket-table`, `methods`.
+- Add machine-readable metadata to the inline chart SVG without changing its
+  visible presentation:
+  - Burn-up SVG: `data-chart="burn-up"`, `data-current-scope`,
+    `data-current-completed`, and `data-remaining`. Mark the total-scope and
+    completed paths/polylines with `data-series="total-scope"` /
+    `data-series="completed"` and `data-end-value`.
+  - Burn-down SVG: `data-chart="burn-down"`, `data-baseline`,
+    `data-as-of-timestamp`, and `data-target-timestamp`. Mark the frozen ideal
+    with `data-series="frozen-ideal"`, `data-start-value`, `data-end-value="0"`,
+    and `data-end-timestamp` equal to the target. Mark the latest rolling
+    expectation with `data-series="rolling-expectation"`,
+    `data-end-value="0"`, and `data-end-timestamp` equal to the target. Mark
+    every disconnected actual segment with `data-series="actual"` and its
+    `data-end-value` / `data-end-timestamp`.
 
 The scheduled runner globs `output/sprint-report-*-<YYYY-MM-DD>.html` and emails the newest match via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
 
@@ -318,3 +341,8 @@ Include a CSV of the daily series when useful, with timestamps, scope, completed
 - **Schema adherence.** Confirm the report contains exactly the 8 sections defined in §6 in order, with no additional banners, alert callouts, coverage pills, sidebars, or extra sections. Confirm coverage disclosure appears only as the greyed header byline plus the Methods `Coverage limits` sub-block — never as a top-of-page banner.
 - Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results in Methods rather than invent values to force reconciliation.
 - Keep credentials, tokens and `.env` contents out of generated files.
+- Run `python scripts/validate_sprint_report.py <new-report-path>` and do not
+  deliver, preview, or email the report unless it exits successfully. This is
+  the executable check for unique filenames, the exact eight-section schema,
+  burn-up reconciliation, frozen-ideal and rolling-expectation target-zero
+  endpoints, and absence of future actual data.
