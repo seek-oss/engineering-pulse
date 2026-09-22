@@ -298,7 +298,7 @@ No coloured pill. No red-tinted background. The byline reports the state; the st
 
 Always write a **self-contained standalone HTML file** to `output/sprint-report-<safe-prefix>-sprint<sprintId>-<YYYY-MM-DD>.html`.
 
-- Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
+- Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time. Many mail clients strip SVG geometry; the scheduled runner rasterizes each chart to an embedded PNG in the SMTP copy via `scripts/send_report_smtp.py` (the on-disk HTML keeps SVG for local preview).
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
 
 The scheduled runner globs `output/sprint-report-*-<YYYY-MM-DD>.html` and emails the newest match via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.

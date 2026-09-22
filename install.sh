@@ -456,8 +456,9 @@ _ec=\$?
 
 # ── Step 2: sprint report (only if SPRINT_BOARD is configured). ────────────
 # Agent writes output/sprint-report-*-<YYYY-MM-DD>.html; the runner then emails
-# the newest match via send_report_smtp.py, reusing SMTP_* from .env with a
-# team-agnostic subject. Runs independently of the daily-dashboard exit code.
+# the newest match via send_report_smtp.py (SVG charts → embedded PNG for mail
+# clients), reusing SMTP_* from .env with a team-agnostic subject. Runs
+# independently of the daily-dashboard exit code.
 SPRINT_SKILL="\$INSTALL_DIR/skills/sprint-report/SKILL.md"
 if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]]; then
   SPRINT_PROMPT=\$(cat "\$SPRINT_SKILL")

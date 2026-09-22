@@ -28,6 +28,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
+from scripts.lib.chart_svg_email import (
+    is_sprint_report_html_path,
+    prepare_sprint_report_html_for_email,
+)
 
 load_dotenv()
 
@@ -72,6 +76,9 @@ def main() -> None:
         sys.exit(1)
 
     is_html = _detect_html(body) or (path.endswith(".html") and path != "-")
+
+    if is_html and path != "-" and is_sprint_report_html_path(path):
+        body = prepare_sprint_report_html_for_email(body)
 
     if is_html:
         msg = MIMEMultipart("alternative")
