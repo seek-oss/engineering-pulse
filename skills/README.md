@@ -13,11 +13,12 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 ## `sprint-report`
 
 Sprint progress report for one team's delivery tickets on a Jira board —
-configured via one free-form `SPRINT_BOARD` sentence in `.env` describing the
-board URL and epic-summary prefix. Produces a self-contained HTML report
-combining a burn-up chart (primary), a burn-down chart with rolling-scope
-expectation line (secondary), an event ledger, and a per-ticket table.
-Suitable for browsers, Gmail and Outlook.
+configured via one free-form sprint description. Set it as `SPRINT_BOARD` in
+`.env` for repository/scheduled runs, or append it directly to the command for
+a standalone run: `/sprint-report My sprint board is at https://…`. Produces a
+self-contained HTML report combining a burn-up chart (primary), a burn-down
+chart with rolling-scope expectation line (secondary), an event ledger, and a
+per-ticket table. Suitable for browsers, Gmail and Outlook.
 
 **Path:** `skills/sprint-report/SKILL.md` (single file)
 

@@ -1,6 +1,6 @@
 ---
 name: sprint-report
-description: "Build an evidence-based sprint progress report from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Produces both a burn-up chart (primary, SDD-friendly) and a burn-down chart with a rolling-scope expectation line, plus at-a-glance tiles, sprint calendar, event ledger, and per-ticket table. Configured via one free-form SPRINT_BOARD sentence in .env. Use for sprint delivery tracking, scope-change analysis, remaining-work reports, and daily/scheduled progress email."
+description: "Build an evidence-based sprint progress report from Jira for a team's delivery tickets under epics whose summary starts with a user-supplied prefix. Produces both a burn-up chart (primary, SDD-friendly) and a burn-down chart with a rolling-scope expectation line, plus at-a-glance tiles, sprint calendar, event ledger, and per-ticket table. Configured via one free-form sprint description supplied in chat or as SPRINT_BOARD in .env. Use for sprint delivery tracking, scope-change analysis, remaining-work reports, and daily/scheduled progress email."
 ---
 
 # Sprint Report
@@ -9,11 +9,26 @@ Generate a daily sprint progress report for one team's delivery tickets on a mix
 
 ## Quick start
 
-Set `SPRINT_BOARD` in `.env` — one free-form sentence describing your sprint board. See the template and inline commentary in [`.env.example`](../../.env.example).
+Use either of these setup modes:
 
-When you invoke the skill, the agent loads `SPRINT_BOARD`, parses the board URL for Atlassian host / project / board id, discovers `cloudId` and custom-field ids at runtime, and picks the active sprint. If more than one active sprint is a plausible match, it asks which one.
+1. **Repository / scheduled mode:** set `SPRINT_BOARD` in `.env` to one free-form sentence describing the sprint board. See the template and inline commentary in [`.env.example`](../../.env.example).
+2. **Standalone / one-off mode:** run `/sprint-report` and append the same free-form sentence in that message. No `.env` configuration is required; the appended description overrides `SPRINT_BOARD` for that run only.
 
-For one-off runs or overrides, paste the same sentence into the chat instead — chat input takes precedence over `.env`.
+Copyable standalone example:
+
+```text
+/sprint-report My sprint board is at https://example.atlassian.net/jira/software/c/projects/PROJ/boards/123. Only include epics whose summary starts with [TEAM-PREFIX]. Sprints run for two weeks; use the moment Jira activated the current sprint as the report's baseline start.
+```
+
+Resolve the sprint description in this order:
+
+1. A description appended to the current `/sprint-report` command (an explicit one-off override).
+2. `SPRINT_BOARD` from the workspace `.env`.
+3. If neither exists, ask the user to paste a description using the example above.
+
+The example is documentation, not fallback configuration. Never query its placeholder host, project, board id or epic prefix. Scheduled/headless runs cannot answer a clarification, so they require `SPRINT_BOARD` in `.env`.
+
+After resolving the description, parse the board URL for Atlassian host / project / board id, discover `cloudId` and custom-field ids at runtime, and pick the active sprint. If more than one active sprint is a plausible match, ask which one.
 
 Every value the agent resolves is captured in the run's report so subsequent runs are reproducible. The rest of this file is the detailed spec the agent follows; you should not need to edit it to reuse the skill.
 
