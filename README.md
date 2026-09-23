@@ -182,9 +182,9 @@ make help         # list all targets
 
 | Variable | Required | Description |
 |---|---|---|
-| `DD_API_KEY` | yes | Datadog API key |
-| `DD_APP_KEY` | yes | Datadog Application key |
-| `DD_SITE` | no | Datadog API host (default: `https://api.datadoghq.com`) |
+| `DD_API_KEY` | legacy REST only | Datadog API key (daily dashboard uses **Datadog MCP**) |
+| `DD_APP_KEY` | legacy REST only | Datadog Application key |
+| `DD_SITE` | legacy REST only | Datadog API host (default: `https://api.datadoghq.com`) |
 | `DATADOG_TEAMS` | no | Comma-separated team slugs — filters all queries |
 | `GITHUB_TOKEN` | yes | PAT with `repo` + `read:org` scopes |
 | `GITHUB_ORG` | yes | GitHub org slug |

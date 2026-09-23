@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Run the dashboard end-to-end without an agent (schedule / ~/bin/runner).
+"""Run the dashboard toolchain without an agent (helper / debug).
 
-Loads `.env`, extracts each declared Datadog dashboard, refreshes Todoist JSON,
-GitHub PRs, renders HTML under `output/`, and sends SMTP (unless --no-email).
+Loads `.env`, refreshes Todoist JSON and GitHub PRs, renders HTML from existing
+`output/<slug>_metric_results.json` snapshots, and sends SMTP (unless --no-email).
+
+Datadog snapshots are **not** fetched here — use Datadog MCP + the agent workflow
+(`skills/engineering-pulse/references/datadog-mcp-extract.md`) or `AGENT_CLI` /
+`make run` for scheduled runs.
 """
 
 from __future__ import annotations
@@ -28,14 +32,6 @@ def _run_logged(cmd: list[str]) -> None:
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 
-def _parse_days(raw: str) -> int:
-    try:
-        d = int(raw.strip())
-    except ValueError:
-        return 7
-    return max(1, min(d, 90))
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description="Engineering Pulse daily dashboard pipeline")
     ap.add_argument(
@@ -52,37 +48,17 @@ def main() -> int:
     py = sys.executable
 
     sys.path.insert(0, str(SCRIPTS))
-    from dashboards_plugin import discover_dashboards, parse_dashboard
-
-    days = _parse_days(os.environ.get("DASHBOARD_DAYS", "7"))
+    from dashboards_plugin import discover_dashboards, load_snapshot, parse_dashboard
 
     for path in discover_dashboards(ROOT / "prompts" / "dashboards"):
-        d = parse_dashboard(path)
-        if not d.url.strip():
-            print(f"skip {path.name}: no URL", flush=True)
-            continue
-        cmd: list[str] = [
-            py,
-            str(SCRIPTS / "datadog_dashboard_extract.py"),
-            "--url",
-            d.url,
-            "--output-slug",
-            d.slug,
-            "--days",
-            str(days),
-        ]
-        foc = d.focus.strip()
-        if foc:
-            cmd.extend(["--focus", foc])
-        try:
-            _run_logged(cmd)
-        except subprocess.CalledProcessError as e:
+        dash = parse_dashboard(path)
+        if load_snapshot(dash.slug, OUT) is None:
             print(
-                f"ERROR: Datadog extract failed for slug={d.slug!r}: {e}",
-                file=sys.stderr,
+                f"WARN: missing output/{dash.slug}_metric_results.json for "
+                f"{path.name} — populate via Datadog MCP "
+                "(skills/engineering-pulse/references/datadog-mcp-extract.md).",
                 flush=True,
             )
-            return int(e.returncode or 1)
 
     todos_path = OUT / "todos.json"
     try:

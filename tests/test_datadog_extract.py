@@ -1,7 +1,4 @@
-"""Tests for scripts/datadog_dashboard_extract.py — pure functions only.
-HTTP-calling functions (get_dashboard, query_metrics_v1, etc.) are mocked
-so no real network traffic is made.
-"""
+"""Tests for scripts/datadog_dashboard_extract.py — pure functions only."""
 
 import time
 
@@ -9,7 +6,6 @@ import pytest
 from scripts.datadog_dashboard_extract import (
     _apply_teams_to_url,
     _extract_time_window,
-    _source_style,
     _teams_to_query_value,
     detect_query_source,
     extract_dashboard_id,
@@ -294,25 +290,6 @@ class TestApplyTeamsToUrl:
         result = _apply_teams_to_url(url, "new-team")
         assert "from_ts=111" in result
         assert "new-team" in result
-
-
-# ---------------------------------------------------------------------------
-# _source_style
-# ---------------------------------------------------------------------------
-
-
-class TestSourceStyle:
-    def test_known_sources_return_colour(self):
-        assert _source_style("metrics") == "green"
-        assert _source_style("metrics_formula") == "green"
-        assert _source_style("logs") == "yellow"
-        assert _source_style("apm") == "yellow"
-        assert _source_style("rum") == "cyan"
-        assert _source_style("process") == "cyan"
-
-    def test_unknown_source_returns_red(self):
-        assert _source_style("unknown") == "red"
-        assert _source_style("something_else") == "red"
 
 
 # ---------------------------------------------------------------------------

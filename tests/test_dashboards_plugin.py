@@ -69,6 +69,7 @@ class TestParseDashboard:
         assert d.slug == "dora"
         assert d.url == "https://app.datadoghq.com/dashboard/abc-123/dora"
         assert d.source == f
+        assert d.focus == ("Deployment Frequency", "Change Failure Rate")
 
     def test_missing_title_falls_back_to_filename(self, tmp_path: Path) -> None:
         f = tmp_path / "my-dashboard.md"
@@ -106,6 +107,23 @@ class TestParseDashboard:
         d = parse_dashboard(f)
         assert d.url == "https://example.com"
         assert d.slug == "my-slug"
+
+    def test_none_focus_and_color_table(self, tmp_path: Path) -> None:
+        f = tmp_path / "owner.md"
+        f.write_text(
+            "# Owner\n"
+            "- **Focus:** (none)\n"
+            "\n"
+            "| Metric | RED | YELLOW | GREEN |\n"
+            "|--------|-----|--------|-------|\n"
+            "| Systems Assessed | < 50% | 50–80% | > 80% |\n",
+            encoding="utf-8",
+        )
+        d = parse_dashboard(f)
+        assert d.focus == ()
+        assert len(d.color_rules) == 1
+        assert d.color_rules[0].label == "Systems Assessed"
+        assert d.color_rules[0].yellow == "50–80%"
 
     def test_value_with_no_decoration(self, tmp_path: Path) -> None:
         f = tmp_path / "x.md"

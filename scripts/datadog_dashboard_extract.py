@@ -1,26 +1,18 @@
 #!/usr/bin/env python3
 """
-Datadog Dashboard Extractor — fetches a dashboard definition via the
-Datadog API, extracts every widget query, and runs the ones that map
-cleanly to an API endpoint (metrics, logs analytics).
+Datadog Dashboard Extractor — build ``output/<slug>_metric_results.json`` for the
+daily HTML report.
 
-Env vars required:
-    DD_API_KEY, DD_APP_KEY
+Agent + Datadog MCP (no API keys):
+
+    1. Agent calls MCP ``get_datadog_dashboard`` → save ``output/<slug>_dashboard.json``
+    2. ``--from-dashboard-json`` → ``*_mcp_query_plan.json`` (+ extracted queries)
+    3. Agent calls MCP ``get_datadog_metric`` for each planned query →
+       ``output/<slug>_mcp_responses.json``
+    4. ``--from-mcp-responses`` → ``*_metric_results.json``
+
 Optional:
-    DD_SITE        (default https://api.datadoghq.com)
-    DATADOG_TEAMS  (comma-separated team names — overrides tpl_var_team in URL)
-
-CLI args:
-    --url           Dashboard URL (pass directly — preferred)
-    --url-env       Name of env var holding the dashboard URL (fallback)
-    --days          Override time window to past N days (0 = use URL timestamps)
-    --focus         Comma-separated widget title substrings to highlight in output
-    --output-slug   Prefix for output files (e.g. 'my_dashboard' → my_dashboard_metric_results.json)
-
-Output files (under output/):
-    [slug_]dashboard.json                      — full dashboard definition
-    [slug_]dashboard_extracted_queries.json    — all extracted widget queries
-    [slug_]metric_results.json                — latest metric points per query (for HTML report)
+    DATADOG_TEAMS  (comma-separated — overrides tpl_var_team in URL and query filters)
 """
 
 import argparse
@@ -34,44 +26,17 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-import requests
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 load_dotenv()
 
 console = Console()
 
-DD_API_KEY = os.environ["DD_API_KEY"]
-DD_APP_KEY = os.environ["DD_APP_KEY"]
-DD_SITE = os.environ.get("DD_SITE", "https://api.datadoghq.com")
-
-
-def _snapshot_series(series: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Latest point per series for persistence / HTML report."""
-    rows: list[dict[str, Any]] = []
-    for s in series:
-        pointlist = s.get("pointlist") or []
-        last_val = pointlist[-1][1] if pointlist else None
-        rows.append({"scope": s.get("scope", "—"), "latest": last_val})
-    return rows
-
-
-def _headers() -> dict[str, str]:
-    return {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "DD-API-KEY": DD_API_KEY,
-        "DD-APPLICATION-KEY": DD_APP_KEY,
-    }
-
 
 # ---------------------------------------------------------------------------
-# Dashboard fetching & parsing
+# Dashboard parsing
 # ---------------------------------------------------------------------------
 
 
@@ -80,13 +45,6 @@ def extract_dashboard_id(dashboard_url: str) -> str:
     if not m:
         raise ValueError(f"Could not extract dashboard ID from URL: {dashboard_url}")
     return m.group(1)
-
-
-def get_dashboard(dashboard_id: str) -> dict[str, Any]:
-    url = f"{DD_SITE}/api/v1/dashboard/{dashboard_id}"
-    resp = requests.get(url, headers=_headers(), timeout=30)
-    resp.raise_for_status()
-    return resp.json()
 
 
 def flatten_widgets(widgets: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -194,108 +152,299 @@ def _teams_to_query_value(teams_csv: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Query execution
+# Datadog MCP offline pipeline (no REST keys)
 # ---------------------------------------------------------------------------
 
 
-def query_metrics_v1(query: str, from_ts: int, to_ts: int) -> dict[str, Any]:
-    url = f"{DD_SITE}/api/v1/query"
-    params = {"from": from_ts, "to": to_ts, "query": query}
-    resp = requests.get(url, headers=_headers(), params=params, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
-
-
-def query_logs_aggregate(
-    search_query: str,
-    from_iso: str,
-    to_iso: str,
-    compute_aggregation: str = "count",
-    compute_metric: str | None = None,
-    group_by_facet: str | None = None,
-    interval: str | None = None,
-) -> dict[str, Any]:
-    url = f"{DD_SITE}/api/v2/logs/analytics/aggregate"
-    compute_obj: dict[str, Any] = {"aggregation": compute_aggregation}
-    if compute_metric:
-        compute_obj["metric"] = compute_metric
-    if interval:
-        compute_obj["interval"] = interval
-        compute_obj["type"] = "timeseries"
-
-    payload: dict[str, Any] = {
-        "filter": {"from": from_iso, "to": to_iso, "query": search_query},
-        "compute": [compute_obj],
+def normalize_mcp_dashboard(raw: dict[str, Any]) -> dict[str, Any]:
+    """Accept REST dashboard JSON or MCP ``get_datadog_dashboard`` payload."""
+    if not isinstance(raw, dict):
+        raise ValueError("Dashboard JSON must be an object")
+    if "widgets" not in raw:
+        raise ValueError("Dashboard JSON missing 'widgets'")
+    return {
+        "title": raw.get("title", "Untitled"),
+        "widgets": raw.get("widgets") or [],
+        "template_variables": raw.get("template_variables") or [],
     }
-    if group_by_facet:
-        payload["group_by"] = [{"facet": group_by_facet, "limit": 10}]
-
-    resp = requests.post(url, headers=_headers(), json=payload, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
 
 
-# ---------------------------------------------------------------------------
-# Rich output helpers
-# ---------------------------------------------------------------------------
-
-
-def _source_style(source: str) -> str:
-    mapping = {
-        "metrics": "green",
-        "metrics_formula": "green",
-        "logs": "yellow",
-        "apm": "yellow",
-        "rum": "cyan",
-        "process": "cyan",
-    }
-    return mapping.get(source, "red")
-
-
-def print_extraction_summary(extracted: list[dict[str, Any]]) -> None:
-    source_counts: dict[str, int] = {}
+def iter_metric_query_jobs(
+    extracted: list[dict[str, Any]],
+    template_vars: list[dict[str, Any]],
+    query_overrides: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Resolved metric queries for MCP ``get_datadog_metric``."""
+    jobs: list[dict[str, Any]] = []
     for item in extracted:
-        source_counts[item["source"]] = source_counts.get(item["source"], 0) + 1
+        req = item["request"]
+        source = item["source"]
+        widget_label = item["title"] or f"widget#{item['widget_index']}"
 
-    table = Table(title="Widget Query Sources", show_header=True, header_style="bold")
-    table.add_column("Source", style="cyan")
-    table.add_column("Count", justify="right")
-    table.add_column("API Support")
-    for source, count in sorted(source_counts.items(), key=lambda x: -x[1]):
-        style = _source_style(source)
-        if source in ("metrics", "metrics_formula"):
-            support = Text("auto-queryable", style="green")
-        elif source == "logs":
-            support = Text("partial (needs mapping)", style="yellow")
-        else:
-            support = Text("manual only", style="red")
-        table.add_row(Text(source, style=style), str(count), support)
-    console.print(table)
+        if source == "metrics" and isinstance(req.get("q"), str):
+            q = resolve_template_variables(req["q"], template_vars, query_overrides)
+            jobs.append({"widget_title": widget_label, "kind": "metrics", "query": q})
+        elif source == "metrics_formula":
+            for qobj in req.get("queries", []):
+                metric_query = qobj.get("query")
+                if not metric_query:
+                    continue
+                metric_query = resolve_template_variables(
+                    metric_query, template_vars, query_overrides
+                )
+                jobs.append(
+                    {
+                        "widget_title": widget_label,
+                        "kind": "metrics_formula_base",
+                        "subquery": qobj.get("name"),
+                        "query": metric_query,
+                    }
+                )
+    return jobs
 
 
-def print_extracted_requests(extracted: list[dict[str, Any]]) -> None:
-    table = Table(
-        title="Extracted Widget Requests",
-        show_header=True,
-        header_style="bold",
-        show_lines=True,
-    )
-    table.add_column("#", justify="right", style="dim", width=4)
-    table.add_column("Title", max_width=40)
-    table.add_column("Type", style="dim")
-    table.add_column("Source")
-    table.add_column("Request Keys", style="dim", max_width=40)
+def snapshot_from_mcp_metric_data(data: Any) -> list[dict[str, Any]]:
+    """Convert MCP ``get_datadog_metric`` JSON_DATA to ``{scope, latest}`` rows."""
+    if data is None:
+        return [{"scope": "—", "latest": None}]
 
-    for i, item in enumerate(extracted):
-        style = _source_style(item["source"])
-        table.add_row(
-            str(i),
-            (item["title"] or "—")[:40],
-            item["widget_type"] or "—",
-            Text(item["source"], style=style),
-            ", ".join(sorted(item["request"].keys())),
+    parsed: Any = data
+    if isinstance(parsed, str):
+        parsed = json.loads(parsed.strip())
+    if isinstance(parsed, dict) and "values" in parsed:
+        parsed = [parsed]
+    if not isinstance(parsed, list):
+        return [{"scope": "—", "latest": None}]
+
+    rows: list[dict[str, Any]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        if isinstance(item.get("values"), dict):
+            for scope, val in item["values"].items():
+                rows.append(
+                    {
+                        "scope": str(scope),
+                        "latest": float(val) if val is not None else None,
+                    }
+                )
+            continue
+
+        scope = item.get("scope") or item.get("expression") or "—"
+        latest: float | None = None
+        binned = item.get("binned")
+        if isinstance(binned, list) and binned:
+            last_bin = binned[-1]
+            if isinstance(last_bin, dict):
+                latest = last_bin.get("avg")
+                if latest is None:
+                    latest = last_bin.get("max")
+        if latest is None:
+            stats = item.get("overall_stats")
+            if isinstance(stats, dict):
+                latest = stats.get("avg")
+        if latest is not None:
+            latest = float(latest)
+        rows.append({"scope": str(scope), "latest": latest})
+
+    return rows or [{"scope": "—", "latest": None}]
+
+
+def build_metric_results_from_mcp_bundle(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    metric_results: list[dict[str, Any]] = []
+    for entry in bundle.get("responses") or []:
+        if not isinstance(entry, dict):
+            continue
+        snap = snapshot_from_mcp_metric_data(entry.get("data"))
+        row: dict[str, Any] = {
+            "widget_title": entry.get("widget_title") or "—",
+            "kind": entry.get("kind") or "metrics",
+            "query": entry.get("query") or "",
+            "series": snap,
+        }
+        sub = entry.get("subquery")
+        if sub:
+            row["subquery"] = sub
+            row["kind"] = "metrics_formula_base"
+        metric_results.append(row)
+    return metric_results
+
+
+def resolve_query_overrides_and_url(dashboard_url: str) -> tuple[str, dict[str, str]]:
+    teams_csv = os.environ.get("DATADOG_TEAMS", "").strip()
+    query_overrides: dict[str, str] = {}
+    url = dashboard_url
+    if teams_csv:
+        url = _apply_teams_to_url(url, teams_csv)
+        query_overrides["team"] = _teams_to_query_value(teams_csv)
+        console.print(
+            f"[dim]Using DATADOG_TEAMS override: "
+            f"[cyan]{teams_csv}[/cyan] "
+            f"→ query filter [cyan]team:{query_overrides['team']}[/cyan][/dim]"
         )
-    console.print(table)
+    return url, query_overrides
+
+
+def resolve_lookback_window(days: int, dashboard_url: str) -> tuple[int, int]:
+    now = int(time.time())
+    if days > 0:
+        lookback = now - days * 86400
+        console.print(f"[dim]Time window: past [cyan]{days}[/cyan] days ({round(days, 1)}d)[/dim]")
+        return lookback, now
+
+    time_window = _extract_time_window(dashboard_url)
+    if time_window:
+        lookback, end = time_window
+        console.print(
+            f"[dim]Time window from URL: "
+            f"[cyan]{lookback}[/cyan] → [cyan]{end}[/cyan] "
+            f"({round((end - lookback) / 86400, 1)} days)[/dim]"
+        )
+        return lookback, end
+
+    lookback = now - 2592000
+    console.print("[dim]No from_ts/to_ts in URL — using 30-day fallback window[/dim]")
+    return lookback, now
+
+
+def _output_prefix(slug: str) -> str:
+    return f"{slug}_" if slug else ""
+
+
+def _write_metric_snapshot(
+    out_dir: Path,
+    prefix: str,
+    *,
+    title: str,
+    dashboard_url: str,
+    dashboard: dict[str, Any],
+    extracted: list[dict[str, Any]],
+    metric_results: list[dict[str, Any]],
+) -> None:
+    out_dir.mkdir(exist_ok=True)
+    fname_dash = f"{prefix}dashboard.json"
+    fname_queries = f"{prefix}dashboard_extracted_queries.json"
+    fname_results = f"{prefix}metric_results.json"
+
+    with open(out_dir / fname_dash, "w", encoding="utf-8") as f:
+        json.dump(dashboard, f, ensure_ascii=False, indent=2)
+
+    with open(out_dir / fname_queries, "w", encoding="utf-8") as f:
+        json.dump(extracted, f, ensure_ascii=False, indent=2)
+
+    with open(out_dir / fname_results, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "dashboard_title": title,
+                "source_url": dashboard_url,
+                "generated_at": datetime.now(UTC).isoformat(),
+                "results": metric_results,
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    console.print()
+    console.print("[dim]Saved:[/dim]")
+    console.print(f"  • output/{fname_dash}")
+    console.print(f"  • output/{fname_queries}")
+    console.print(f"  • output/{fname_results}")
+
+
+def run_mcp_query_plan(
+    dashboard_path: Path,
+    dashboard_url: str,
+    output_slug: str,
+    days: int,
+) -> None:
+    raw = json.loads(dashboard_path.read_text(encoding="utf-8"))
+    dashboard = normalize_mcp_dashboard(raw)
+    dashboard_url, query_overrides = resolve_query_overrides_and_url(dashboard_url)
+    resolve_lookback_window(days, dashboard_url)
+
+    title = dashboard.get("title", "Untitled")
+    extracted = extract_widget_queries(dashboard)
+    jobs = iter_metric_query_jobs(
+        extracted,
+        dashboard.get("template_variables") or [],
+        query_overrides,
+    )
+
+    for i, job in enumerate(jobs):
+        job["id"] = str(i)
+
+    out_dir = Path(__file__).resolve().parent.parent / "output"
+    prefix = _output_prefix(output_slug)
+    plan = {
+        "dashboard_title": title,
+        "source_url": dashboard_url,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "time_window": {"from": f"now-{days}d" if days > 0 else "now-7d", "to": "now"},
+        "mcp_tool": "get_datadog_metric",
+        "mcp_recommended_args": {
+            "response_format": "scalar",
+            "queries": "one plan entry per call; use structured query with query + aggregator last",
+        },
+        "queries": jobs,
+    }
+
+    out_dir.mkdir(exist_ok=True)
+    fname_dash = f"{prefix}dashboard.json"
+    fname_queries = f"{prefix}dashboard_extracted_queries.json"
+    with open(out_dir / fname_dash, "w", encoding="utf-8") as f:
+        json.dump(dashboard, f, ensure_ascii=False, indent=2)
+    with open(out_dir / fname_queries, "w", encoding="utf-8") as f:
+        json.dump(extracted, f, ensure_ascii=False, indent=2)
+
+    plan_path = out_dir / f"{prefix}mcp_query_plan.json"
+    with open(plan_path, "w", encoding="utf-8") as f:
+        json.dump(plan, f, ensure_ascii=False, indent=2)
+
+    console.print("[dim]Saved:[/dim]")
+    console.print(f"  • output/{fname_dash}")
+    console.print(f"  • output/{fname_queries}")
+    console.print(f"  • output/{prefix}mcp_query_plan.json")
+    console.print(
+        f"[green]Planned {len(jobs)} metric queries[/green] — fetch via Datadog MCP, "
+        f"then run with --from-mcp-responses"
+    )
+
+
+def run_mcp_build_results(
+    responses_path: Path,
+    dashboard_url: str,
+    output_slug: str,
+) -> None:
+    bundle = json.loads(responses_path.read_text(encoding="utf-8"))
+    metric_results = build_metric_results_from_mcp_bundle(bundle)
+    title = bundle.get("dashboard_title") or "Untitled"
+    dashboard_url = bundle.get("source_url") or dashboard_url
+
+    out_dir = Path(__file__).resolve().parent.parent / "output"
+    prefix = _output_prefix(output_slug)
+    dash_path = out_dir / f"{prefix}dashboard.json"
+    queries_path = out_dir / f"{prefix}dashboard_extracted_queries.json"
+
+    dashboard: dict[str, Any] = {"title": title, "widgets": [], "template_variables": []}
+    extracted: list[dict[str, Any]] = []
+    if dash_path.is_file():
+        dashboard = normalize_mcp_dashboard(json.loads(dash_path.read_text(encoding="utf-8")))
+    if queries_path.is_file():
+        extracted = json.loads(queries_path.read_text(encoding="utf-8"))
+
+    _write_metric_snapshot(
+        out_dir,
+        prefix,
+        title=title,
+        dashboard_url=dashboard_url,
+        dashboard=dashboard,
+        extracted=extracted,
+        metric_results=metric_results,
+    )
+    console.print(
+        f"[green]Built {len(metric_results)} metric result rows from MCP responses[/green]"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -355,23 +504,25 @@ def main() -> None:
     parser.add_argument(
         "--url",
         default="",
-        help="Dashboard URL (pass directly instead of via env var)",
+        help="Dashboard URL (required with --from-dashboard-json; optional metadata for --from-mcp-responses)",
     )
     parser.add_argument(
-        "--url-env",
+        "--from-dashboard-json",
         default="",
-        help="Name of the env var that holds the dashboard URL (fallback if --url not given)",
+        metavar="FILE",
+        help="MCP mode: build query plan from saved get_datadog_dashboard JSON (requires --url, --output-slug)",
+    )
+    parser.add_argument(
+        "--from-mcp-responses",
+        default="",
+        metavar="FILE",
+        help="MCP mode: build metric_results.json from agent MCP response bundle",
     )
     parser.add_argument(
         "--days",
         type=int,
         default=0,
-        help="Override time window to past N days (0 = use URL timestamps)",
-    )
-    parser.add_argument(
-        "--focus",
-        default="",
-        help="Comma-separated widget title substrings to highlight (case-insensitive)",
+        help="Override time window to past N days (0 = use URL timestamps; MCP plan defaults to 7)",
     )
     parser.add_argument(
         "--output-slug",
@@ -380,248 +531,39 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.url:
-        dashboard_url = args.url
-        console.print(f"[dim]URL: [cyan]{dashboard_url[:80]}…[/cyan][/dim]")
-    elif args.url_env:
-        if args.url_env not in os.environ:
-            console.print(f"[red]Error: env var '{args.url_env}' is not set.[/red]")
+    if args.from_mcp_responses:
+        if not args.output_slug:
+            console.print("[red]Error: --from-mcp-responses requires --output-slug.[/red]")
             sys.exit(1)
-        dashboard_url = os.environ[args.url_env]
-        console.print(f"[dim]URL env: [cyan]{args.url_env}[/cyan][/dim]")
-    else:
-        console.print("[red]Error: pass --url or --url-env.[/red]")
-        sys.exit(1)
+        path = Path(args.from_mcp_responses)
+        if not path.is_file():
+            console.print(f"[red]Error: MCP responses file not found: {path}[/red]")
+            sys.exit(1)
+        url = args.url or ""
+        run_mcp_build_results(path, url, args.output_slug)
+        return
 
-    focus_terms = [t.strip().lower() for t in args.focus.split(",") if t.strip()]
-
-    teams_csv = os.environ.get("DATADOG_TEAMS", "").strip()
-    # Build overrides dict used when resolving template variables in queries
-    query_overrides: dict[str, str] = {}
-    if teams_csv:
-        dashboard_url = _apply_teams_to_url(dashboard_url, teams_csv)
-        query_overrides["team"] = _teams_to_query_value(teams_csv)
-        console.print(
-            f"[dim]Using DATADOG_TEAMS override: "
-            f"[cyan]{teams_csv}[/cyan] "
-            f"→ query filter [cyan]team:{query_overrides['team']}[/cyan][/dim]"
-        )
-
-    # Time window: --days flag takes priority, then URL timestamps, then 30-day fallback.
-    now = int(time.time())
-    if args.days > 0:
-        lookback = now - args.days * 86400
-        console.print(
-            f"[dim]Time window: past [cyan]{args.days}[/cyan] days ({round(args.days, 1)}d)[/dim]"
-        )
-    else:
-        time_window = _extract_time_window(dashboard_url)
-        if time_window:
-            lookback, now = time_window
+    if args.from_dashboard_json:
+        if not args.url or not args.output_slug:
             console.print(
-                f"[dim]Time window from URL: "
-                f"[cyan]{lookback}[/cyan] → [cyan]{now}[/cyan] "
-                f"({round((now - lookback) / 86400, 1)} days)[/dim]"
+                "[red]Error: --from-dashboard-json requires --url and --output-slug.[/red]"
             )
-        else:
-            lookback = now - 2592000  # 30-day fallback
-            console.print("[dim]No from_ts/to_ts in URL — using 30-day fallback window[/dim]")
-
-    dashboard_id = extract_dashboard_id(dashboard_url)
+            sys.exit(1)
+        path = Path(args.from_dashboard_json)
+        if not path.is_file():
+            console.print(f"[red]Error: dashboard JSON not found: {path}[/red]")
+            sys.exit(1)
+        days = args.days if args.days > 0 else 7
+        run_mcp_query_plan(path, args.url, args.output_slug, days)
+        return
 
     console.print(
-        Panel(
-            f"[bold]Datadog Dashboard Review[/bold]\nDashboard ID: [cyan]{dashboard_id}[/cyan]",
-            border_style="blue",
-        )
+        "[red]Error: Datadog extract is MCP-only.[/red]\n"
+        "[dim]Use --from-dashboard-json or --from-mcp-responses "
+        "(see skills/engineering-pulse/references/datadog-mcp-extract.md). "
+        "Fetch dashboard JSON and metrics via Datadog MCP in the agent session.[/dim]"
     )
-
-    console.print("[dim]Fetching dashboard definition…[/dim]")
-    dashboard = get_dashboard(dashboard_id)
-    title = dashboard.get("title", "Untitled")
-    total_widgets = len(flatten_widgets(dashboard.get("widgets", [])))
-
-    console.print(f"  Title: [bold]{title}[/bold]")
-    console.print(f"  Widgets (flat): [bold]{total_widgets}[/bold]")
-    console.print()
-
-    extracted = extract_widget_queries(dashboard)
-    template_vars = dashboard.get("template_variables", [])
-
-    if template_vars:
-        console.print("[dim]Template variables (effective values for queries):[/dim]")
-        for tv in template_vars:
-            name = tv.get("name", "")
-            prefix = tv.get("prefix", "")
-            if name in query_overrides:
-                value = query_overrides[name]
-                source_note = "[yellow](from DATADOG_TEAMS)[/yellow]"
-            else:
-                default = tv.get("default") or tv.get("defaults", ["*"])
-                if isinstance(default, list):
-                    default = default[0] if default else "*"
-                value = default or "*"
-                source_note = "[dim](dashboard default)[/dim]"
-            console.print(f"  ${name} → {prefix}:{value}  {source_note}")
-        console.print()
-
-    # --- Summary tables ---
-    print_extraction_summary(extracted)
-    console.print()
-    print_extracted_requests(extracted)
-    console.print()
-
-    # --- Execute metric queries ---
-    metric_results: list[dict[str, Any]] = []
-    errors: list[str] = []
-    skipped: list[str] = []
-
-    for item in extracted:
-        req = item["request"]
-        source = item["source"]
-        widget_label = item["title"] or f"widget#{item['widget_index']}"
-
-        is_focused = focus_terms and any(t in widget_label.lower() for t in focus_terms)
-        label_styled = (
-            f"[bold yellow]{widget_label}[/bold yellow] [yellow]★ focus[/yellow]"
-            if is_focused
-            else f"[bold]{widget_label}[/bold]"
-        )
-
-        if source == "metrics" and isinstance(req.get("q"), str):
-            q = resolve_template_variables(req["q"], template_vars, query_overrides)
-            console.print(f"[green]▶[/green] Metric query — {label_styled}")
-            console.print(f"  [dim]{q}[/dim]")
-            try:
-                result = query_metrics_v1(q, lookback, now)
-                series = result.get("series", [])
-                snap = _snapshot_series(series)
-                metric_results.append(
-                    {
-                        "widget_title": widget_label,
-                        "kind": "metrics",
-                        "query": q,
-                        "series": snap,
-                    }
-                )
-                console.print(f"  → {len(series)} series returned")
-
-                for row in snap[:3]:
-                    scope = row["scope"]
-                    last_val = row["latest"]
-                    val_str = f"{last_val:.2f}" if last_val is not None else "null"
-                    console.print(f"    [dim]{scope}[/dim]  latest={val_str}")
-                if len(snap) > 3:
-                    console.print(f"    [dim]… +{len(snap) - 3} more series[/dim]")
-            except requests.HTTPError as e:
-                msg = f"Metric query failed for '{widget_label}': {e}"
-                errors.append(msg)
-                console.print(f"  [red]✗ {e}[/red]")
-            console.print()
-
-        elif source == "metrics_formula":
-            queries = req.get("queries", [])
-            for qobj in queries:
-                metric_query = qobj.get("query")
-                if not metric_query:
-                    continue
-                metric_query = resolve_template_variables(
-                    metric_query, template_vars, query_overrides
-                )
-                console.print(f"[green]▶[/green] Formula base query — {label_styled}")
-                console.print(f"  [dim]{metric_query}[/dim]")
-                try:
-                    result = query_metrics_v1(metric_query, lookback, now)
-                    series = result.get("series", [])
-                    snap = _snapshot_series(series)
-                    metric_results.append(
-                        {
-                            "widget_title": widget_label,
-                            "kind": "metrics_formula_base",
-                            "subquery": qobj.get("name"),
-                            "query": metric_query,
-                            "series": snap,
-                        }
-                    )
-                    console.print(f"  → {len(series)} series returned")
-
-                    for row in snap[:3]:
-                        scope = row["scope"]
-                        last_val = row["latest"]
-                        val_str = f"{last_val:.2f}" if last_val is not None else "null"
-                        console.print(f"    [dim]{scope}[/dim]  latest={val_str}")
-                    if len(snap) > 3:
-                        console.print(f"    [dim]… +{len(snap) - 3} more series[/dim]")
-                except requests.HTTPError as e:
-                    msg = f"Formula base query failed for '{widget_label}': {e}"
-                    errors.append(msg)
-                    console.print(f"  [red]✗ {e}[/red]")
-                console.print()
-
-        elif source == "logs":
-            skipped.append(f"Logs widget '{widget_label}' — saved for manual mapping")
-
-        elif source not in ("metrics", "metrics_formula"):
-            skipped.append(f"{source} widget '{widget_label}' — no auto handler")
-
-    # --- Final summary panel ---
-    console.print()
-    summary_parts = []
-    summary_parts.append(f"[bold]Dashboard:[/bold] {title}")
-    summary_parts.append(f"[bold]Total widgets:[/bold] {total_widgets}")
-    summary_parts.append(f"[bold]Extracted requests:[/bold] {len(extracted)}")
-    summary_parts.append(
-        f"[bold]Metric queries executed:[/bold] {len(metric_results)}"
-    )  # rows, not unique widgets
-
-    if errors:
-        summary_parts.append("")
-        summary_parts.append("[red bold]Errors:[/red bold]")
-        for err in errors:
-            summary_parts.append(f"  [red]• {err}[/red]")
-
-    if skipped:
-        summary_parts.append("")
-        summary_parts.append("[yellow bold]Skipped (no auto handler):[/yellow bold]")
-        for s in skipped:
-            summary_parts.append(f"  [yellow]• {s}[/yellow]")
-
-    border = "green" if not errors else "red" if len(errors) > 2 else "yellow"
-    console.print(Panel("\n".join(summary_parts), title="Summary", border_style=border))
-
-    # --- Write output files ---
-    out_dir = Path(__file__).resolve().parent.parent / "output"
-    out_dir.mkdir(exist_ok=True)
-    prefix = f"{args.output_slug}_" if args.output_slug else ""
-
-    fname_dash = f"{prefix}dashboard.json"
-    fname_queries = f"{prefix}dashboard_extracted_queries.json"
-    fname_results = f"{prefix}metric_results.json"
-
-    with open(out_dir / fname_dash, "w", encoding="utf-8") as f:
-        json.dump(dashboard, f, ensure_ascii=False, indent=2)
-
-    with open(out_dir / fname_queries, "w", encoding="utf-8") as f:
-        json.dump(extracted, f, ensure_ascii=False, indent=2)
-
-    with open(out_dir / fname_results, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "dashboard_title": title,
-                "source_url": dashboard_url,
-                "generated_at": datetime.now(UTC).isoformat(),
-                "results": metric_results,
-            },
-            f,
-            ensure_ascii=False,
-            indent=2,
-        )
-
-    console.print()
-    console.print("[dim]Saved:[/dim]")
-    console.print(f"  • output/{fname_dash}")
-    console.print(f"  • output/{fname_queries}")
-    console.print(f"  • output/{fname_results}")
+    sys.exit(1)
 
 
 if __name__ == "__main__":

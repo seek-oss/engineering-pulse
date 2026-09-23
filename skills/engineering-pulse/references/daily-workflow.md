@@ -9,20 +9,11 @@ focused HTML report**, and email it.
 
 ## Step 1 — Extract Datadog Dashboards
 
-For **each dashboard** in `prompts/dashboards/` (skip `_*.md` templates), run:
+Use **Datadog MCP** (see [datadog-mcp-extract.md](datadog-mcp-extract.md)). For **each**
+dashboard in `prompts/dashboards/` (skip `_*.md` templates), produce
+`output/<slug>_metric_results.json` via MCP + local helper scripts.
 
-```bash
-python3 scripts/datadog_dashboard_extract.py \
-  --url '<URL from the dashboard .md file>' \
-  --output-slug <SLUG> \
-  --days 7 \
-  --focus "<focus terms, if any>"
-```
-
-Each dashboard writes to `output/<slug>_metric_results.json`.
-
-Read every qualifying `.md` in `prompts/dashboards/` and execute its extraction command.
-See `prompts/dashboards/_example.md` for the file format.
+Read every qualifying `.md` in `prompts/dashboards/`; see `_example.md` for file format.
 
 ---
 

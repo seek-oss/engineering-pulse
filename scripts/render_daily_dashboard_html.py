@@ -6,7 +6,8 @@ GitHub PRs, Todoist tasks, and drop-in extras cards.
 Dashboards are discovered from `prompts/dashboards/*.md` (skipping `_*.md`
 templates). Each `.md` file declares a title + slug + URL; the matching
 `output/<slug>_metric_results.json` snapshot is loaded and rendered with
-the generic tile renderer (one tile per unique widget, latest value).
+the generic tile renderer. A dashboard **Focus** list keeps one tile per
+named widget and evaluates that widget's query-value formula.
 
 Sections are numbered dynamically (Part A, B, C, …) based on what is
 actually present:
@@ -40,6 +41,12 @@ from dotenv import dotenv_values, load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+from dashboard_tiles import (  # noqa: E402
+    Tile,
+    build_tiles,
+    query_value_specs,
+    section_suffix,
+)
 from dashboards_plugin import (  # noqa: E402
     Dashboard,
     discover_dashboards,
@@ -148,31 +155,46 @@ def _render_stakeholder_section(
 # ── Section renderers ──────────────────────────────────────────────────────
 
 
+def _render_tiles(label: str, tiles: list[Tile]) -> str:
+    label_esc = html_mod.escape(label)
+    if not tiles:
+        return f'<div class="section-title">{label_esc}</div><p class="muted">No metric data</p>'
+    rendered: list[str] = []
+    for tile in tiles:
+        rendered.append(
+            f'<div class="tile {tile.css_class}">'
+            f'<div class="label">{html_mod.escape(tile.title)}</div>'
+            f'<div class="big-number">{html_mod.escape(tile.display)}</div></div>'
+        )
+    return _tile_rows(label_esc, rendered)
+
+
 def _render_generic_section(label: str, data: dict[str, Any]) -> str:
     """Render a generic dashboard section with one tile per unique widget."""
-    label_esc = html_mod.escape(label)
-    results = data.get("results") or []
-    if not results:
-        return f'<div class="section-title">{label_esc}</div><p class="muted">No metric data</p>'
+    return _render_tiles(label, build_tiles(data.get("results") or []))
 
-    seen: dict[str, float | None] = {}
-    for row in results:
-        title = row.get("widget_title", "—")
-        if title in seen:
-            continue
-        series = row.get("series") or []
-        val = series[0].get("latest") if series else None
-        seen[title] = float(val) if val is not None else None
 
-    tiles: list[str] = []
-    for widget_title, val in seen.items():
-        val_str = f"{val:.1f}" if val is not None else "—"
-        tile_cls = "tile-grey" if val is None else "tile-green"
-        tiles.append(
-            f'<div class="tile {tile_cls}">'
-            f'<div class="label">{html_mod.escape(widget_title)}</div>'
-            f'<div class="big-number">{val_str}</div></div>'
-        )
+def _render_dashboard_section(
+    label: str,
+    dash: Dashboard,
+    snap: dict[str, Any],
+    output_dir: Path,
+) -> str:
+    """Render one dashboard, limited to its Focus list when that list is set."""
+    specs = {}
+    dashboard_path = output_dir / f"{dash.slug}_dashboard.json"
+    if dashboard_path.is_file():
+        specs = query_value_specs(json.loads(dashboard_path.read_text(encoding="utf-8")))
+    tiles = build_tiles(
+        snap.get("results") or [],
+        focus=dash.focus,
+        color_rules=dash.color_rules,
+        specs=specs,
+    )
+    return _render_tiles(label, tiles)
+
+
+def _tile_rows(label_esc: str, tiles: list[str]) -> str:
 
     rows: list[str] = []
     for i in range(0, len(tiles), 3):
@@ -267,8 +289,8 @@ def main() -> None:
 
     # 1) Dashboards from *.md
     for dash, snap in dashboard_records:
-        label = next_label(dash.title)
-        sections.append((label, _render_generic_section(label, snap)))
+        label = next_label(section_suffix(dash.title))
+        sections.append((label, _render_dashboard_section(label, dash, snap, output_dir)))
 
     # 2) Ad-hoc --extra dashboards (CLI order)
     for spec in args.extra:

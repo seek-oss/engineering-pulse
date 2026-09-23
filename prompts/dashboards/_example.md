@@ -17,13 +17,8 @@
 - **Slug:** `dora`
 - **Focus:** `Deployment Frequency,Change Failure Rate,Latency`
 
-```bash
-python3 scripts/datadog_dashboard_extract.py \
-  --url 'https://app.datadoghq.com/dashboard/abc-xyz-123/my-dashboard?tpl_var_team%5B0%5D=my-team&from_ts=1700000000000&to_ts=1700086400000&live=true' \
-  --output-slug dora \
-  --days 7 \
-  --focus "Deployment Frequency,Change Failure Rate,Latency"
-```
+Daily extract: Datadog MCP + `scripts/datadog_dashboard_extract.py` — see
+`skills/engineering-pulse/references/datadog-mcp-extract.md`.
 
 **Metrics to extract — find and read the latest value for each:**
 

@@ -20,7 +20,10 @@ stripping surrounding whitespace and backticks):
 
 - `URL`    — Datadog dashboard URL (used for the header link; missing → no link)
 - `Slug`   — output-file prefix used by `datadog_dashboard_extract.py --output-slug`
-- `Focus`  — optional; surfaced in console output but not used by the renderer
+- `Focus`  — optional comma-separated widget-title fragments. When set, the
+  HTML report shows only the first matching widget for each fragment.
+  `(none)` means no filter. A colour table (`RED` / `YELLOW` / `GREEN`) in the
+  same file sets tile colours for those metrics.
 
 The snapshot JSON for slug `<x>` is expected at `output/<x>_metric_results.json`
 (matching what `scripts/datadog_dashboard_extract.py` writes). If the snapshot
@@ -41,6 +44,16 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class ColorRule:
+    """One row of a dashboard markdown colour table."""
+
+    label: str
+    red: str
+    yellow: str
+    green: str
+
+
+@dataclass(frozen=True)
 class Dashboard:
     """One parsed dashboard markdown file."""
 
@@ -48,6 +61,37 @@ class Dashboard:
     slug: str
     url: str
     source: Path
+    focus: tuple[str, ...] = ()
+    color_rules: tuple[ColorRule, ...] = ()
+
+
+_NO_FOCUS = {"", "(none)", "none", "n/a", "—", "-"}
+
+
+def _parse_focus(raw: str) -> tuple[str, ...]:
+    if raw.strip().lower() in _NO_FOCUS:
+        return ()
+    parts = []
+    for part in raw.split(","):
+        item = part.strip()
+        if item and item.lower() not in _NO_FOCUS:
+            parts.append(item)
+    return tuple(parts)
+
+
+def _parse_color_rules(text: str) -> tuple[ColorRule, ...]:
+    rules: list[ColorRule] = []
+    for line in text.splitlines():
+        if not line.strip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        label = cells[0]
+        if label.lower() == "metric" or set(label) <= {"-", ":"}:
+            continue
+        rules.append(ColorRule(label, cells[1], cells[2], cells[3]))
+    return tuple(rules)
 
 
 def discover_dashboards(dashboards_dir: Path) -> list[Path]:
@@ -111,6 +155,8 @@ def parse_dashboard(path: Path) -> Dashboard:
         slug=fields.get("slug") or path.stem,
         url=fields.get("url", ""),
         source=path,
+        focus=_parse_focus(fields.get("focus", "")),
+        color_rules=_parse_color_rules(raw),
     )
 
 
