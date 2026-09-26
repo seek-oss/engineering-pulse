@@ -22,6 +22,8 @@ SECTION_IDS = [
     "ticket-table",
     "methods",
 ]
+# Checked against agent-written text only; Jira data in table cells is skipped.
+FORBIDDEN_EPIC_WORDS = ("confidence", "on track", "intervene")
 UNIQUE_FILENAME = re.compile(
     r"^sprint-report-[A-Za-z0-9_-]+-sprint\d+-run\d{6}-\d{4}-\d{2}-\d{2}\.html$"
 )
@@ -35,8 +37,15 @@ class SprintReportParser(HTMLParser):
         self.section_ids: list[str] = []
         self.charts: dict[str, dict[str, object]] = {}
         self._current_chart: str | None = None
-        self.epic_progress: dict[str, object] = {"attrs": {}, "rows": []}
+        self.epic_progress: dict[str, object] = {
+            "attrs": {},
+            "rows": [],
+            "hrefs": [],
+            "has_callout": False,
+            "text": [],
+        }
         self._in_epic_progress = False
+        self._td_depth = 0
 
     def handle_starttag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
         attrs = {key: value for key, value in attrs_list if value is not None}
@@ -46,6 +55,14 @@ class SprintReportParser(HTMLParser):
             self._in_epic_progress = section_id == "epic-progress"
             if self._in_epic_progress:
                 self.epic_progress["attrs"] = attrs
+        elif self._in_epic_progress and tag == "td":
+            self._td_depth += 1
+        elif self._in_epic_progress and tag == "a" and "href" in attrs:
+            hrefs = self.epic_progress["hrefs"]
+            assert isinstance(hrefs, list)
+            hrefs.append(attrs["href"])
+        elif self._in_epic_progress and "epic-prefix-callout" in attrs.get("class", "").split():
+            self.epic_progress["has_callout"] = True
         elif tag == "svg" and "data-chart" in attrs:
             chart_name = attrs["data-chart"]
             self._current_chart = chart_name
@@ -59,11 +76,20 @@ class SprintReportParser(HTMLParser):
             assert isinstance(rows, list)
             rows.append(attrs)
 
+    def handle_data(self, data: str) -> None:
+        if self._in_epic_progress and self._td_depth == 0:
+            text = self.epic_progress["text"]
+            assert isinstance(text, list)
+            text.append(data)
+
     def handle_endtag(self, tag: str) -> None:
         if tag == "svg":
             self._current_chart = None
+        elif tag == "td" and self._td_depth:
+            self._td_depth -= 1
         elif tag == "section" and self._in_epic_progress:
             self._in_epic_progress = False
+            self._td_depth = 0
 
 
 def _number(attrs: dict[str, str], key: str, errors: list[str], label: str) -> float | None:
@@ -181,19 +207,28 @@ def _validate_burnup(chart: dict[str, object], errors: list[str]) -> None:
             errors.append("completed: endpoint must equal current completed")
 
 
-def _validate_epic_progress(epic_progress: dict[str, object], html: str, errors: list[str]) -> None:
-    attrs = epic_progress.get("attrs")
-    rows = epic_progress.get("rows")
-    if not isinstance(attrs, dict):
-        errors.append("epic-progress: missing section element")
-        return
-    if not isinstance(rows, list):
-        errors.append("epic-progress: missing data rows")
-        return
+def _validate_epic_progress(epic_progress: dict[str, object], errors: list[str]) -> None:
+    attrs = epic_progress["attrs"]
+    rows = epic_progress["rows"]
+    hrefs = epic_progress["hrefs"]
+    text = epic_progress["text"]
+    assert isinstance(attrs, dict)
+    assert isinstance(rows, list)
+    assert isinstance(hrefs, list)
+    assert isinstance(text, list)
 
     team_prefix = attrs.get("data-team-prefix")
     if not team_prefix:
         errors.append("epic-progress: missing data-team-prefix on section")
+    if "data-child-filter" in attrs and not attrs["data-child-filter"].strip():
+        errors.append("epic-progress: data-child-filter must be non-empty when present")
+    if not epic_progress["has_callout"]:
+        errors.append("epic-progress: missing epic-prefix-callout scope line")
+
+    section_text = " ".join(text)
+    for word in FORBIDDEN_EPIC_WORDS:
+        if re.search(rf"\b{re.escape(word)}\b", section_text, re.IGNORECASE):
+            errors.append(f"epic-progress: forbidden wording {word!r}")
 
     expected_count = attrs.get("data-epic-count")
     if expected_count is None:
@@ -233,6 +268,8 @@ def _validate_epic_progress(epic_progress: dict[str, object], html: str, errors:
         if total == 0:
             if pct_raw is not None and pct_raw != "":
                 errors.append(f"{label}: data-pct must be omitted when data-total is 0")
+        elif pct_raw is None:
+            errors.append(f"{label}: missing data-pct")
         else:
             pct = _number(row, "data-pct", errors, label)
             if pct is not None and round(100 * done / total) != int(pct):
@@ -241,8 +278,8 @@ def _validate_epic_progress(epic_progress: dict[str, object], html: str, errors:
                     f"got {int(pct)} expected {round(100 * done / total)}"
                 )
 
-        if f"/browse/{key}" not in html:
-            errors.append(f"{label}: missing browse link for {key}")
+        if not any(href.endswith(f"/browse/{key}") for href in hrefs):
+            errors.append(f"{label}: missing browse link for {key} in epic-progress")
 
 
 def validate_report(path: Path) -> list[str]:
@@ -254,9 +291,8 @@ def validate_report(path: Path) -> list[str]:
             "(...-runHHMMSS-YYYY-MM-DD.html)"
         )
 
-    html = path.read_text(encoding="utf-8")
     parser = SprintReportParser()
-    parser.feed(html)
+    parser.feed(path.read_text(encoding="utf-8"))
     if parser.section_ids != SECTION_IDS:
         errors.append(
             "sections must be exactly, in order: "
@@ -267,7 +303,7 @@ def validate_report(path: Path) -> list[str]:
     if "epic-progress" not in parser.section_ids:
         errors.append("missing epic-progress section")
     else:
-        _validate_epic_progress(parser.epic_progress, html, errors)
+        _validate_epic_progress(parser.epic_progress, errors)
 
     burnup = parser.charts.get("burn-up")
     burndown = parser.charts.get("burn-down")

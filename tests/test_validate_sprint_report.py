@@ -4,9 +4,46 @@ from pathlib import Path
 
 from scripts.validate_sprint_report import validate_report
 
+SECTION_IDS = [
+    "header",
+    "at-a-glance",
+    "calendar",
+    "burn-up",
+    "burn-down",
+    "epic-progress",
+    "event-ledger",
+    "ticket-table",
+    "methods",
+]
+CALLOUT = (
+    '<div class="epic-prefix-callout">Includes epics whose summary starts with [TEAM]; '
+    "progress counts all standard-level children.</div>"
+)
 
-def _epic_progress_inner(*, rows: str) -> str:
-    return f"<table><tbody>{rows}</tbody></table>"
+
+def _epic_row(
+    key: str, done: int, total: int, pct: int | None, *, link: bool = True, summary: str = ""
+) -> str:
+    pct_attr = "" if pct is None else f' data-pct="{pct}"'
+    cell = f'<a href="https://example.atlassian.net/browse/{key}">{key}</a>' if link else key
+    return (
+        f'<tr data-epic="{key}" data-done="{done}" data-total="{total}"{pct_attr}>'
+        f"<td>{cell}</td><td>{summary}</td></tr>"
+    )
+
+
+def _epic_section(
+    *,
+    rows: str,
+    count: int,
+    attrs: str = 'data-team-prefix="[TEAM]"',
+    callout: str = CALLOUT,
+    extra: str = "",
+) -> str:
+    return (
+        f'<section id="epic-progress" data-epic-count="{count}" {attrs}>'
+        f"<h2>Epic progress</h2>{callout}<table><tbody>{rows}</tbody></table>{extra}</section>"
+    )
 
 
 def _report(
@@ -15,39 +52,17 @@ def _report(
     actual_end: str = "2026-09-22T16:00:00+10:00",
     remaining: str = "16",
     section_ids: list[str] | None = None,
-    epic_rows: str | None = None,
-    epic_count: int = 1,
+    epic_section: str | None = None,
 ) -> str:
-    ids = section_ids or [
-        "header",
-        "at-a-glance",
-        "calendar",
-        "burn-up",
-        "burn-down",
-        "epic-progress",
-        "event-ledger",
-        "ticket-table",
-        "methods",
-    ]
-    default_row = (
-        '<tr data-epic="SEA-100" data-done="2" data-total="4" data-pct="50">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-100">SEA-100</a></td>'
-        "</tr>"
-    )
     sections = []
-    for section_id in ids:
-        content = ""
+    for section_id in section_ids or SECTION_IDS:
         if section_id == "epic-progress":
-            if epic_rows is not False:
-                rows_html = epic_rows if epic_rows is not None else default_row
-                content = (
-                    f'<section id="epic-progress" data-epic-count="{epic_count}" '
-                    f'data-team-prefix="[TEAM]">'
-                    f"{_epic_progress_inner(rows=rows_html)}</section>"
-                )
-                sections.append(content)
+            sections.append(
+                epic_section or _epic_section(rows=_epic_row("SEA-100", 2, 4, 50), count=1)
+            )
             continue
-        elif section_id == "burn-up":
+        content = ""
+        if section_id == "burn-up":
             content = f"""
             <svg data-chart="burn-up" data-current-scope="26"
                  data-current-completed="10" data-remaining="{remaining}">
@@ -70,8 +85,9 @@ def _report(
                  data-end-timestamp="{actual_end}"/>
             </svg>
             """
-        if section_id != "epic-progress":
-            sections.append(f'<section id="{section_id}">{content}</section>')
+        elif section_id == "ticket-table":
+            content = '<a href="https://example.atlassian.net/browse/SEA-999">SEA-999</a>'
+        sections.append(f'<section id="{section_id}">{content}</section>')
     return "<!doctype html><html><body>" + "".join(sections) + "</body></html>"
 
 
@@ -81,99 +97,133 @@ def _write_report(tmp_path: Path, html: str, *, name: str | None = None) -> Path
     return path
 
 
+def _errors(tmp_path: Path, **kwargs) -> list[str]:
+    return validate_report(_write_report(tmp_path, _report(**kwargs)))
+
+
 def test_valid_report_passes(tmp_path: Path):
-    path = _write_report(tmp_path, _report())
-    assert validate_report(path) == []
+    assert _errors(tmp_path) == []
 
 
 def test_expectation_must_reach_zero_at_target(tmp_path: Path):
-    path = _write_report(tmp_path, _report(expectation_end="16"))
-    errors = validate_report(path)
-    assert "rolling expectation: must end at 0, got 16" in errors
+    assert "rolling expectation: must end at 0, got 16" in _errors(tmp_path, expectation_end="16")
 
 
 def test_actual_cannot_extend_after_as_of(tmp_path: Path):
-    path = _write_report(
-        tmp_path,
-        _report(actual_end="2026-09-23T09:00:00+10:00"),
-    )
-    errors = validate_report(path)
+    errors = _errors(tmp_path, actual_end="2026-09-23T09:00:00+10:00")
     assert "actual segment 1: contains future data after as-of time" in errors
 
 
 def test_requires_exact_section_order(tmp_path: Path):
-    ids = [
-        "header",
-        "calendar",
-        "at-a-glance",
-        "burn-up",
-        "burn-down",
-        "epic-progress",
-        "event-ledger",
-        "ticket-table",
-        "methods",
-    ]
-    path = _write_report(tmp_path, _report(section_ids=ids))
-    assert any(error.startswith("sections must be exactly") for error in validate_report(path))
+    ids = SECTION_IDS.copy()
+    ids[1], ids[2] = ids[2], ids[1]
+    assert any(e.startswith("sections must be exactly") for e in _errors(tmp_path, section_ids=ids))
 
 
 def test_burnup_gap_must_reconcile(tmp_path: Path):
-    path = _write_report(tmp_path, _report(remaining="17"))
-    assert "burn-up: current scope minus completed must equal remaining" in validate_report(path)
+    errors = _errors(tmp_path, remaining="17")
+    assert "burn-up: current scope minus completed must equal remaining" in errors
 
 
 def test_filename_requires_unique_run_time(tmp_path: Path):
-    path = _write_report(
-        tmp_path,
-        _report(),
-        name="sprint-report-TEAM-sprint123-2026-09-22.html",
-    )
+    path = _write_report(tmp_path, _report(), name="sprint-report-TEAM-sprint123-2026-09-22.html")
     assert any(error.startswith("filename must include") for error in validate_report(path))
 
 
+def test_missing_epic_progress_section(tmp_path: Path):
+    ids = [s for s in SECTION_IDS if s != "epic-progress"]
+    assert "missing epic-progress section" in _errors(tmp_path, section_ids=ids)
+
+
 def test_epic_progress_pct_must_match_done_total(tmp_path: Path):
-    rows = (
-        '<tr data-epic="SEA-200" data-done="1" data-total="3" data-pct="50">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-200">SEA-200</a></td></tr>'
-    )
-    path = _write_report(tmp_path, _report(epic_rows=rows))
-    assert any("data-pct must equal" in error for error in validate_report(path))
+    section = _epic_section(rows=_epic_row("SEA-200", 1, 3, 50), count=1)
+    assert any("data-pct must equal" in e for e in _errors(tmp_path, epic_section=section))
+
+
+def test_epic_progress_pct_required_when_total_positive(tmp_path: Path):
+    section = _epic_section(rows=_epic_row("SEA-205", 1, 3, None), count=1)
+    assert "epic-progress row 1: missing data-pct" in _errors(tmp_path, epic_section=section)
 
 
 def test_epic_progress_done_cannot_exceed_total(tmp_path: Path):
-    rows = (
-        '<tr data-epic="SEA-201" data-done="5" data-total="3" data-pct="100">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-201">SEA-201</a></td></tr>'
-    )
-    path = _write_report(tmp_path, _report(epic_rows=rows))
-    assert any("data-done (5) exceeds data-total (3)" in error for error in validate_report(path))
+    section = _epic_section(rows=_epic_row("SEA-201", 5, 3, 100), count=1)
+    errors = _errors(tmp_path, epic_section=section)
+    assert any("data-done (5) exceeds data-total (3)" in e for e in errors)
 
 
 def test_epic_progress_row_count_must_match_section_attr(tmp_path: Path):
-    rows = (
-        '<tr data-epic="SEA-202" data-done="0" data-total="2" data-pct="0">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-202">SEA-202</a></td></tr>'
-    )
-    path = _write_report(tmp_path, _report(epic_rows=rows, epic_count=2))
-    assert any("data-epic-count is 2 but found 1" in error for error in validate_report(path))
+    section = _epic_section(rows=_epic_row("SEA-202", 0, 2, 0), count=2)
+    errors = _errors(tmp_path, epic_section=section)
+    assert any("data-epic-count is 2 but found 1" in e for e in errors)
+
+
+def test_epic_progress_rejects_duplicate_epic(tmp_path: Path):
+    rows = _epic_row("SEA-206", 1, 2, 50) + _epic_row("SEA-206", 1, 2, 50)
+    section = _epic_section(rows=rows, count=2)
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress row 2: duplicate epic key 'SEA-206'" in errors
 
 
 def test_epic_progress_requires_team_prefix_attr(tmp_path: Path):
-    rows = (
-        '<tr data-epic="SEA-204" data-done="1" data-total="2" data-pct="50">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-204">SEA-204</a></td></tr>'
-    )
-    html = _report(epic_rows=rows).replace('data-team-prefix="[TEAM]"', "")
-    path = _write_report(tmp_path, html)
-    assert "epic-progress: missing data-team-prefix on section" in validate_report(path)
+    section = _epic_section(rows=_epic_row("SEA-204", 1, 2, 50), count=1, attrs="")
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress: missing data-team-prefix on section" in errors
+
+
+def test_epic_progress_child_filter_must_be_non_empty(tmp_path: Path):
+    attrs = 'data-team-prefix="[TEAM]" data-child-filter=" "'
+    section = _epic_section(rows=_epic_row("SEA-207", 1, 2, 50), count=1, attrs=attrs)
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress: data-child-filter must be non-empty when present" in errors
+
+
+def test_epic_progress_child_filter_accepted(tmp_path: Path):
+    attrs = 'data-team-prefix="[TEAM]" data-child-filter="[TEAM]"'
+    section = _epic_section(rows=_epic_row("SEA-208", 1, 2, 50), count=1, attrs=attrs)
+    assert _errors(tmp_path, epic_section=section) == []
 
 
 def test_epic_progress_zero_total_omits_pct(tmp_path: Path):
-    rows = (
-        '<tr data-epic="SEA-203" data-done="0" data-total="0" data-pct="0">'
-        '<td><a href="https://example.atlassian.net/browse/SEA-203">SEA-203</a></td></tr>'
+    section = _epic_section(rows=_epic_row("SEA-203", 0, 0, 0), count=1)
+    errors = _errors(tmp_path, epic_section=section)
+    assert any("data-pct must be omitted when data-total is 0" in e for e in errors)
+
+
+def test_epic_progress_zero_total_without_pct_passes(tmp_path: Path):
+    section = _epic_section(rows=_epic_row("SEA-209", 0, 0, None), count=1)
+    assert _errors(tmp_path, epic_section=section) == []
+
+
+def test_epic_progress_link_must_be_inside_section(tmp_path: Path):
+    section = _epic_section(rows=_epic_row("SEA-999", 1, 2, 50, link=False), count=1)
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress row 1: missing browse link for SEA-999 in epic-progress" in errors
+
+
+def test_epic_progress_requires_callout(tmp_path: Path):
+    section = _epic_section(rows=_epic_row("SEA-210", 1, 2, 50), count=1, callout="")
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress: missing epic-prefix-callout scope line" in errors
+
+
+def test_epic_progress_rejects_forecast_wording(tmp_path: Path):
+    section = _epic_section(
+        rows=_epic_row("SEA-211", 1, 2, 50), count=1, extra="<p>Delivery looks on track.</p>"
     )
-    path = _write_report(tmp_path, _report(epic_rows=rows))
-    assert any(
-        "data-pct must be omitted when data-total is 0" in error for error in validate_report(path)
+    errors = _errors(tmp_path, epic_section=section)
+    assert "epic-progress: forbidden wording 'on track'" in errors
+
+
+def test_epic_progress_ignores_forbidden_words_in_jira_data(tmp_path: Path):
+    rows = _epic_row("SEA-212", 1, 2, 50, summary="Get onboarding back on track") + _epic_row(
+        "SEA-213", 0, 1, 0, summary="Intervene on stale confidence scores"
     )
+    section = _epic_section(rows=rows, count=2)
+    assert _errors(tmp_path, epic_section=section) == []
+
+
+def test_epic_progress_matches_whole_words_only(tmp_path: Path):
+    section = _epic_section(
+        rows=_epic_row("SEA-214", 1, 2, 50), count=1, extra="<p>Confidential tickets excluded.</p>"
+    )
+    assert _errors(tmp_path, epic_section=section) == []
