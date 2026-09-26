@@ -44,6 +44,8 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 - **Credentials:** `.env` via python-dotenv only — never hardcode tokens or org URLs in tracked files.
 - **Output:** HTML/JSON under `output/` (`output/daily_dashboard_report.html`).
 - **Config:** No hardcoded org/team names — use env vars (`DATADOG_TEAMS`, `GITHUB_ORG`, etc.).
+- **Privacy:** No real stakeholder names or other PII in tracked files; demo and test fixtures use fictional orgs, hosts and names.
+- **Changes:** Behaviour changes include or update tests; prefer the smallest correct diff and avoid new dependencies unless justified.
 - **Scripts:** Thin orchestration in `scripts/`; workflow prose lives in the skill references.
 
 ## Scripts
