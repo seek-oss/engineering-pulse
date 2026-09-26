@@ -17,6 +17,7 @@ SECTION_IDS = [
     "calendar",
     "burn-up",
     "burn-down",
+    "epic-progress",
     "event-ledger",
     "ticket-table",
     "methods",
@@ -27,18 +28,24 @@ UNIQUE_FILENAME = re.compile(
 
 
 class SprintReportParser(HTMLParser):
-    """Collect report sections and machine-readable chart metadata."""
+    """Collect report sections, chart metadata, and epic-progress rows."""
 
     def __init__(self) -> None:
         super().__init__()
         self.section_ids: list[str] = []
         self.charts: dict[str, dict[str, object]] = {}
         self._current_chart: str | None = None
+        self.epic_progress: dict[str, object] = {"attrs": {}, "rows": []}
+        self._in_epic_progress = False
 
     def handle_starttag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
         attrs = {key: value for key, value in attrs_list if value is not None}
         if tag == "section":
-            self.section_ids.append(attrs.get("id", ""))
+            section_id = attrs.get("id", "")
+            self.section_ids.append(section_id)
+            self._in_epic_progress = section_id == "epic-progress"
+            if self._in_epic_progress:
+                self.epic_progress["attrs"] = attrs
         elif tag == "svg" and "data-chart" in attrs:
             chart_name = attrs["data-chart"]
             self._current_chart = chart_name
@@ -47,10 +54,16 @@ class SprintReportParser(HTMLParser):
             series = self.charts[self._current_chart]["series"]
             assert isinstance(series, list)
             series.append(attrs)
+        elif tag == "tr" and self._in_epic_progress and "data-epic" in attrs:
+            rows = self.epic_progress["rows"]
+            assert isinstance(rows, list)
+            rows.append(attrs)
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "svg":
             self._current_chart = None
+        elif tag == "section" and self._in_epic_progress:
+            self._in_epic_progress = False
 
 
 def _number(attrs: dict[str, str], key: str, errors: list[str], label: str) -> float | None:
@@ -168,6 +181,70 @@ def _validate_burnup(chart: dict[str, object], errors: list[str]) -> None:
             errors.append("completed: endpoint must equal current completed")
 
 
+def _validate_epic_progress(epic_progress: dict[str, object], html: str, errors: list[str]) -> None:
+    attrs = epic_progress.get("attrs")
+    rows = epic_progress.get("rows")
+    if not isinstance(attrs, dict):
+        errors.append("epic-progress: missing section element")
+        return
+    if not isinstance(rows, list):
+        errors.append("epic-progress: missing data rows")
+        return
+
+    team_prefix = attrs.get("data-team-prefix")
+    if not team_prefix:
+        errors.append("epic-progress: missing data-team-prefix on section")
+
+    expected_count = attrs.get("data-epic-count")
+    if expected_count is None:
+        errors.append("epic-progress: missing data-epic-count on section")
+    else:
+        try:
+            count = int(expected_count)
+        except ValueError:
+            errors.append(
+                f"epic-progress: data-epic-count must be an integer, got {expected_count!r}"
+            )
+        else:
+            if count != len(rows):
+                errors.append(
+                    f"epic-progress: data-epic-count is {count} but found {len(rows)} data row(s)"
+                )
+
+    seen_keys: set[str] = set()
+    for index, row in enumerate(rows, start=1):
+        label = f"epic-progress row {index}"
+        key = row.get("data-epic")
+        if not key:
+            errors.append(f"{label}: missing data-epic")
+            continue
+        if key in seen_keys:
+            errors.append(f"{label}: duplicate epic key {key!r}")
+        seen_keys.add(key)
+
+        done = _number(row, "data-done", errors, label)
+        total = _number(row, "data-total", errors, label)
+        if done is None or total is None:
+            continue
+        if done > total:
+            errors.append(f"{label}: data-done ({done:g}) exceeds data-total ({total:g})")
+
+        pct_raw = row.get("data-pct")
+        if total == 0:
+            if pct_raw is not None and pct_raw != "":
+                errors.append(f"{label}: data-pct must be omitted when data-total is 0")
+        else:
+            pct = _number(row, "data-pct", errors, label)
+            if pct is not None and round(100 * done / total) != int(pct):
+                errors.append(
+                    f"{label}: data-pct must equal round(100 * done / total), "
+                    f"got {int(pct)} expected {round(100 * done / total)}"
+                )
+
+        if f"/browse/{key}" not in html:
+            errors.append(f"{label}: missing browse link for {key}")
+
+
 def validate_report(path: Path) -> list[str]:
     """Return validation errors for a sprint-report HTML file."""
     errors: list[str] = []
@@ -177,14 +254,20 @@ def validate_report(path: Path) -> list[str]:
             "(...-runHHMMSS-YYYY-MM-DD.html)"
         )
 
+    html = path.read_text(encoding="utf-8")
     parser = SprintReportParser()
-    parser.feed(path.read_text(encoding="utf-8"))
+    parser.feed(html)
     if parser.section_ids != SECTION_IDS:
         errors.append(
             "sections must be exactly, in order: "
             + ", ".join(SECTION_IDS)
             + f"; found: {', '.join(parser.section_ids)}"
         )
+
+    if "epic-progress" not in parser.section_ids:
+        errors.append("missing epic-progress section")
+    else:
+        _validate_epic_progress(parser.epic_progress, html, errors)
 
     burnup = parser.charts.get("burn-up")
     burndown = parser.charts.get("burn-down")

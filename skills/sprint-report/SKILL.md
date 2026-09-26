@@ -267,18 +267,19 @@ Fetch data anew for each run; never reuse a previous report as evidence.
 
 ### Required layout (strict schema)
 
-The HTML report contains **exactly these 8 sections, in this order, and no others**:
+The HTML report contains **exactly these 9 sections, in this order, and no others**:
 
 1. **Header** — sprint name, board link, epic prefix, team window, baseline timestamp, target endpoint, as-of time, timezone, unit, completion rule, and a **one-line coverage byline** (see below).
 2. **At-a-glance tile row** — 5–6 stat tiles, no chart yet. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
 3. **Sprint calendar strip** — one visible cell per calendar day from sprint start to end. Weekends greyed. Public holidays flagged with location and emoji. Today highlighted. Each cell shows date and per-day team capacity where applicable (e.g. `4/6` on a holiday for one location).
 4. **Burn-up chart** (primary, per §5b) with the two required overlays (projection lines + pace ratio referenced from the at-a-glance tile).
 5. **Burn-down chart** (secondary, per §5a) with the frozen ideal and the rolling-scope expectation line overlaid.
-6. **Event ledger** — every scope-add / removal / completion / reopening in chronological order, with columns: timestamp (AEST or configured tz), event description, delta, running scope, running completed.
-7. **Ticket table** — all in-scope tickets. Columns: linked key (using `<Jira host>/browse/{key}`), current status pill (colour by status category), epic (linked), summary, assignee, estimate if relevant, membership interval, flags (`carryover` / `added after t0` / `removed/rejoined` / `done in sprint` / `inferred join` / `partial history`).
-8. **Methods and exclusions** — data source (MCP tools used), JQL used for epics and ticket membership, sanity-check outcome (cross-check with an inverted-order or name-based JQL, per §2), excluded epics with the literal-prefix rationale, and a **`Coverage limits` sub-block** (see below).
+6. **Epic progress** (per §6b) — one row per prefix-matched epic: initiative grouping, linked epic key, epic status, progress % with `done/total`, children added since `t0`, children completed since `t0` (via `resolutiondate`), due date or the literal phrase `no due date`, and optional attention when `On Hold` children exist. No confidence, forecast, or narrative columns. Place this section **immediately after the burn-down chart and before the event ledger**.
+7. **Event ledger** — every scope-add / removal / completion / reopening in chronological order, with columns: timestamp (AEST or configured tz), event description, delta, running scope, running completed.
+8. **Ticket table** — all in-scope tickets. Columns: linked key (using `<Jira host>/browse/{key}`), current status pill (colour by status category), epic (linked), summary, assignee, estimate if relevant, membership interval, flags (`carryover` / `added after t0` / `removed/rejoined` / `done in sprint` / `inferred join` / `partial history`).
+9. **Methods and exclusions** — data source (MCP tools used), JQL used for epics, epic children, and ticket membership, sanity-check outcome (cross-check with an inverted-order or name-based JQL, per §2), excluded epics with the literal-prefix rationale, epic-progress rules (Withdrawn children excluded; team prefix on children when configured), and a **`Coverage limits` sub-block** (see below).
 
-**Forbidden additions.** Do not add: top-of-page cover banners, coloured coverage pills, danger/warning/info alert boxes above the header, "note" or "assessment" callouts between required sections, sidebars, watermarks, or "draft"/"partial"/"unreliable" overlays on the charts. Do not add any 9th section. If a required signal cannot be computed for a run, its section still appears with the value shown as `—`; do not replace or supplement the section with a substitute banner. Both charts render with the same visual weight.
+**Forbidden additions.** Do not add: top-of-page cover banners, coloured coverage pills, danger/warning/info alert boxes above the header, "note" or "assessment" callouts between required sections, sidebars, watermarks, or "draft"/"partial"/"unreliable" overlays on the charts. Do not add any 10th section. If a required signal cannot be computed for a run, its section still appears with the value shown as `—`; do not replace or supplement the section with a substitute banner. Both charts render with the same visual weight.
 
 **Coverage byline (in Header, item 1).** One greyed line in the header meta area, in the same muted tone as the timezone. Exactly one of:
 
@@ -288,7 +289,37 @@ The HTML report contains **exactly these 8 sections, in this order, and no other
 
 No coloured pill. No red-tinted background. The byline reports the state; the story lives in Methods.
 
-**Coverage limits sub-block (in Methods, item 8).** When coverage is not `complete`, a subsection titled `Coverage limits` lists each affected ticket with: the ticket key, what was blocked (MCP guardrail / throttling / access), what was inferred (join timestamp from `created`, etc.), and the concrete downstream effect on the report (e.g. "remaining through Fri 18 is a lower bound"). When coverage is `complete`, this sub-block is omitted.
+**Coverage limits sub-block (in Methods, item 9).** When coverage is not `complete`, a subsection titled `Coverage limits` lists each affected ticket with: the ticket key, what was blocked (MCP guardrail / throttling / access), what was inferred (join timestamp from `created`, etc.), and the concrete downstream effect on the report (e.g. "remaining through Fri 18 is a lower bound"). When coverage is `complete`, this sub-block is omitted.
+
+### Epic progress (§6b)
+
+After epic discovery (§2), fetch **all** children of every prefix-matched epic — not only sprint members:
+
+1. **Epic metadata** — `key in (<fresh epic keys>)`, fields: `summary`, `status`, `duedate`, `parent` (Initiative name/key).
+2. **Epic children** — `parent in (<fresh epic keys>) ORDER BY key ASC`, fields: `summary`, `status`, `parent`, `resolutiondate`, `created`. Paginate to `isLast`.
+
+**Computation (ticket count, no changelog):**
+
+- **Team prefix on children (required when configured).** When the sprint description supplies an epic/team prefix (the same literal prefix used for epic discovery in §2), count only standard-level children whose **summary literally starts with that prefix** — apply the same local prefix test as for epics; JQL text search alone is not enough. When no prefix is configured, include all standard-level children under the epic. Sprint ticket membership (§2) still never requires the prefix on child summaries; this rule applies **only** to epic-progress counts.
+- Denominator: eligible children under the epic after the prefix filter, **excluding** issues whose status name is `Withdrawn` (that status uses `statusCategory = Done` and must not inflate completion).
+- Completed: `statusCategory = Done` among denominator tickets.
+- Progress %: `round(100 × done / denominator)`; show `—` when denominator is 0.
+- Added this sprint: `created ≥ t0`.
+- Completed this sprint: `resolutiondate` within `[t0, as-of]` (inclusive).
+- Due date: epic `duedate` as `YYYY-MM-DD` plus days remaining/overdue vs as-of; literal **`no due date`** when null.
+- Attention: count children in `On Hold` (and flagged impediments when the Flagged field is present and non-empty). Show the column only when count &gt; 0 for that epic; otherwise `—`.
+
+Sort rows by due date ascending, nulls last. Group visually by Initiative (`parent` on the epic).
+
+**HTML contract:**
+
+- `<section id="epic-progress" data-epic-count="N" data-team-prefix="…">` wrapping a table. Set `data-team-prefix` to the configured literal prefix when one exists; omit the attribute only when the run has no team prefix.
+- Each epic row: `<tr data-epic="KEY" data-done="D" data-total="T" data-pct="P">` — omit `data-pct` when `T=0`.
+- Epic key column links to `<Jira host>/browse/{key}`.
+- **Highlighted scope line (required when a team prefix is configured).** Immediately under the section heading, a visible callout (not muted caption text alone) states that progress counts **only** children whose summary starts with the configured prefix, names that prefix explicitly (e.g. `[TEAM-PREFIX]`), and notes that sibling-squad work under the same epic is excluded. Use a dedicated class such as `epic-prefix-callout` so the constraint is obvious in HTML and email clients.
+- Caption (muted): Withdrawn children excluded; no confidence or forecast language.
+
+Do not use words like *confidence*, *on track*, *intervene*, or star ratings in this section.
 
 **Distinguish current Done inventory from completions-while-in-scope-this-sprint.** A pre-sprint-Done ticket that joined mid-sprint is not this sprint's delivery. Never conflate the two in the tiles or ledger.
 
@@ -326,9 +357,9 @@ glob.
 
 - Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
-- Give the eight required sections these ids, in order: `header`,
-  `at-a-glance`, `calendar`, `burn-up`, `burn-down`, `event-ledger`,
-  `ticket-table`, `methods`.
+- Give the nine required sections these ids, in order: `header`,
+  `at-a-glance`, `calendar`, `burn-up`, `burn-down`, `epic-progress`,
+  `event-ledger`, `ticket-table`, `methods`.
 - Add machine-readable metadata to the inline chart SVG without changing its
   visible presentation:
   - Burn-up SVG: `data-chart="burn-up"`, `data-current-scope`,
@@ -358,12 +389,13 @@ Include a CSV of the daily series when useful, with timestamps, scope, completed
 - **Burn-up checks.** Verify the total-scope line ends at `current_scope` on the as-of date, the completed line ends at `current_completed`, and the gap equals `remaining_today`. Verify the projection uses the declared trailing-M-day window and no data from before that window. Verify pace-ratio bucket matches the numeric ratio.
 - **Sanity-check the ticket count against team scale.** For a team of N engineers ~40% through a two-week sprint, a total ticket count in single digits with zero completions is a strong hint the query missed results. Cross-check by re-running the query with a different JQL shape (e.g. swap `sprint = <id>` for `sprint = "<sprint name>"`, or invert the `AND` order); the two must agree. If they disagree, trust the larger set and disclose the discrepancy.
 - **Two-tier changelog coverage.** Confirm every currently-Done ticket has a fetched changelog. Confirm every ticket with multiple sprint ids on the current Sprint field, or `created ≥ t0`, either has a fetched changelog or is flagged "partial history" in the ticket table.
-- **Schema adherence.** Confirm the report contains exactly the 8 sections defined in §6 in order, with no additional banners, alert callouts, coverage pills, sidebars, or extra sections. Confirm coverage disclosure appears only as the greyed header byline plus the Methods `Coverage limits` sub-block — never as a top-of-page banner.
+- **Epic progress.** Confirm every prefix-matched epic appears once; when a team prefix is configured, only children whose summary literally starts with that prefix are counted, `data-team-prefix` is set, and the highlighted callout names the prefix; Withdrawn children are excluded from done/total; `data-pct` reconciles with `data-done`/`data-total`; epics without due dates show `no due date`; section `data-epic-count` matches row count; section appears after `burn-down` and before `event-ledger`; no confidence/forecast wording in the section.
+- **Schema adherence.** Confirm the report contains exactly the 9 sections defined in §6 in order, with no additional banners, alert callouts, coverage pills, sidebars, or extra sections. Confirm coverage disclosure appears only as the greyed header byline plus the Methods `Coverage limits` sub-block — never as a top-of-page banner.
 - **Rendering style.** Confirm both charts use the equal-width working-day x-axis with weekends omitted and two-line day labels, carry markers at each plotted observation, show the labelled today line, and pin a y gridline to `B`. A chart whose x-axis spans calendar time proportionally fails this check.
 - Inspect the rendered output for readable labels, correct dates, gaps and units. If history is incomplete, qualify results in Methods rather than invent values to force reconciliation.
 - Keep credentials, tokens and `.env` contents out of generated files.
 - Run `python scripts/validate_sprint_report.py <new-report-path>` and do not
   deliver, preview, or email the report unless it exits successfully. This is
-  the executable check for unique filenames, the exact eight-section schema,
-  burn-up reconciliation, frozen-ideal and rolling-expectation target-zero
-  endpoints, and absence of future actual data.
+  the executable check for unique filenames, the exact nine-section schema,
+  epic-progress row metadata, burn-up reconciliation, frozen-ideal and
+  rolling-expectation target-zero endpoints, and absence of future actual data.
