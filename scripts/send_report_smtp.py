@@ -42,6 +42,7 @@ load_dotenv()
 
 
 SVG_RE = re.compile(r"<svg\b[\s\S]*?</svg>", re.IGNORECASE)
+_STYLE_RE = re.compile(r"<style\b[^>]*>([\s\S]*?)</style>", re.IGNORECASE)
 _VIEWBOX_RE = re.compile(r'viewBox="\s*[\d.+-]+[\s,]+[\d.+-]+[\s,]+([\d.]+)', re.IGNORECASE)
 _CHART_NAME_RE = re.compile(r'(?:data-chart|aria-label)="([^"]+)"', re.IGNORECASE)
 PNG_ZOOM = 2
@@ -55,7 +56,11 @@ def _detect_html(body: str) -> bool:
     return body.strip().lower().startswith(("<!doctype", "<html"))
 
 
-def _render_svg_png(svg: str) -> bytes:
+def _page_css(body: str) -> str:
+    return "\n".join(_STYLE_RE.findall(body))
+
+
+def _render_svg_png(svg: str, css: str = "") -> bytes:
     import resvg_py
 
     return resvg_py.svg_to_bytes(
@@ -64,22 +69,25 @@ def _render_svg_png(svg: str) -> bytes:
         background="#ffffff",
         font_family="Helvetica",
         sans_serif_family="Helvetica",
+        style_sheet=css or None,
     )
 
 
 def inline_svg_charts(body: str, render=None) -> tuple[str, list[tuple[str, bytes]]]:
     """Replace each inline <svg> with a CID <img>; return (html, [(cid, png)]).
 
-    A chart that fails to render is replaced with CHART_FALLBACK_NOTE and omitted
-    from the returned image list.
+    Charts may be styled by class from the page's <style> blocks, so that CSS is
+    passed to the renderer. A chart that fails to render is replaced with
+    CHART_FALLBACK_NOTE and omitted from the returned image list.
     """
     render = render or _render_svg_png
+    css = _page_css(body)
     images: list[tuple[str, bytes]] = []
 
     def _replace(match: re.Match) -> str:
         svg = match.group(0)
         try:
-            png = render(svg)
+            png = render(svg, css)
         except Exception as exc:
             print(f"Warning: could not rasterise chart for email: {exc}", file=sys.stderr)
             return CHART_FALLBACK_NOTE
