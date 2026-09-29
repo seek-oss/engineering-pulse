@@ -15,12 +15,21 @@ Usage:
   python scripts/send_report_smtp.py "Subject line" report.html
   python scripts/send_report_smtp.py "Subject line" report.txt
   cat report.html | python scripts/send_report_smtp.py "Subject line" -
+
+Inline <svg> charts are rasterised to PNG (resvg-py) and embedded as CID images
+in the emailed copy only, because Gmail and Outlook drop inline SVG. The report
+file on disk is not modified. If rasterising fails, each chart is replaced by a
+short note and the original HTML is attached.
 """
 
+import html
 import os
+import re
 import smtplib
 import ssl
 import sys
+from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -32,8 +41,97 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+SVG_RE = re.compile(r"<svg\b[\s\S]*?</svg>", re.IGNORECASE)
+_STYLE_RE = re.compile(r"<style\b[^>]*>([\s\S]*?)</style>", re.IGNORECASE)
+_VIEWBOX_RE = re.compile(r'viewBox="\s*[\d.+-]+[\s,]+[\d.+-]+[\s,]+([\d.]+)', re.IGNORECASE)
+_CHART_NAME_RE = re.compile(r'(?:data-chart|aria-label)="([^"]+)"', re.IGNORECASE)
+PNG_ZOOM = 2
+CHART_FALLBACK_NOTE = (
+    '<p style="color:#667085;font-style:italic;">'
+    "Chart not shown in email; open the attached HTML report to view it.</p>"
+)
+
+
 def _detect_html(body: str) -> bool:
     return body.strip().lower().startswith(("<!doctype", "<html"))
+
+
+def _page_css(body: str) -> str:
+    return "\n".join(_STYLE_RE.findall(body))
+
+
+def _render_svg_png(svg: str, css: str = "") -> bytes:
+    import resvg_py
+
+    return resvg_py.svg_to_bytes(
+        svg_string=svg,
+        zoom=PNG_ZOOM,
+        background="#ffffff",
+        font_family="Helvetica",
+        sans_serif_family="Helvetica",
+        style_sheet=css or None,
+    )
+
+
+def inline_svg_charts(body: str, render=None) -> tuple[str, list[tuple[str, bytes]]]:
+    """Replace each inline <svg> with a CID <img>; return (html, [(cid, png)]).
+
+    Charts may be styled by class from the page's <style> blocks, so that CSS is
+    passed to the renderer. A chart that fails to render is replaced with
+    CHART_FALLBACK_NOTE and omitted from the returned image list.
+    """
+    render = render or _render_svg_png
+    css = _page_css(body)
+    images: list[tuple[str, bytes]] = []
+
+    def _replace(match: re.Match) -> str:
+        svg = match.group(0)
+        try:
+            png = render(svg, css)
+        except Exception as exc:
+            print(f"Warning: could not rasterise chart for email: {exc}", file=sys.stderr)
+            return CHART_FALLBACK_NOTE
+        cid = f"chart-{len(images) + 1}@engineering-pulse"
+        images.append((cid, png))
+        name = _CHART_NAME_RE.search(svg)
+        alt = html.escape(f"{name.group(1)} chart" if name else "Chart", quote=True)
+        viewbox = _VIEWBOX_RE.search(svg)
+        width = int(float(viewbox.group(1))) if viewbox else 600
+        return (
+            f'<img src="cid:{cid}" alt="{alt}" width="{width}" '
+            f'style="display:block;width:100%;max-width:{width}px;height:auto;border:0;">'
+        )
+
+    return SVG_RE.sub(_replace, body), images
+
+
+def _build_html_message(body: str, attachment: Path | None = None) -> MIMEMultipart:
+    html_body, images = inline_svg_charts(body)
+    chart_count = len(SVG_RE.findall(body))
+
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText("See HTML version of this report.", "plain", "utf-8"))
+    alternative.attach(MIMEText(html_body, "html", "utf-8"))
+
+    msg = alternative
+    if images:
+        msg = MIMEMultipart("related")
+        msg.attach(alternative)
+        for cid, png in images:
+            part = MIMEImage(png, "png")
+            part.add_header("Content-ID", f"<{cid}>")
+            part.add_header("Content-Disposition", "inline", filename=f"{cid.split('@')[0]}.png")
+            msg.attach(part)
+
+    if len(images) < chart_count and attachment is not None:
+        mixed = MIMEMultipart("mixed")
+        mixed.attach(msg)
+        report = MIMEApplication(attachment.read_bytes(), "html")
+        report.add_header("Content-Disposition", "attachment", filename=attachment.name)
+        mixed.attach(report)
+        msg = mixed
+
+    return msg
 
 
 def main() -> None:
@@ -74,9 +172,7 @@ def main() -> None:
     is_html = _detect_html(body) or (path.endswith(".html") and path != "-")
 
     if is_html:
-        msg = MIMEMultipart("alternative")
-        msg.attach(MIMEText("See HTML version of this report.", "plain", "utf-8"))
-        msg.attach(MIMEText(body, "html", "utf-8"))
+        msg = _build_html_message(body, attachment=None if path == "-" else Path(path))
     else:
         msg = MIMEText(body, "plain", "utf-8")
 
