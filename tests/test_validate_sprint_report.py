@@ -46,6 +46,10 @@ def _epic_section(
     )
 
 
+TILES_TABLE = "<table><tr><td>Total scope 26</td><td>Completed 10</td></tr></table>"
+CALENDAR_TABLE = "<table><tr><td>Mon 21</td><td>Tue 22</td></tr></table>"
+
+
 def _report(
     *,
     expectation_end: str = "0",
@@ -53,6 +57,9 @@ def _report(
     remaining: str = "16",
     section_ids: list[str] | None = None,
     epic_section: str | None = None,
+    tiles: str = TILES_TABLE,
+    calendar: str = CALENDAR_TABLE,
+    style: str = ".day{border:1px solid #e5e7eb}",
 ) -> str:
     sections = []
     for section_id in section_ids or SECTION_IDS:
@@ -62,7 +69,11 @@ def _report(
             )
             continue
         content = ""
-        if section_id == "burn-up":
+        if section_id == "at-a-glance":
+            content = tiles
+        elif section_id == "calendar":
+            content = calendar
+        elif section_id == "burn-up":
             content = f"""
             <svg data-chart="burn-up" data-current-scope="26"
                  data-current-completed="10" data-remaining="{remaining}">
@@ -88,7 +99,11 @@ def _report(
         elif section_id == "ticket-table":
             content = '<a href="https://example.atlassian.net/browse/SEA-999">SEA-999</a>'
         sections.append(f'<section id="{section_id}">{content}</section>')
-    return "<!doctype html><html><body>" + "".join(sections) + "</body></html>"
+    return (
+        f"<!doctype html><html><head><style>{style}</style></head><body>"
+        + "".join(sections)
+        + "</body></html>"
+    )
 
 
 def _write_report(tmp_path: Path, html: str, *, name: str | None = None) -> Path:
@@ -220,6 +235,32 @@ def test_epic_progress_ignores_forbidden_words_in_jira_data(tmp_path: Path):
     )
     section = _epic_section(rows=rows, count=2)
     assert _errors(tmp_path, epic_section=section) == []
+
+
+def test_rejects_grid_layout_in_stylesheet(tmp_path: Path):
+    errors = _errors(tmp_path, style=".cal{display:grid;grid-template-columns:repeat(15,1fr)}")
+    assert any(e.startswith("layout: display:grid is not email-safe") for e in errors)
+
+
+def test_rejects_flex_layout_in_inline_style(tmp_path: Path):
+    tiles = '<div style="display: inline-flex"><div>Total scope 26</div></div>' + TILES_TABLE
+    errors = _errors(tmp_path, tiles=tiles)
+    assert any(e.startswith("layout: display:inline-flex is not email-safe") for e in errors)
+
+
+def test_calendar_must_use_table(tmp_path: Path):
+    calendar = '<div class="cal"><div class="day">Mon 21</div></div>'
+    errors = _errors(tmp_path, calendar=calendar)
+    assert "calendar: must be laid out with a <table> for email clients" in errors
+
+
+def test_tiles_must_use_table(tmp_path: Path):
+    errors = _errors(tmp_path, tiles='<div class="tiles"><div>Total scope 26</div></div>')
+    assert "at-a-glance: must be laid out with a <table> for email clients" in errors
+
+
+def test_block_display_is_allowed(tmp_path: Path):
+    assert _errors(tmp_path, style="img{display:block}.x{display:inline-block}") == []
 
 
 def test_epic_progress_matches_whole_words_only(tmp_path: Path):

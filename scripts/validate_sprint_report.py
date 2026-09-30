@@ -27,6 +27,9 @@ FORBIDDEN_EPIC_WORDS = ("confidence", "on track", "intervene")
 UNIQUE_FILENAME = re.compile(
     r"^sprint-report-[A-Za-z0-9_-]+-sprint\d+-run\d{6}-\d{4}-\d{2}-\d{2}\.html$"
 )
+# Gmail and Outlook ignore grid/flex, so these sections must be laid out as tables.
+TABLE_LAYOUT_SECTIONS = ("at-a-glance", "calendar")
+EMAIL_UNSAFE_DISPLAY = re.compile(r"display\s*:\s*((?:inline-)?(?:grid|flex))\b", re.IGNORECASE)
 
 
 class SprintReportParser(HTMLParser):
@@ -46,12 +49,23 @@ class SprintReportParser(HTMLParser):
         }
         self._in_epic_progress = False
         self._td_depth = 0
+        self.css: list[str] = []
+        self.sections_with_table: set[str] = set()
+        self._current_section: str | None = None
+        self._in_style = False
 
     def handle_starttag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
         attrs = {key: value for key, value in attrs_list if value is not None}
+        if "style" in attrs:
+            self.css.append(attrs["style"])
+        if tag == "style":
+            self._in_style = True
+        elif tag == "table" and self._current_section:
+            self.sections_with_table.add(self._current_section)
         if tag == "section":
             section_id = attrs.get("id", "")
             self.section_ids.append(section_id)
+            self._current_section = section_id
             self._in_epic_progress = section_id == "epic-progress"
             if self._in_epic_progress:
                 self.epic_progress["attrs"] = attrs
@@ -77,19 +91,25 @@ class SprintReportParser(HTMLParser):
             rows.append(attrs)
 
     def handle_data(self, data: str) -> None:
+        if self._in_style:
+            self.css.append(data)
         if self._in_epic_progress and self._td_depth == 0:
             text = self.epic_progress["text"]
             assert isinstance(text, list)
             text.append(data)
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "svg":
+        if tag == "style":
+            self._in_style = False
+        elif tag == "svg":
             self._current_chart = None
         elif tag == "td" and self._td_depth:
             self._td_depth -= 1
-        elif tag == "section" and self._in_epic_progress:
-            self._in_epic_progress = False
-            self._td_depth = 0
+        elif tag == "section":
+            self._current_section = None
+            if self._in_epic_progress:
+                self._in_epic_progress = False
+                self._td_depth = 0
 
 
 def _number(attrs: dict[str, str], key: str, errors: list[str], label: str) -> float | None:
@@ -282,6 +302,20 @@ def _validate_epic_progress(epic_progress: dict[str, object], errors: list[str])
             errors.append(f"{label}: missing browse link for {key} in epic-progress")
 
 
+def _validate_email_layout(parser: SprintReportParser, errors: list[str]) -> None:
+    unsafe = sorted(
+        {m.group(1).lower() for m in EMAIL_UNSAFE_DISPLAY.finditer(" ".join(parser.css))}
+    )
+    if unsafe:
+        errors.append(
+            f"layout: display:{', display:'.join(unsafe)} is not email-safe "
+            "(Gmail/Outlook ignore it); use <table> layout"
+        )
+    for section_id in TABLE_LAYOUT_SECTIONS:
+        if section_id in parser.section_ids and section_id not in parser.sections_with_table:
+            errors.append(f"{section_id}: must be laid out with a <table> for email clients")
+
+
 def validate_report(path: Path) -> list[str]:
     """Return validation errors for a sprint-report HTML file."""
     errors: list[str] = []
@@ -299,6 +333,7 @@ def validate_report(path: Path) -> list[str]:
             + ", ".join(SECTION_IDS)
             + f"; found: {', '.join(parser.section_ids)}"
         )
+    _validate_email_layout(parser, errors)
 
     if "epic-progress" not in parser.section_ids:
         errors.append("missing epic-progress section")

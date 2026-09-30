@@ -270,8 +270,8 @@ Fetch data anew for each run; never reuse a previous report as evidence.
 The HTML report contains **exactly these 9 sections, in this order, and no others**:
 
 1. **Header** — sprint name, board link, epic prefix, team window, baseline timestamp, target endpoint, as-of time, timezone, unit, completion rule, and a **one-line coverage byline** (see below).
-2. **At-a-glance tile row** — 5–6 stat tiles, no chart yet. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
-3. **Sprint calendar strip** — one visible cell per calendar day from sprint start to end. Weekends greyed. Public holidays flagged with location and emoji. Today highlighted. Each cell shows date and per-day team capacity where applicable (e.g. `4/6` on a holiday for one location).
+2. **At-a-glance tile row** — 5–6 stat tiles in one table row (see email-safe layout in Output), no chart yet. Required tiles: **Total scope**, **Completed**, **Remaining today (gap)**, **Recent pace** (trailing-M-working-day, per §5b), **Required pace** (per §5b), and **Pace ratio bucket** (`on pace` / `watch` / `intervene`). Every tile has a subtitle giving the reference window (e.g. "as of 21 Sep 21:40", "trailing 5 wd", "last done Thu 17"). All values are live, not end-of-last-completed-day.
+3. **Sprint calendar strip** — one table cell per calendar day from sprint start to end, in a single row (see email-safe layout in Output). Weekends greyed. Public holidays flagged with location and emoji. Today highlighted. Each cell shows date and per-day team capacity where applicable (e.g. `4/6` on a holiday for one location).
 4. **Burn-up chart** (primary, per §5b) with the two required overlays (projection lines + pace ratio referenced from the at-a-glance tile).
 5. **Burn-down chart** (secondary, per §5a) with the frozen ideal and the rolling-scope expectation line overlaid.
 6. **Epic progress** (per §6b) — one row per prefix-matched epic: initiative grouping, linked epic key, epic status, progress % with `done/total`, children added since `t0`, children completed since `t0` (via `resolutiondate`), due date or the literal phrase `no due date`, and optional attention when `On Hold` children exist. No confidence, forecast, or narrative columns. Place this section **immediately after the burn-down chart and before the event ledger**.
@@ -357,6 +357,12 @@ preserves the scheduled runner's `output/sprint-report-*-<YYYY-MM-DD>.html`
 glob.
 
 - Inline SVG for both charts, inline CSS for styling, **no external assets** — the file must render cleanly in Gmail and Outlook without fetching any resource at open time.
+- **Email-safe layout.** Gmail and Outlook ignore CSS grid and flexbox, so
+  grid/flex layouts collapse into one full-width block per item. Lay out the
+  at-a-glance tiles and the sprint calendar as `<table>` rows, one `<td>` per
+  tile or calendar day, and never use `display:grid`, `display:flex`,
+  `display:inline-grid` or `display:inline-flex` anywhere in the report
+  (stylesheet or inline `style`). Block, inline-block and table layouts are fine.
 - Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
 - Give the nine required sections these ids, in order: `header`,
   `at-a-glance`, `calendar`, `burn-up`, `burn-down`, `epic-progress`,
@@ -399,6 +405,7 @@ Include a CSV of the daily series when useful, with timestamps, scope, completed
   deliver, preview, or email the report unless it exits successfully. This is
   the executable check for unique filenames, the exact nine-section schema,
   epic-progress metadata (row counts, `data-pct` reconciliation, in-section
-  browse links, the scope callout, and forbidden forecast wording), burn-up
+  browse links, the scope callout, and forbidden forecast wording), email-safe
+  layout (table-based tiles and calendar, no grid/flex), burn-up
   reconciliation, frozen-ideal and
   rolling-expectation target-zero endpoints, and absence of future actual data.
