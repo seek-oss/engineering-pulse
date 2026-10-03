@@ -382,7 +382,7 @@ glob.
     every disconnected actual segment with `data-series="actual"` and its
     `data-end-value` / `data-end-timestamp`.
 
-The scheduled runner globs `output/sprint-report-*-<YYYY-MM-DD>.html` and emails the newest match via `scripts/send_report_smtp.py` with a team-agnostic subject like `Sprint report — <YYYY-MM-DD>`, reusing the existing SMTP env vars (`SMTP_HOST`, `SMTP_TO`, etc.) so the report lands in the same inbox as the daily dashboard as a second, separately-subjected email.
+After validation passes, deliver the new report once with `python3 scripts/deliver_report.py send --type sprint --subject "Sprint report — <YYYY-MM-DD>" <new-report-path>`. It archives the report to the local report calendar (`output/reports/index.html`) and then notifies and/or emails per `DELIVERY` in `.env`, using the same SMTP settings as the daily dashboard. If the agent does not deliver, the scheduled runner delivers the newest `output/sprint-report-*-<YYYY-MM-DD>.html` itself, or records a failed run on the calendar.
 
 Include a CSV of the daily series when useful, with timestamps, scope, completed, remaining, ideal, expectation, delta and coverage; leave unknown/future actuals blank. Provide an event CSV when needed to make scope changes auditable. For Slack sharing, offer a PNG export. Do not send messages, publish externally or write to Confluence/SharePoint without authorization.
 

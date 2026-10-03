@@ -73,11 +73,15 @@ post_install_guide() {
   echo -e "  ${BOLD}5) Schedule (LaunchAgent)${RESET}"
   echo -e "     ${DIM}Installed plist:${RESET} ${MAGENTA}${BOLD}${PLIST_PATH}${RESET}"
   echo -e "     ${DIM}Default run times come from${RESET} ${BOLD}SCHEDULE_HOURS${RESET}${DIM} (${SCHEDULE_HOURS}) when you run this installer.${RESET}"
-  echo -e "     ${DIM}To change times: edit the plist (duplicate${RESET} ${BOLD}StartCalendarInterval${RESET} ${DIM}dicts), then:${RESET}"
-  echo -e "       ${CYAN}launchctl unload \"${PLIST_PATH}\" && launchctl load \"${PLIST_PATH}\"${RESET}"
-  echo -e "     ${DIM}Or re-run this installer from a clone with${RESET} ${BOLD}SCHEDULE_HOURS=\"9 12 17\" bash install.sh${RESET}"
+  echo -e "     ${DIM}To change days/times later (e.g. 10:00 every day including weekends):${RESET}"
+  echo -e "       ${CYAN}cd ${INSTALL_DIR} && .venv/bin/python scripts/schedule.py set --days mon-sun --times 10:00${RESET}"
+  echo -e "     ${DIM}Show the current schedule:${RESET} ${CYAN}.venv/bin/python scripts/schedule.py show${RESET}"
   echo ""
-  echo -e "  ${BOLD}6) Run once after .env is filled${RESET}"
+  echo -e "  ${BOLD}6) Reports${RESET}"
+  echo -e "     ${DIM}Every report is archived to a calendar (DELIVERY=notify|email|both|none in .env):${RESET}"
+  echo -e "       ${MAGENTA}${INSTALL_DIR}/output/reports/index.html${RESET}"
+  echo ""
+  echo -e "  ${BOLD}7) Run once after .env is filled${RESET}"
   echo -e "     ${CYAN}${RUNNER_SCRIPT}${RESET}"
   echo -e "     ${DIM}Or:${RESET} ${CYAN}cd ${INSTALL_DIR} && make run${RESET}"
   echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET} ${DIM}(cleared at run start if over 50 MiB)${RESET}"
@@ -342,6 +346,22 @@ python3 -m venv "$INSTALL_DIR/.venv"
 "$INSTALL_DIR/.venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
 success "Python dependencies installed"
 
+# Clickable "report ready" notifications (optional; plain osascript banner otherwise).
+if [[ "$SKIP_LAUNCHD" == "0" ]]; then
+  if command -v terminal-notifier &>/dev/null; then
+    success "terminal-notifier  $(command -v terminal-notifier)"
+  elif command -v brew &>/dev/null; then
+    info "Installing terminal-notifier (clickable report notifications)"
+    if brew install --quiet terminal-notifier; then
+      success "terminal-notifier installed"
+    else
+      warn "terminal-notifier install failed — notifications fall back to a plain banner"
+    fi
+  else
+    warn "Homebrew not found — skipping terminal-notifier; notifications use a plain banner"
+  fi
+fi
+
 # ── 3. Seed .env (non-interactive — safe for curl | bash) ───────────────────
 header "3/5  Configuration"
 
@@ -450,32 +470,34 @@ run_skill_step() {
   return \$ec
 }
 
+# ── Helper: deliver if the agent did not (archive + notify/email per DELIVERY),
+# or record a failed run on the report calendar. ────────────────────────────
+ensure_delivered() {
+  "\$INSTALL_DIR/.venv/bin/python" "\$INSTALL_DIR/scripts/deliver_report.py" ensure "\$@" \
+    >>"\$LOG_FILE" 2>&1 || true
+}
+
 # ── Step 1: daily dashboard (always runs). ──────────────────────────────────
+pulse_start=\$(date +%s)
 run_skill_step "daily-dashboard" "\$PROMPT"
 _ec=\$?
+ensure_delivered --type pulse --since "\$pulse_start" --agent-exit "\$_ec" \
+  "\$INSTALL_DIR/output/daily_dashboard_report.html"
 
 # ── Step 2: sprint report (only if SPRINT_BOARD is configured). ────────────
-# Agent writes output/sprint-report-*-<YYYY-MM-DD>.html; the runner then emails
-# the newest match via send_report_smtp.py, reusing SMTP_* from .env with a
-# team-agnostic subject. Runs independently of the daily-dashboard exit code.
+# Agent writes output/sprint-report-*-<YYYY-MM-DD>.html and delivers it; the
+# safety net delivers the newest match if the agent did not. Runs independently
+# of the daily-dashboard exit code.
 SPRINT_SKILL="\$INSTALL_DIR/skills/sprint-report/SKILL.md"
 if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]]; then
   SPRINT_PROMPT=\$(cat "\$SPRINT_SKILL")
-  run_skill_step "sprint-report" "\$SPRINT_PROMPT" || true
+  sprint_start=\$(date +%s)
+  run_skill_step "sprint-report" "\$SPRINT_PROMPT"
+  sprint_ec=\$?
   today=\$(date +%Y-%m-%d)
   latest=\$(ls -t "\$INSTALL_DIR/output/sprint-report-"*"-\$today.html" 2>/dev/null | head -1)
-  if [[ -n "\$latest" ]]; then
-    printf '%s\n' "[\$(date)] Emailing sprint report: \$latest" >> "\$LOG_FILE"
-    if "\$INSTALL_DIR/.venv/bin/python" \
-        "\$INSTALL_DIR/scripts/send_report_smtp.py" \
-        "Sprint report — \$today" "\$latest" >>"\$LOG_FILE" 2>&1; then
-      printf '%s\n' "[\$(date)] Sprint-report email sent" >> "\$LOG_FILE"
-    else
-      printf '%s\n' "[\$(date)] Sprint-report email failed (see log)" >> "\$LOG_FILE"
-    fi
-  else
-    printf '%s\n' "[\$(date)] No sprint-report HTML found for \$today; skipping email" >> "\$LOG_FILE"
-  fi
+  ensure_delivered --type sprint --since "\$sprint_start" --agent-exit "\$sprint_ec" \
+    --subject "Sprint report — \$today" \${latest:+"\$latest"}
 fi
 
 exit \$_ec

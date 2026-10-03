@@ -4,7 +4,7 @@
 
 An **agent- and skill-driven** daily engineering health dashboard for **engineering teams** — visibility into systems, delivery, and review load in one place.
 
-Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, and emails it — driven interactively (**Claude Code** or **Cursor** with **`/daily-dashboard`**) or headlessly (`make run` / LaunchAgent via `AGENT_CLI`: **`claude`** or **`cursor`**). Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP where your editor exposes it — e.g. Cursor) for names you list in `.env`. **Pi Agent** support is **[in progress](harness/pi-agent/)** (experimental `AGENT_CLI=pi`).
+Pulls live data from **Datadog**, **GitHub**, and **Todoist**, generates a colour-coded HTML scorecard, archives it to a local **report calendar**, and notifies you on macOS (or emails it) — driven interactively (**Claude Code** or **Cursor** with **`/daily-dashboard`**) or headlessly (`make run` / LaunchAgent via `AGENT_CLI`: **`claude`** or **`cursor`**). Also keeps a **task list** and **reading queue** in Todoist. Optionally adds **Stakeholder Pulse** — per-person Slack summaries (via Glean MCP where your editor exposes it — e.g. Cursor) for names you list in `.env`. **Pi Agent** support is **[in progress](harness/pi-agent/)** (experimental `AGENT_CLI=pi`).
 
 ## Install
 
@@ -105,6 +105,10 @@ scripts/
   extras_plugin.py               ← discovers + renders extras & stakeholder *.md cards
   github_prs.py                  ← fetches PR review queue via GitHub GraphQL
   todo.py                        ← Todoist-backed tasks & reading queue
+  deliver_report.py              ← archive + notify/email per DELIVERY
+  report_archive.py              ← report archive, manifest, calendar index.html
+  notify_report.py               ← macOS "report ready" notification
+  schedule.py                    ← show / change the LaunchAgent schedule
   send_report_smtp.py            ← sends HTML report via SMTP
 
 output/                     ← gitignored; all generated files land here
@@ -112,6 +116,7 @@ output/                     ← gitignored; all generated files land here
   github_prs.json
   todos.json
   stakeholders/*.md         ← Glean-generated Stakeholder Pulse cards
+  reports/                  ← archived reports + calendar (index.html, manifest.json)
   ...
 ```
 
@@ -147,7 +152,7 @@ cp .env.example .env
 You need:
 - **Datadog** — API key + App key + dashboard URLs
 - **GitHub** — Personal Access Token with `repo` (read) + `read:org` scopes
-- **Gmail SMTP** — App Password (2FA must be enabled on your Google account)
+- **Gmail SMTP** *(only for `DELIVERY=email` or `both`)* — App Password (2FA must be enabled on your Google account)
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
 - **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); add it wherever your toolchain supports MCP (commonly Cursor), then set `STAKEHOLDERS` in `.env`
 
@@ -176,6 +181,30 @@ make help         # list all targets
 
 **On a schedule** — the installer sets up a macOS LaunchAgent (default 9:00, 12:00, 16:00 Mon–Fri). After upgrading the repo, re-run `bash install.sh` from `~/.engineering-pulse` so `~/bin/run-daily-dashboard.sh` points at `skills/engineering-pulse/SKILL.md`.
 
+Change the schedule from the command line (rewrites the plist and reloads it):
+
+```bash
+cd ~/.engineering-pulse
+.venv/bin/python scripts/schedule.py show
+.venv/bin/python scripts/schedule.py set --days mon-sun --times 10:00            # 10 AM every day
+.venv/bin/python scripts/schedule.py set --days mon-fri --times 09:00,12:00,16:00
+```
+
+### Report calendar and notifications
+
+Every report is archived under `output/reports/` and listed on a calendar at
+`output/reports/index.html` (`make reports` opens it). Days with reports show a
+coloured dot per type (Engineering Pulse, Sprint report); click a day to step through
+all of that day's reports with ← / →. Days without reports are greyed out, and a
+scheduled day with no report gets a dashed red outline. The ⚙ Settings panel shows the
+current schedule and the commands to change it.
+
+`DELIVERY` in `.env` picks how you're told a report is ready: `notify` (default, macOS
+notification), `email` (SMTP), `both`, or `none` (local file only — no notification or
+email). The installer installs `terminal-notifier` via Homebrew so clicking the
+notification opens the report; without Homebrew you get a plain banner. To import
+reports generated before the archive existed, run `.venv/bin/python scripts/report_archive.py backfill`.
+
 ---
 
 ## Configuration reference
@@ -186,10 +215,13 @@ make help         # list all targets
 | `GITHUB_TOKEN` | yes | PAT with `repo` + `read:org` scopes |
 | `GITHUB_ORG` | yes | GitHub org slug |
 | `GITHUB_TEAM` | yes | Team slug for PR review queue |
-| `SMTP_USER` | yes | Gmail address |
-| `SMTP_PASSWORD` | yes | Gmail App Password (16 chars) |
-| `SMTP_FROM` | yes | Sender address |
-| `SMTP_TO` | yes | Recipient address |
+| `DELIVERY` | no | `notify` (default), `email`, `both`, or `none` (local file only) — reports are always archived to the calendar |
+| `REPORT_AUTO_OPEN` | no | `1` also opens the report in your browser after each run |
+| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
+| `SMTP_USER` | for email | Gmail address |
+| `SMTP_PASSWORD` | for email | Gmail App Password (16 chars) |
+| `SMTP_FROM` | for email | Sender address |
+| `SMTP_TO` | for email | Recipient address |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Names for Pulse (Glean MCP; typically wired through an MCP-capable editor such as Cursor). **Omit this line from `.env` to hide Pulse** (shell `export` alone does not enable it). `STAKEHOLDERS=` explicitly clears tracked names when your dotenv tooling needs an empty value. Prefer `Jane Doe,john.smith@example.com` over first names only. |
@@ -262,7 +294,10 @@ python3 scripts/datadog_dashboard_extract.py \
 # Fetch GitHub PR review queue
 python3 scripts/github_prs.py
 
-# Send a report
+# Deliver a report (archive + notify/email per DELIVERY)
+python3 scripts/deliver_report.py send --type pulse output/daily_dashboard_report.html
+
+# Email only
 python3 scripts/send_report_smtp.py "My Subject" output/daily_dashboard_report.html
 ```
 

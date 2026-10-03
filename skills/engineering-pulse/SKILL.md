@@ -3,7 +3,8 @@ name: engineering-pulse
 description: >
   Run the daily engineering health dashboard: extract Datadog dashboards,
   GitHub PR review queue, Todoist tasks, optional Stakeholder Pulse via Glean MCP,
-  render HTML scorecard, and email via SMTP. Use when the user asks for daily
+  render HTML scorecard, archive it to a local report calendar, and notify
+  (macOS) and/or email via SMTP. Use when the user asks for daily
   dashboard, engineering pulse, health scorecard, or @daily-dashboard.
 license: MIT
 compatibility: >
@@ -22,7 +23,7 @@ metadata:
 
 - Run in the **workspace root** (cloned repo or `~/.engineering-pulse`).
 - This is an **execution** task — run steps now; do not stop at analysis.
-- Complete only when **SMTP send succeeds** (`Sent to <SMTP_TO>`).
+- Complete only when **delivery succeeds** (`scripts/deliver_report.py send` exits 0).
 
 **Time window:** past **7 days** for all Datadog extractions (`--days 7`).
 
@@ -37,7 +38,7 @@ paths, and script reference.
 2. **Render prep** — PRs, todos, extras per [daily-workflow.md](references/daily-workflow.md#step-2--build-the-html-report)
 3. **Stakeholder Pulse** (if `STAKEHOLDERS` set) — [stakeholder-pulse.md](references/stakeholder-pulse.md)
 4. **Render HTML** — `python3 scripts/render_daily_dashboard_html.py`
-5. **Email** — [daily-workflow.md § Step 3](references/daily-workflow.md#step-3--send-the-report)
+5. **Deliver** (archive + notify/email per `DELIVERY`) — [daily-workflow.md § Step 3](references/daily-workflow.md#step-3--deliver-the-report)
 
 ## Related tasks
 
@@ -54,3 +55,4 @@ paths, and script reference.
 - Stakeholder cards (generated): `output/stakeholders/*.md`
 - Snapshots: `output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`
 - HTML scorecard (default render): `output/daily_dashboard_report.html`
+- Report archive + calendar: `output/reports/` (`index.html`, `manifest.json`)

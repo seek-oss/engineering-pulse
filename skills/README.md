@@ -23,7 +23,8 @@ event ledger, and a per-ticket table. Suitable for browsers, Gmail and Outlook.
 **Path:** `skills/sprint-report/SKILL.md` (single file)
 
 **Requires:** Atlassian MCP (no browser fallback); no repo Python scripts.
-The scheduled runner emails the HTML via `scripts/send_report_smtp.py`.
+Reports are delivered via `scripts/deliver_report.py` (archive to the report calendar,
+then notify and/or email per `DELIVERY`).
 
 ## Install
 

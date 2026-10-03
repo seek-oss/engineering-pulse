@@ -6,4 +6,4 @@ Read and execute `skills/engineering-pulse/SKILL.md` from the workspace root, th
 `skills/engineering-pulse/references/daily-workflow.md` (and `stakeholder-pulse.md` when
 `STAKEHOLDERS` is set in `.env`).
 
-Do not stop until `scripts/send_report_smtp.py` reports success.
+Do not stop until `scripts/deliver_report.py send` exits successfully.

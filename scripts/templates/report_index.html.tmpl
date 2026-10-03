@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Pulse — Reports</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1f2933; --muted: #6b7280; --line: #e5e7eb;
+    --off: #eef0f3; --off-text: #a3a9b3; --weekend: #f3f4f6; --accent: #2563eb;
+    --pulse: #3b82f6; --sprint: #8b5cf6; --fail: #ef4444; --ok: #16a34a; --today: #f59e0b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a21; --text: #e5e7eb; --muted: #9ca3af; --line: #2a2f3a;
+      --off: #1b1f27; --off-text: #4b5563; --weekend: #14171d; --accent: #60a5fa;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--text); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  header.top { display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+               background: var(--panel); border-bottom: 1px solid var(--line); }
+  header.top h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  header.top .spacer { flex: 1; }
+  .btn { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+  .btn:hover { border-color: var(--accent); }
+  .btn[disabled] { opacity: .4; cursor: default; border-color: var(--line); }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; }
+  .dot.pulse { background: var(--pulse); } .dot.sprint { background: var(--sprint); }
+  .dot.fail { background: transparent; border: 2px solid var(--fail); }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+  /* Calendar */
+  .month-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .month-bar h2 { margin: 0 8px; font-size: 20px; min-width: 190px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .dow { text-align: center; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+  .cell { min-height: 92px; border-radius: 10px; padding: 8px; background: var(--panel);
+          border: 1px solid var(--line); text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .cell.blank { background: transparent; border: none; }
+  .cell.off { background: var(--off); color: var(--off-text); cursor: default; }
+  .cell.weekend.off { background: var(--weekend); }
+  .cell.missed { border: 1px dashed var(--fail); }
+  .cell.has { cursor: pointer; }
+  .cell.has:hover { border-color: var(--accent); box-shadow: 0 1px 6px rgba(37, 99, 235, .15); }
+  .cell.failed { box-shadow: inset 0 0 0 2px var(--fail); }
+  .cell .num { font-weight: 700; font-size: 13px; }
+  .cell.today .num { background: var(--today); color: #fff; border-radius: 6px; padding: 0 6px; align-self: flex-start; }
+  .cell .counts { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .cell .note { font-size: 11px; color: var(--fail); }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+
+  /* Day view */
+  #day-view { display: none; flex-direction: column; height: calc(100vh - 60px); }
+  body.day #calendar-view { display: none; }
+  body.day #day-view { display: flex; }
+  .day-bar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--panel);
+             border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .day-bar h2 { margin: 0; font-size: 18px; }
+  .tabs, .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 12px; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 3px 10px; font-size: 13px; }
+  .chip.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .chip.failed { color: var(--fail); }
+  .sub-bar { display: flex; align-items: center; gap: 12px; padding: 8px 20px; border-bottom: 1px solid var(--line);
+             background: var(--panel); flex-wrap: wrap; }
+  .viewer { flex: 1; position: relative; background: var(--bg); }
+  .viewer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .viewer .fail-panel { padding: 40px; text-align: center; color: var(--fail); }
+  .foot { display: flex; align-items: center; gap: 10px; padding: 8px 20px; background: var(--panel);
+          border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .foot .spacer { flex: 1; }
+  a { color: var(--accent); }
+
+  /* Settings */
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 0; width: min(720px, 94vw);
+           background: var(--panel); color: var(--text); }
+  dialog::backdrop { background: rgba(0, 0, 0, .35); }
+  .dlg-head { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .dlg-head h3 { margin: 0; flex: 1; }
+  .dlg-body { padding: 4px 18px 18px; max-height: 75vh; overflow: auto; }
+  .dlg-body h4 { margin: 18px 0 6px; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-weight: 600; }
+  .cmd { position: relative; background: var(--off); border: 1px solid var(--line); border-radius: 8px;
+         padding: 10px 12px; margin: 6px 0; font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+         white-space: pre-wrap; word-break: break-all; }
+  .cmd .copy { position: absolute; top: 6px; right: 6px; font-size: 11px; padding: 2px 8px; }
+  .hint { color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Engineering Pulse — Reports</h1>
+  <div class="legend">
+    <span><span class="dot pulse"></span> Engineering Pulse</span>
+    <span><span class="dot sprint"></span> Sprint report</span>
+    <span><span class="dot fail"></span> Failed run</span>
+  </div>
+  <div class="spacer"></div>
+  <span class="hint" id="generated"></span>
+  <button class="btn" id="open-settings" title="Schedule &amp; delivery settings">⚙ Settings</button>
+</header>
+
+<main id="calendar-view">
+  <div class="month-bar">
+    <button class="btn" id="prev-month" aria-label="Previous month">‹</button>
+    <h2 id="month-title"></h2>
+    <button class="btn" id="next-month" aria-label="Next month">›</button>
+    <button class="btn" id="this-month">Today</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="hint" style="margin-top:14px">
+    Click a highlighted day to view its reports. Grey days have no reports.
+    A dashed red outline marks a scheduled day with no report (Mac asleep or run skipped).
+  </p>
+</main>
+
+<section id="day-view">
+  <div class="day-bar">
+    <button class="btn" id="back">← Calendar</button>
+    <button class="btn" id="prev-day" aria-label="Previous day with reports">‹</button>
+    <h2 id="day-title"></h2>
+    <button class="btn" id="next-day" aria-label="Next day with reports">›</button>
+    <div class="spacer" style="flex:1"></div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+  <div class="sub-bar">
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="viewer" id="viewer"></div>
+  <div class="foot">
+    <button class="btn" id="prev-report">← Previous</button>
+    <span id="position"></span>
+    <button class="btn" id="next-report">Next →</button>
+    <span class="spacer"></span>
+    <span>← / → step through this day's reports · Esc returns to the calendar</span>
+    <a id="open-tab" target="_blank" rel="noopener">Open in new tab</a>
+  </div>
+</section>
+
+<dialog id="settings">
+  <div class="dlg-head">
+    <h3>Settings</h3>
+    <button class="btn" id="close-settings">Close</button>
+  </div>
+  <div class="dlg-body" id="settings-body"></div>
+</dialog>
+
+<script id="report-data" type="application/json">__REPORT_DATA__</script>
+<script>
+(() => {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("report-data").textContent);
+  const TYPES = DATA.types || {};
+  const TYPE_ORDER = Object.keys(TYPES);
+  const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const entries = (DATA.entries || []).slice().sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const byDate = {};
+  for (const e of entries) (byDate[e.date] ||= []).push(e);
+  const reportDates = Object.keys(byDate).sort();
+  const scheduledDays = new Set((DATA.schedule && DATA.schedule.days) || [1, 2, 3, 4, 5]);
+
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseYmd = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const todayStr = ymd(new Date());
+
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") node.className = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) if (c != null) node.append(c.nodeType ? c : document.createTextNode(c));
+    return node;
+  }
+
+  $("generated").textContent = DATA.generated ? `Updated ${DATA.generated.replace("T", " ").slice(0, 16)}` : "";
+
+  /* ── Calendar ───────────────────────────────────────────────────────── */
+  let month = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+
+  function renderCalendar() {
+    $("month-title").textContent = month.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const grid = $("grid");
+    grid.replaceChildren();
+    for (const name of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]) grid.append(el("div", { class: "dow" }, name));
+    const lead = (month.getDay() + 6) % 7;
+    for (let i = 0; i < lead; i++) grid.append(el("div", { class: "cell blank" }));
+    const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const first = reportDates[0];
+    for (let n = 1; n <= days; n++) {
+      const date = new Date(month.getFullYear(), month.getMonth(), n);
+      const key = ymd(date);
+      const list = byDate[key] || [];
+      const weekend = date.getDay() === 0 || date.getDay() === 6;
+      const classes = ["cell"];
+      if (weekend) classes.push("weekend");
+      if (key === todayStr) classes.push("today");
+      const children = [el("span", { class: "num" }, String(n))];
+      if (list.length) {
+        classes.push("has");
+        const counts = el("div", { class: "counts" });
+        for (const t of TYPE_ORDER) {
+          const ok = list.filter((e) => e.type === t && e.status === "ok").length;
+          if (ok) counts.append(el("span", {}, el("span", { class: `dot ${t}` }), ` ${TYPES[t]} ×${ok}`));
+        }
+        const failed = list.filter((e) => e.status !== "ok").length;
+        if (failed) {
+          classes.push("failed");
+          counts.append(el("span", { class: "note" }, `${failed} failed run${failed > 1 ? "s" : ""}`));
+        }
+        children.push(counts);
+      } else {
+        classes.push("off");
+        if (first && key >= first && key < todayStr && scheduledDays.has(date.getDay())) {
+          classes.push("missed");
+          children.push(el("span", { class: "note" }, "No report"));
+        }
+      }
+      const attrs = { class: classes.join(" ") };
+      if (list.length) {
+        attrs.onclick = () => openDay(key);
+        attrs.title = `${list.length} report(s) on ${key}`;
+      }
+      grid.append(el(list.length ? "button" : "div", attrs, children));
+    }
+  }
+
+  $("prev-month").onclick = () => { month = new Date(month.getFullYear(), month.getMonth() - 1, 1); renderCalendar(); };
+  $("next-month").onclick = () => { month = new Date(month.getFullYear(), month.getMonth() + 1, 1); renderCalendar(); };
+  $("this-month").onclick = () => { const d = new Date(); month = new Date(d.getFullYear(), d.getMonth(), 1); renderCalendar(); };
+
+  /* ── Day view ───────────────────────────────────────────────────────── */
+  let day = null, typeFilter = "all", selectedId = null;
+
+  function openDay(date, id) { location.hash = `#/day/${date}${id ? "/" + id : ""}`; }
+
+  function visible() {
+    const list = byDate[day] || [];
+    return typeFilter === "all" ? list : list.filter((e) => e.type === typeFilter);
+  }
+
+  function setSelection(id) {
+    selectedId = id;
+    history.replaceState(null, "", `#/day/${day}${id ? "/" + id : ""}`);
+    renderDay();
+  }
+
+  function renderDay() {
+    const list = byDate[day] || [];
+    const date = parseYmd(day);
+    $("day-title").textContent = date.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const idx = reportDates.indexOf(day);
+    $("prev-day").disabled = idx <= 0;
+    $("next-day").disabled = idx < 0 || idx >= reportDates.length - 1;
+
+    const tabs = $("tabs");
+    tabs.replaceChildren(el("button", { class: `tab${typeFilter === "all" ? " active" : ""}`, onclick: () => { typeFilter = "all"; selectedId = null; renderDay(); } }, `All (${list.length})`));
+    for (const t of TYPE_ORDER) {
+      const n = list.filter((e) => e.type === t).length;
+      if (!n) continue;
+      tabs.append(el("button", { class: `tab${typeFilter === t ? " active" : ""}`, onclick: () => { typeFilter = t; selectedId = null; renderDay(); } }, el("span", { class: `dot ${t}` }), ` ${TYPES[t]} (${n})`));
+    }
+
+    const shown = visible();
+    if (!shown.some((e) => e.id === selectedId)) {
+      const okOnes = shown.filter((e) => e.status === "ok");
+      selectedId = (okOnes[okOnes.length - 1] || shown[shown.length - 1] || {}).id || null;
+    }
+    const chips = $("chips");
+    chips.replaceChildren();
+    for (const e of shown) {
+      const failed = e.status !== "ok";
+      chips.append(el("button", {
+        class: `chip${e.id === selectedId ? " active" : ""}${failed ? " failed" : ""}`,
+        title: e.title, onclick: () => setSelection(e.id),
+      }, el("span", { class: `dot ${e.type}` }), ` ${e.time} ${failed ? "✗" : "✓"}`));
+    }
+
+    const pos = shown.findIndex((e) => e.id === selectedId);
+    $("position").textContent = shown.length ? `${pos + 1} of ${shown.length}` : "";
+    $("prev-report").disabled = pos <= 0;
+    $("next-report").disabled = pos < 0 || pos >= shown.length - 1;
+
+    const current = shown[pos];
+    const viewer = $("viewer");
+    const link = $("open-tab");
+    if (!current) {
+      viewer.replaceChildren(el("div", { class: "fail-panel" }, "No reports for this filter."));
+      link.removeAttribute("href");
+    } else if (current.status !== "ok" || !current.path) {
+      viewer.replaceChildren(el("div", { class: "fail-panel" },
+        el("h3", {}, `${TYPES[current.type] || current.type} run failed at ${current.time}`),
+        el("p", {}, current.note || "The scheduled run did not produce a report."),
+        el("p", { class: "hint" }, "Check the run log: tail -200 /tmp/daily-dashboard.log")));
+      link.removeAttribute("href");
+    } else {
+      const frame = viewer.querySelector("iframe");
+      if (!frame || frame.getAttribute("src") !== current.path) {
+        viewer.replaceChildren(el("iframe", { src: current.path, title: current.title }));
+      }
+      link.href = current.path;
+      document.title = `${current.title} — ${current.time}`;
+    }
+  }
+
+  function step(delta) {
+    const shown = visible();
+    const pos = shown.findIndex((e) => e.id === selectedId);
+    const next = shown[pos + delta];
+    if (next) setSelection(next.id);
+  }
+
+  function stepDay(delta) {
+    const idx = reportDates.indexOf(day);
+    const next = reportDates[idx + delta];
+    if (next) { typeFilter = "all"; openDay(next); }
+  }
+
+  $("back").onclick = () => { location.hash = ""; };
+  $("prev-report").onclick = () => step(-1);
+  $("next-report").onclick = () => step(1);
+  $("prev-day").onclick = () => stepDay(-1);
+  $("next-day").onclick = () => stepDay(1);
+
+  document.addEventListener("keydown", (ev) => {
+    if (!document.body.classList.contains("day") || $("settings").open) return;
+    if (ev.key === "ArrowLeft") { step(-1); ev.preventDefault(); }
+    else if (ev.key === "ArrowRight") { step(1); ev.preventDefault(); }
+    else if (ev.key === "Escape") { location.hash = ""; }
+  });
+
+  /* ── Routing ────────────────────────────────────────────────────────── */
+  function route() {
+    const m = location.hash.match(/^#\/day\/(\d{4}-\d{2}-\d{2})(?:\/(.+))?$/);
+    if (m && byDate[m[1]]) {
+      if (day !== m[1]) typeFilter = "all";
+      day = m[1];
+      selectedId = m[2] ? decodeURIComponent(m[2]) : null;
+      document.body.classList.add("day");
+      renderDay();
+      return;
+    }
+    document.body.classList.remove("day");
+    document.title = "Engineering Pulse — Reports";
+    if (day) { const d = parseYmd(day); month = new Date(d.getFullYear(), d.getMonth(), 1); }
+    renderCalendar();
+  }
+  window.addEventListener("hashchange", route);
+
+  /* ── Settings (read-only; changes are made from the command line) ──── */
+  function commandBlock(text) {
+    const pre = el("div", { class: "cmd" }, text);
+    const btn = el("button", { class: "btn copy", onclick: async () => {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const range = document.createRange(); range.selectNodeContents(pre);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        document.execCommand("copy");
+      }
+      btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy"; }, 1200);
+    } }, "Copy");
+    pre.append(btn);
+    return pre;
+  }
+
+  function renderSettings() {
+    const s = DATA.schedule;
+    const py = DATA.python || "python3";
+    const cd = `cd "${DATA.install_dir}"`;
+    const daysText = !s ? "—" : s.days.length === 7 ? "Every day" :
+      s.days.join() === "1,2,3,4,5" ? "Mon–Fri" : s.days.map((d) => DAY_NAMES[d]).join(", ");
+    const body = $("settings-body");
+    body.replaceChildren(
+      el("h4", {}, "Current schedule"),
+      s ? el("dl", { class: "kv" },
+        el("dt", {}, "Days"), el("dd", {}, daysText),
+        el("dt", {}, "Times"), el("dd", {}, s.times.join(", ") || "—"),
+        el("dt", {}, "Delivery"), el("dd", {}, DATA.delivery || "notify"),
+        el("dt", {}, "Keep reports"), el("dd", {}, DATA.retention_days > 0 ? `${DATA.retention_days} days` : "forever"))
+        : el("p", { class: "hint" }, "No LaunchAgent installed on this Mac yet — run install.sh to schedule reports."),
+      el("p", { class: "hint" },
+        "This page is a static file, so it can't change settings itself. Run the commands below in Terminal; ",
+        "the change applies from the next scheduled run, and this page shows it after the next report is archived."),
+
+      el("h4", {}, "Example: move the 9:00 AM run to 10:00 AM, every day including weekends"),
+      el("p", { class: "hint" }, "1. Go to the install folder and check what is scheduled now:"),
+      commandBlock(`${cd}\n${py} scripts/schedule.py show`),
+      el("p", { class: "hint" }, "2. Preview the new schedule without changing anything:"),
+      commandBlock(`${py} scripts/schedule.py set --days mon-sun --times 10:00 --dry-run`),
+      el("p", { class: "hint" }, "3. Apply it (rewrites the LaunchAgent plist and reloads it):"),
+      commandBlock(`${py} scripts/schedule.py set --days mon-sun --times 10:00`),
+      el("p", { class: "hint" }, "4. Confirm:"),
+      commandBlock(`${py} scripts/schedule.py show`),
+
+      el("h4", {}, "Other examples"),
+      el("p", { class: "hint" }, "Weekdays only, three times a day (the installer default):"),
+      commandBlock(`${py} scripts/schedule.py set --days mon-fri --times 09:00,12:00,16:00`),
+      el("p", { class: "hint" }, "Pause and resume the schedule:"),
+      commandBlock(`make unschedule\nmake schedule`),
+
+      el("h4", {}, "Delivery and retention"),
+      el("p", { class: "hint" }, "Edit .env in the install folder (applies from the next run):"),
+      commandBlock(`DELIVERY=notify          # notify | email | both | none (local file only)\nREPORT_AUTO_OPEN=0       # 1 = also open the report in your browser\nREPORT_RETENTION_DAYS=90 # 0 = keep forever`),
+      el("p", { class: "hint" }, "The installer sets up terminal-notifier (via Homebrew) so clicking a notification opens the report; without it a plain macOS banner is shown."),
+      el("p", { class: "hint" }, "Scheduled runs only happen while the Mac is awake; a run missed during sleep fires once on wake."),
+    );
+  }
+
+  $("open-settings").onclick = () => { renderSettings(); $("settings").showModal(); };
+  $("close-settings").onclick = () => $("settings").close();
+
+  if (!entries.length) {
+    $("grid").before(el("div", { class: "empty" }, "No reports archived yet. They appear here after the next run."));
+  }
+  route();
+})();
+</script>
+</body>
+</html>

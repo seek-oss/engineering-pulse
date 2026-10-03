@@ -1,1 +1,1 @@
-Use the **engineering-pulse** skill. Execute the full daily dashboard workflow from the cloned engineering-pulse repository until the HTML report is emailed successfully.
+Use the **engineering-pulse** skill. Execute the full daily dashboard workflow from the cloned engineering-pulse repository until the HTML report is delivered successfully (`scripts/deliver_report.py send` exits 0).

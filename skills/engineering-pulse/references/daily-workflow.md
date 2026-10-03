@@ -3,7 +3,7 @@
 ## Overview
 
 Run **all Datadog dashboards** defined under `prompts/dashboards/`, produce a **single
-focused HTML report**, and email it.
+focused HTML report**, archive it to the report calendar, and notify and/or email per `DELIVERY`.
 
 ---
 
@@ -91,12 +91,18 @@ Override: `--extras-dir prompts/extras`.
 
 ---
 
-## Step 3 — Send the report
+## Step 3 — Deliver the report
 
 ```bash
-python3 scripts/send_report_smtp.py \
-  "Daily dashboard — <team> — $(date +%Y-%m-%d)" \
+python3 scripts/deliver_report.py send --type pulse \
+  --subject "Daily dashboard — <team> — $(date +%Y-%m-%d)" \
   output/daily_dashboard_report.html
 ```
 
-Confirm `Sent to <SMTP_TO>`. Do not mark complete until send succeeds.
+Always archives the report to `output/reports/` (calendar at `output/reports/index.html`),
+then follows `DELIVERY` in `.env`: `notify` (default, macOS notification), `email`
+(SMTP via `send_report_smtp.py`), `both`, or `none` (archive only).
+
+Confirm `Archived …`, plus `Notified via …` and/or `Sent to <SMTP_TO>` for the
+configured mode. Do not mark complete until the command exits 0. Run it once per
+report; a repeat with identical content is skipped.

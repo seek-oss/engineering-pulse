@@ -8,7 +8,11 @@
 | `ANTHROPIC_API_KEY` | for Claude automation | API key when using Claude Code for scheduled runs |
 | `PI_API_KEY` | experimental | Provider API key if testing `AGENT_CLI=pi` ([in progress](../../../harness/pi-agent/README.md)) |
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
-| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | yes | Gmail SMTP credentials |
+| `DELIVERY` | no | `notify` (default, macOS notification), `email`, `both`, or `none` (local file only). Reports are always archived. |
+| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
+| `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery |
+| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
+| `REPORTS_DIR` | no | Archive root (default `output/reports`) |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Pulse names (Glean). **Leave this key out** of `.env` to omit Pulse entirely (ignored if only set via shell `export`). |
@@ -38,6 +42,7 @@ SMTP_TO=recipient@example.com
 | `prompts/extras/*.md` | Extra report cards |
 | `output/` | All generated JSON/HTML |
 | `output/stakeholders/*.md` | Glean-generated stakeholder cards |
+| `output/reports/` | Archived reports, `manifest.json`, calendar `index.html` |
 | `.env` | Secrets |
 
 ## Script reference
@@ -48,6 +53,13 @@ SMTP_TO=recipient@example.com
 **Render:** `scripts/render_daily_dashboard_html.py` — default HTML at
 `output/daily_dashboard_report.html`; args include `--out`, `--dashboards-dir`,
 `--output-dir`, `--prs`, `--todos`, `--extras-dir`, `--stakeholders-dir`, `--extra LABEL:FILE`
+
+**Deliver:** `scripts/deliver_report.py send --type pulse|sprint [--subject S] FILE` —
+archives via `scripts/report_archive.py`, then notifies (`scripts/notify_report.py`)
+and/or emails (`scripts/send_report_smtp.py`) per `DELIVERY`.
+
+**Schedule:** `scripts/schedule.py show` / `set --days mon-sun --times 10:00` — edits the
+installed LaunchAgent plist and reloads it.
 
 | Argument (`datadog_dashboard_extract.py`) | Default | Purpose |
 |-------------------------------------------|---------|---------|

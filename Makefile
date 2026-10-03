@@ -25,6 +25,8 @@ help:
 	@echo "  make logs-launchd Tail the launchd stdout/stderr"
 	@echo "  make update       Pull latest code + reinstall dependencies"
 	@echo "  make test         Run the test suite with coverage"
+	@echo "  make reports      Open the report calendar in your browser"
+	@echo "  make schedule-show Show the scheduled days and times"
 	@echo "  make schedule     Reload the LaunchAgent (after plist changes)"
 	@echo "  make unschedule   Unload the LaunchAgent (pause the schedule)"
 	@echo "  make uninstall    Remove everything (LaunchAgent + files)"
@@ -63,6 +65,15 @@ status:
 	@echo ""
 	@echo "→  Plist: $(PLIST_PATH)"
 	@ls -la "$(PLIST_PATH)" 2>/dev/null || echo "  (not found)"
+
+.PHONY: schedule-show
+schedule-show:
+	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/schedule.py show
+
+.PHONY: reports
+reports:
+	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/report_archive.py build-index
+	@open "$(INSTALL_DIR)/output/reports/index.html"
 
 .PHONY: schedule
 schedule:
