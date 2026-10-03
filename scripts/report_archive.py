@@ -46,7 +46,40 @@ _SPRINT_NAME_RE = re.compile(
     r"^sprint-report-.+?-(?:run(?P<run>\d{4}|\d{6})-)?(?P<date>\d{4}-\d{2}-\d{2})\.html$"
 )
 
+# Archived copies are viewed inside the calendar's iframe, where Slack, Jira, GitHub
+# etc. refuse to load (X-Frame-Options). Open every non-anchor link in a new tab.
+_EXTERNAL_LINKS_MARKER = "data-ep-external-links"
+_EXTERNAL_LINKS_SCRIPT = (
+    f"<script {_EXTERNAL_LINKS_MARKER}>"
+    "document.addEventListener('click',function(e){"
+    "var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;"
+    "var h=a.getAttribute('href')||'';"
+    "if(h.charAt(0)==='#'||/^javascript:/i.test(h))return;"
+    "a.target='_blank';a.rel='noopener noreferrer';},true);"
+    "</script>"
+)
+_HEAD_CLOSE_RE = re.compile(r"</head\s*>", re.IGNORECASE)
+_BODY_OPEN_RE = re.compile(r"<body\b[^>]*>", re.IGNORECASE)
+
 console = Console(stderr=True)
+
+
+def with_external_links(body: str) -> str:
+    """Return ``body`` with the open-links-in-a-new-tab script added (idempotent)."""
+    if _EXTERNAL_LINKS_MARKER in body:
+        return body
+    if m := _HEAD_CLOSE_RE.search(body):
+        return body[: m.start()] + _EXTERNAL_LINKS_SCRIPT + body[m.start() :]
+    if m := _BODY_OPEN_RE.search(body):
+        return body[: m.end()] + _EXTERNAL_LINKS_SCRIPT + body[m.end() :]
+    return _EXTERNAL_LINKS_SCRIPT + body
+
+
+def _ensure_external_links(path: Path) -> None:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    updated = with_external_links(text)
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
 
 
 def reports_dir() -> Path:
@@ -132,12 +165,13 @@ def archive(
     if (root / rel).exists():
         rel = rel.with_name(f"{entry['id']}.html")
     (root / rel).parent.mkdir(parents=True, exist_ok=True)
-    (root / rel).write_bytes(data)
+    text = data.decode("utf-8", "replace")
+    (root / rel).write_text(with_external_links(text), encoding="utf-8")
 
     entry.update(
         {
             "status": "ok",
-            "title": extract_title(data.decode("utf-8", "replace"), TYPE_LABELS[report_type]),
+            "title": extract_title(text, TYPE_LABELS[report_type]),
             "path": rel.as_posix(),
             "sha256": digest,
             "source": src.name,
@@ -286,6 +320,9 @@ def build_index(root: Path | None = None) -> Path:
     index.write_text(render_index(data), encoding="utf-8")
 
     ok = [e for e in data["entries"] if e.get("status") == "ok" and e.get("path")]
+    for entry in ok:
+        if (root / entry["path"]).is_file():
+            _ensure_external_links(root / entry["path"])
     if ok:
         newest = ok[-1]
         shutil.copyfile(root / newest["path"], root / "latest.html")

@@ -14,6 +14,7 @@ from scripts.report_archive import (
     load_manifest,
     prune,
     record_failure,
+    with_external_links,
 )
 
 
@@ -93,6 +94,38 @@ class TestArchive:
         html = (root / "index.html").read_text()
         assert html.count("</script>") == 2  # data block + app script only
         assert _embedded_data(root)["entries"][0]["title"] == "x </script> y"
+
+
+class TestExternalLinks:
+    def test_inserted_before_head_close_once(self):
+        body = "<html><head><title>x</title></head><body><a href='https://x'>x</a></body></html>"
+        out = with_external_links(body)
+        assert out.index("data-ep-external-links") < out.index("</head>")
+        assert with_external_links(out) == out
+
+    def test_without_head_goes_after_body_or_first(self):
+        assert with_external_links("<body class='a'><p>x</p>").startswith("<body class='a'><script")
+        assert with_external_links("<p>x</p>").startswith("<script data-ep-external-links>")
+
+    def test_archived_copy_has_script_but_source_is_untouched(self, tmp_path):
+        root = tmp_path / "reports"
+        src = _report(tmp_path, body="<a href='https://slack.example/x'>x</a>")
+        original = src.read_text()
+        entry, _ = archive(src, "pulse", root=root)
+        assert src.read_text() == original
+        archived = (root / entry["path"]).read_text()
+        assert "data-ep-external-links" in archived
+        assert "data-ep-external-links" in (root / "latest.html").read_text()
+        _, created = archive(src, "pulse", root=root)
+        assert not created  # dedupe still compares the original content
+
+    def test_build_index_upgrades_older_archived_copies(self, tmp_path):
+        root = tmp_path / "reports"
+        entry, _ = archive(_report(tmp_path), "pulse", root=root)
+        path = root / entry["path"]
+        path.write_text(path.read_text().replace("data-ep-external-links", "old-marker"))
+        build_index(root)
+        assert "data-ep-external-links" in path.read_text()
 
 
 def test_extract_title_fallback():
