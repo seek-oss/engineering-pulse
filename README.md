@@ -253,7 +253,7 @@ tail -f /tmp/engineering-pulse-compare.log
 | `DELIVERY` | no | `notify` (default), `email`, `both`, or `none` (local file only) — reports are always archived to the calendar |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in your browser after each run |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
-| `SCHEDULED_REPORTS` | no | Reports that scheduled runs make: `pulse,sprint` (default), `pulse`, `sprint`, or `none` (paused). `make run` always runs both |
+| `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, or `none` (paused) |
 | `SMTP_USER` | for email | Gmail address |
 | `SMTP_PASSWORD` | for email | Gmail App Password (16 chars) |
 | `SMTP_FROM` | for email | Sender address |

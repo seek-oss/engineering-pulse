@@ -477,10 +477,12 @@ ensure_delivered() {
     >>"\$LOG_FILE" 2>&1 || true
 }
 
-# ── Helper: is this report enabled for scheduled runs? SCHEDULED_REPORTS in .env
-# (pulse,sprint | pulse | sprint | none). Manual runs (make run) always run. ────
+# ── Helper: is this report enabled? SCHEDULED_REPORTS in .env (pulse,sprint |
+# pulse | sprint | none) decides for scheduled runs and make run alike. ────────
 report_enabled() {
-  [[ -n \${ENGINEERING_PULSE_MANUAL:-} ]] && return 0
+  # #region agent log
+  printf '{"sessionId":"84a6e6","runId":"post-fix","hypothesisId":"A","location":"run-daily-dashboard.sh:report_enabled","message":"report_enabled check","data":{"report":"%s","scheduled_reports":"%s","manual":"%s","decision":"%s"},"timestamp":%s000}\n' "\$1" "\${SCHEDULED_REPORTS-}" "\${ENGINEERING_PULSE_MANUAL-}" "\$([[ ",\${SCHEDULED_REPORTS:-pulse,sprint}," == *",\$1,"* ]] && echo run || echo skip)" "\$(date +%s)" >> /Users/hzhu/code/genai/engineering-pulse/.cursor/debug-84a6e6.log
+  # #endregion
   [[ ",\${SCHEDULED_REPORTS:-pulse,sprint}," == *",\$1,"* ]] && return 0
   printf '%s\n' "[\$(date)] \$1 report paused (SCHEDULED_REPORTS=\${SCHEDULED_REPORTS}) — skipped" >> "\$LOG_FILE"
   return 1

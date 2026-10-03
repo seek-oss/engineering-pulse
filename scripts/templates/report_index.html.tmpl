@@ -698,7 +698,7 @@
       el("div", {}, reportBoxes.map((b) => b.node)),
       el("p", {}, el("button", { class: "btn", onclick: () => send(paused ? { reports: SCHED_TYPES.join(",") } : { reports: "none" }) },
         paused ? "▶ Resume all scheduled reports" : "⏸ Pause all scheduled reports")),
-      el("p", { class: "hint" }, "Paused reports are skipped by scheduled runs only; make run always runs everything."),
+      el("p", { class: "hint" }, "Only the ticked reports are generated, by scheduled runs and by make run."),
       el("h4", {}, "When to run"),
       el("div", {}, dayBoxes.map((b) => b.node)),
       el("p", {}, "Times ", times, el("span", { class: "muted" }, "  24-hour, comma-separated")),

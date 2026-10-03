@@ -12,7 +12,7 @@
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
-| `SCHEDULED_REPORTS` | no | Reports scheduled runs make: `pulse,sprint` (default), `pulse`, `sprint`, `none`; manual runs ignore it |
+| `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, `none` |
 | `REPORTS_DIR` | no | Archive root (default `output/reports`) |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
