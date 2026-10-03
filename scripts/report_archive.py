@@ -306,7 +306,21 @@ def index_data(root: Path) -> dict:
         "python": _python_cmd(),
         "delivery": os.environ.get("DELIVERY", "notify"),
         "retention_days": int(os.environ.get("REPORT_RETENTION_DAYS", DEFAULT_RETENTION_DAYS)),
+        "auto_open": os.environ.get("REPORT_AUTO_OPEN", "0").strip() == "1",
+        "scheduled_reports": _scheduled_reports(),
+        "sprint_configured": bool(os.environ.get("SPRINT_BOARD", "").strip()),
+        "link_handler": _link_handler_installed(),
     }
+
+
+def _scheduled_reports() -> list[str]:
+    spec = os.environ.get("SCHEDULED_REPORTS", "").strip().lower() or "pulse,sprint"
+    return [t for t in ("pulse", "sprint") if t in spec.split(",")]
+
+
+def _link_handler_installed() -> bool:
+    app_dir = Path(os.environ.get("URL_HANDLER_APP_DIR", Path.home() / "Applications"))
+    return (app_dir.expanduser() / "Engineering Pulse.app").is_dir()
 
 
 def render_index(data: dict) -> str:

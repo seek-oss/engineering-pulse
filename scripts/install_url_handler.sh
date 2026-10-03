@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # install_url_handler.sh — build and register "Engineering Pulse.app", the macOS handler
-# for engineering-pulse:// links on the report calendar (Compare → "Ask the agent").
+# for engineering-pulse:// links on the report calendar (Compare → "Ask the agent",
+# Settings → "Apply").
 #
 #   scripts/install_url_handler.sh [INSTALL_DIR]          # build + register
 #   scripts/install_url_handler.sh --uninstall             # unregister + remove
 #
-# The app only forwards the link to scripts/run_compare.sh, which validates it.
+# The app only forwards the link to scripts/run_compare.sh or scripts/settings.py,
+# which validate it; settings changes need a click on the app's own confirmation dialog.
 
 set -euo pipefail
 
@@ -29,7 +31,9 @@ fi
 
 INSTALL_DIR="$(cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd)"
 RUNNER="$INSTALL_DIR/scripts/run_compare.sh"
-case "$RUNNER" in
+SETTINGS="$INSTALL_DIR/scripts/settings.py"
+PY="$INSTALL_DIR/.venv/bin/python"
+case "$INSTALL_DIR" in
   *\"* | *\\*) echo "Install path contains quotes or backslashes; cannot build link handler." >&2; exit 1 ;;
 esac
 
@@ -37,8 +41,34 @@ src=$(mktemp -t engineering-pulse-handler).applescript
 trap 'rm -f "$src"' EXIT
 cat >"$src" <<EOF
 on open location theURL
-	do shell script "/bin/bash " & quoted form of "$RUNNER" & " --url " & quoted form of theURL & " >/dev/null 2>&1 &"
+	if theURL starts with "engineering-pulse://settings" then
+		applySettings(theURL)
+	else
+		do shell script "/bin/bash " & quoted form of "$RUNNER" & " --url " & quoted form of theURL & " >/dev/null 2>&1 &"
+	end if
 end open location
+
+-- The dialog text comes from settings.py after validation, never from the raw link.
+on applySettings(theURL)
+	activate
+	set cmd to quoted form of "$PY" & " " & quoted form of "$SETTINGS"
+	try
+		set summary to do shell script cmd & " describe-url " & quoted form of theURL
+	on error errMsg
+		display dialog errMsg buttons {"OK"} default button 1 with title "Engineering Pulse" with icon caution
+		return
+	end try
+	if summary is "No changes." then
+		display dialog "These settings are already in place." buttons {"OK"} default button 1 with title "Engineering Pulse"
+		return
+	end if
+	display dialog "Apply these settings?" & return & return & summary buttons {"Cancel", "Apply"} default button "Apply" cancel button "Cancel" with title "Engineering Pulse"
+	try
+		do shell script cmd & " apply-url " & quoted form of theURL
+	on error errMsg
+		display dialog errMsg buttons {"OK"} default button 1 with title "Engineering Pulse" with icon stop
+	end try
+end applySettings
 
 on run
 	display dialog "Engineering Pulse link handler. Use the Compare view on the report calendar to ask the agent to compare two reports." buttons {"OK"} default button 1 with title "Engineering Pulse"

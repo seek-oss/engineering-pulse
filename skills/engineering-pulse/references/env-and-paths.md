@@ -12,6 +12,7 @@
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
+| `SCHEDULED_REPORTS` | no | Reports scheduled runs make: `pulse,sprint` (default), `pulse`, `sprint`, `none`; manual runs ignore it |
 | `REPORTS_DIR` | no | Archive root (default `output/reports`) |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
@@ -65,7 +66,9 @@ the ids with `scripts/compare_reports.py prepare`, writes
 `AGENT_CLI`. Log: `/tmp/engineering-pulse-compare.log`.
 
 **Schedule:** `scripts/schedule.py show` / `set --days mon-sun --times 10:00` — edits the
-installed LaunchAgent plist and reloads it.
+installed LaunchAgent plist and reloads it. `scripts/settings.py show` / `set` also
+covers `SCHEDULED_REPORTS`, `REPORT_AUTO_OPEN` and `REPORT_RETENTION_DAYS`, and backs
+the calendar's Settings panel (`engineering-pulse://settings` links).
 
 | Argument (`datadog_dashboard_extract.py`) | Default | Purpose |
 |-------------------------------------------|---------|---------|

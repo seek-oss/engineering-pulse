@@ -200,8 +200,14 @@ Every report is archived under `output/reports/` and listed on a calendar at
 `output/reports/index.html` (`make reports` opens it). Days with reports show a
 coloured dot per type (Engineering Pulse, Sprint report); click a day to step through
 all of that day's reports with ← / →. Days without reports are greyed out, and a
-scheduled day with no report gets a dashed red outline. The ⚙ Settings panel shows the
-current schedule and the commands to change it.
+scheduled day with no report gets a dashed red outline.
+
+The ⚙ Settings panel changes the schedule (days and times), pauses or resumes each
+scheduled report, and sets `REPORT_AUTO_OPEN` and `REPORT_RETENTION_DAYS`. **Apply**
+opens an `engineering-pulse://settings` link; the helper app shows a macOS confirmation
+dialog, then `scripts/settings.py` updates the LaunchAgent and `.env` and rebuilds the
+calendar. Secrets and `DELIVERY` are only changed by editing `.env`. The same changes
+work from Terminal: `.venv/bin/python scripts/settings.py set --reports pulse --times 10:00`.
 
 `DELIVERY` in `.env` picks how you're told a report is ready: `notify` (default, macOS
 notification), `email` (SMTP), `both`, or `none` (local file only — no notification or
@@ -247,6 +253,7 @@ tail -f /tmp/engineering-pulse-compare.log
 | `DELIVERY` | no | `notify` (default), `email`, `both`, or `none` (local file only) — reports are always archived to the calendar |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in your browser after each run |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
+| `SCHEDULED_REPORTS` | no | Reports that scheduled runs make: `pulse,sprint` (default), `pulse`, `sprint`, or `none` (paused). `make run` always runs both |
 | `SMTP_USER` | for email | Gmail address |
 | `SMTP_PASSWORD` | for email | Gmail App Password (16 chars) |
 | `SMTP_FROM` | for email | Sender address |

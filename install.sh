@@ -477,19 +477,31 @@ ensure_delivered() {
     >>"\$LOG_FILE" 2>&1 || true
 }
 
-# ── Step 1: daily dashboard (always runs). ──────────────────────────────────
-pulse_start=\$(date +%s)
-run_skill_step "daily-dashboard" "\$PROMPT"
-_ec=\$?
-ensure_delivered --type pulse --since "\$pulse_start" --agent-exit "\$_ec" \
-  "\$INSTALL_DIR/output/daily_dashboard_report.html"
+# ── Helper: is this report enabled for scheduled runs? SCHEDULED_REPORTS in .env
+# (pulse,sprint | pulse | sprint | none). Manual runs (make run) always run. ────
+report_enabled() {
+  [[ -n \${ENGINEERING_PULSE_MANUAL:-} ]] && return 0
+  [[ ",\${SCHEDULED_REPORTS:-pulse,sprint}," == *",\$1,"* ]] && return 0
+  printf '%s\n' "[\$(date)] \$1 report paused (SCHEDULED_REPORTS=\${SCHEDULED_REPORTS}) — skipped" >> "\$LOG_FILE"
+  return 1
+}
+
+# ── Step 1: daily dashboard. ───────────────────────────────────────────────
+_ec=0
+if report_enabled pulse; then
+  pulse_start=\$(date +%s)
+  run_skill_step "daily-dashboard" "\$PROMPT"
+  _ec=\$?
+  ensure_delivered --type pulse --since "\$pulse_start" --agent-exit "\$_ec" \
+    "\$INSTALL_DIR/output/daily_dashboard_report.html"
+fi
 
 # ── Step 2: sprint report (only if SPRINT_BOARD is configured). ────────────
 # Agent writes output/sprint-report-*-<YYYY-MM-DD>.html and delivers it; the
 # safety net delivers the newest match if the agent did not. Runs independently
 # of the daily-dashboard exit code.
 SPRINT_SKILL="\$INSTALL_DIR/skills/sprint-report/SKILL.md"
-if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]]; then
+if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]] && report_enabled sprint; then
   SPRINT_PROMPT=\$(cat "\$SPRINT_SKILL")
   sprint_start=\$(date +%s)
   run_skill_step "sprint-report" "\$SPRINT_PROMPT"

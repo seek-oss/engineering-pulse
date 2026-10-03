@@ -219,6 +219,7 @@
   for (const e of entries) (byDate[e.date] ||= []).push(e);
   const reportDates = Object.keys(byDate).sort();
   const scheduledDays = new Set((DATA.schedule && DATA.schedule.days) || [1, 2, 3, 4, 5]);
+  const allPaused = (DATA.scheduled_reports || ["pulse", "sprint"]).length === 0;
 
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, "0");
@@ -393,7 +394,7 @@
         children.push(counts);
       } else {
         classes.push("off");
-        if (first && key >= first && key < todayStr && scheduledDays.has(date.getDay())) {
+        if (first && key >= first && key < todayStr && scheduledDays.has(date.getDay()) && !allPaused) {
           classes.push("missed");
           children.push(el("span", { class: "note" }, "No report"));
         }
@@ -620,7 +621,7 @@
   }
   window.addEventListener("hashchange", route);
 
-  /* ── Settings (read-only; changes are made from the command line) ──── */
+  /* ── Settings (applied through the engineering-pulse:// link helper) ── */
   function commandBlock(text) {
     const pre = el("div", { class: "cmd" }, text);
     const btn = el("button", { class: "btn copy", onclick: async () => {
@@ -636,24 +637,110 @@
     return pre;
   }
 
+  const SCHED_TYPES = ["pulse", "sprint"];
+  const WEEK = [1, 2, 3, 4, 5, 6, 0];
+  const TIME_RE = /^([01]?\d|2[0-3])(:[0-5]\d)?$/;
+  const REOPEN_KEY = "ep-reopen-settings";
+  let applyPending = false, leftPage = false;
+
+  function settingsForm(s) {
+    const current = {
+      days: s.days.slice(), times: s.times.join(","), reports: (DATA.scheduled_reports || SCHED_TYPES).slice(),
+      auto_open: !!DATA.auto_open, retention: DATA.retention_days,
+    };
+    const check = (checked, label, extra) => {
+      const box = el("input", { type: "checkbox", checked });
+      return { box, node: el("label", { style: "margin-right:14px; white-space:nowrap" }, box, ` ${label}`, extra || null) };
+    };
+    const reportBoxes = SCHED_TYPES.map((t) => check(current.reports.includes(t), TYPES[t],
+      t === "sprint" && !DATA.sprint_configured ? el("span", { class: "muted" }, " (needs SPRINT_BOARD in .env)") : null));
+    const dayBoxes = WEEK.map((d) => check(current.days.includes(d), DAY_NAMES[d]));
+    const times = el("input", { type: "text", value: current.times.replace(/,/g, ", "), size: 28, "aria-label": "Run times" });
+    const autoOpen = check(current.auto_open, "Also open each new report in the browser");
+    const retention = el("input", { type: "number", min: 0, max: 3650, value: current.retention, style: "width:80px", "aria-label": "Days to keep reports" });
+    const status = el("p", { class: "hint" });
+
+    function link(changes) {
+      const q = Object.entries(changes).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+      return `engineering-pulse://settings?${q}`;
+    }
+
+    function collect() {
+      const changes = {};
+      const reports = SCHED_TYPES.filter((_, i) => reportBoxes[i].box.checked);
+      if (reports.join() !== current.reports.join()) changes.reports = reports.join(",") || "none";
+      const days = WEEK.filter((_, i) => dayBoxes[i].box.checked);
+      if (!days.length) throw new Error("Pick at least one day.");
+      if (days.join() !== WEEK.filter((d) => current.days.includes(d)).join()) changes.days = days.map((d) => DAY_NAMES[d].toLowerCase()).join(",");
+      const t = times.value.split(",").map((x) => x.trim()).filter(Boolean);
+      if (!t.length || t.some((x) => !TIME_RE.test(x))) throw new Error("Times must look like 09:00, 12:30.");
+      if (t.join(",") !== current.times) changes.times = t.join(",");
+      if (autoOpen.box.checked !== current.auto_open) changes.auto_open = autoOpen.box.checked ? "1" : "0";
+      const keep = Number(retention.value);
+      if (!Number.isInteger(keep) || keep < 0 || keep > 3650) throw new Error("Keep reports must be 0–3650 days.");
+      if (keep !== current.retention) changes.retention = String(keep);
+      return changes;
+    }
+
+    function send(changes) {
+      if (!Object.keys(changes).length) { status.textContent = "Nothing changed."; return; }
+      applyPending = true; leftPage = false;
+      sessionStorage.setItem(REOPEN_KEY, "1");
+      status.replaceChildren("Confirm the change in the Engineering Pulse dialog. This page reloads when you come back. ",
+        el("button", { class: "btn", onclick: () => location.reload() }, "Reload now"));
+      location.href = link(changes);
+    }
+
+    const apply = () => { try { send(collect()); } catch (e) { status.textContent = e.message; } };
+    const paused = current.reports.length === 0;
+    return [
+      el("h4", {}, "Scheduled reports"),
+      el("div", {}, reportBoxes.map((b) => b.node)),
+      el("p", {}, el("button", { class: "btn", onclick: () => send(paused ? { reports: SCHED_TYPES.join(",") } : { reports: "none" }) },
+        paused ? "▶ Resume all scheduled reports" : "⏸ Pause all scheduled reports")),
+      el("p", { class: "hint" }, "Paused reports are skipped by scheduled runs only; make run always runs everything."),
+      el("h4", {}, "When to run"),
+      el("div", {}, dayBoxes.map((b) => b.node)),
+      el("p", {}, "Times ", times, el("span", { class: "muted" }, "  24-hour, comma-separated")),
+      el("h4", {}, "Reports"),
+      el("div", {}, autoOpen.node),
+      el("p", {}, "Keep reports for ", retention, " days ", el("span", { class: "muted" }, "(0 = forever)")),
+      el("p", {}, el("button", { class: "btn", style: "background:var(--accent);border-color:var(--accent);color:#fff", onclick: apply }, "Apply…")),
+      status,
+      el("p", { class: "hint" }, "Apply asks for confirmation in a macOS dialog, then updates the schedule and .env. ",
+        `Delivery (${DATA.delivery || "notify"}) and secrets are changed in .env only.`),
+    ];
+  }
+
+  window.addEventListener("blur", () => { if (applyPending) leftPage = true; });
+  window.addEventListener("focus", () => { if (applyPending && leftPage) setTimeout(() => location.reload(), 1500); });
+
   function renderSettings() {
     const s = DATA.schedule;
     const py = DATA.python || "python3";
     const cd = `cd "${DATA.install_dir}"`;
     const daysText = !s ? "—" : s.days.length === 7 ? "Every day" :
       s.days.join() === "1,2,3,4,5" ? "Mon–Fri" : s.days.map((d) => DAY_NAMES[d]).join(", ");
+    const reports = DATA.scheduled_reports || SCHED_TYPES;
+    const live = s && DATA.link_handler;
     const body = $("settings-body");
     body.replaceChildren(
-      el("h4", {}, "Current schedule"),
-      s ? el("dl", { class: "kv" },
-        el("dt", {}, "Days"), el("dd", {}, daysText),
-        el("dt", {}, "Times"), el("dd", {}, s.times.join(", ") || "—"),
-        el("dt", {}, "Delivery"), el("dd", {}, DATA.delivery || "notify"),
-        el("dt", {}, "Keep reports"), el("dd", {}, DATA.retention_days > 0 ? `${DATA.retention_days} days` : "forever"))
-        : el("p", { class: "hint" }, "No LaunchAgent installed on this Mac yet — run install.sh to schedule reports."),
-      el("p", { class: "hint" },
-        "This page is a static file, so it can't change settings itself. Run the commands below in Terminal; ",
-        "the change applies from the next scheduled run, and this page shows it after the next report is archived."),
+      ...(live ? settingsForm(s) : [
+        el("h4", {}, "Current settings"),
+        s ? el("dl", { class: "kv" },
+          el("dt", {}, "Reports"), el("dd", {}, reports.length ? reports.map((t) => TYPES[t]).join(" + ") : "paused"),
+          el("dt", {}, "Days"), el("dd", {}, daysText),
+          el("dt", {}, "Times"), el("dd", {}, s.times.join(", ") || "—"),
+          el("dt", {}, "Delivery"), el("dd", {}, DATA.delivery || "notify"),
+          el("dt", {}, "Keep reports"), el("dd", {}, DATA.retention_days > 0 ? `${DATA.retention_days} days` : "forever"))
+          : el("p", { class: "hint" }, "No LaunchAgent installed on this Mac yet — run install.sh to schedule reports."),
+        el("p", { class: "hint" }, s
+          ? "To change settings from this page, register the link helper: bash scripts/install_url_handler.sh (or re-run install.sh). Or use the commands below."
+          : "Run the commands below in Terminal after installing."),
+      ]),
+      el("h4", {}, "From the command line"),
+      el("p", { class: "hint" }, "Show all settings, pause only the sprint report, or resume both:"),
+      commandBlock(`${cd}\n${py} scripts/settings.py show\n${py} scripts/settings.py set --reports pulse\n${py} scripts/settings.py set --reports pulse,sprint`),
 
       el("h4", {}, "Example: move the 9:00 AM run to 10:00 AM, every day including weekends"),
       el("p", { class: "hint" }, "1. Go to the install folder and check what is scheduled now:"),
@@ -668,8 +755,8 @@
       el("h4", {}, "Other examples"),
       el("p", { class: "hint" }, "Weekdays only, three times a day (the installer default):"),
       commandBlock(`${py} scripts/schedule.py set --days mon-fri --times 09:00,12:00,16:00`),
-      el("p", { class: "hint" }, "Pause and resume the schedule:"),
-      commandBlock(`make unschedule\nmake schedule`),
+      el("p", { class: "hint" }, "Pause and resume both reports:"),
+      commandBlock(`${py} scripts/settings.py set --reports none\n${py} scripts/settings.py set --reports pulse,sprint`),
 
       el("h4", {}, "Delivery and retention"),
       el("p", { class: "hint" }, "Edit .env in the install folder (applies from the next run):"),
@@ -681,6 +768,14 @@
 
   $("open-settings").onclick = () => { renderSettings(); $("settings").showModal(); };
   $("close-settings").onclick = () => $("settings").close();
+  if (sessionStorage.getItem(REOPEN_KEY)) {
+    sessionStorage.removeItem(REOPEN_KEY);
+    renderSettings(); $("settings").showModal();
+  }
+  if (DATA.schedule && allPaused) {
+    $("grid").before(el("div", { class: "card", style: "margin:0 0 12px" }, "⏸ Scheduled reports are paused. ",
+      el("button", { class: "btn", onclick: () => $("open-settings").click() }, "Settings")));
+  }
 
   if (!entries.length) {
     $("grid").before(el("div", { class: "empty" }, "No reports archived yet. They appear here after the next run."));
