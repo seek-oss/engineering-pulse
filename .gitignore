@@ -49,6 +49,7 @@ dist/
 .cursor/skills/*
 !.cursor/skills/engineering-pulse
 !.cursor/skills/sprint-report
+!.cursor/skills/report-compare
 
 # Local Cursor helper commands; not part of the product.
 .cursor/commands/*

@@ -577,6 +577,12 @@ EOF
   info "Schedule: runs at $(echo "$SCHEDULE_HOURS" | sed 's/ /:00, /g'):00 Mon–Fri"
   info "Logs: $LOG_FILE"
   info "launchd stdout: /tmp/daily-dashboard-launchd.out"
+
+  if bash "$INSTALL_DIR/scripts/install_url_handler.sh" "$INSTALL_DIR" >/dev/null 2>&1; then
+    success "Link handler registered: report calendar Compare → \"Ask the agent\""
+  else
+    warn "Could not register the engineering-pulse:// link handler — use 'make compare' instead"
+  fi
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────

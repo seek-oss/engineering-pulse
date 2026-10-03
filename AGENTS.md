@@ -57,6 +57,9 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 | `render_daily_dashboard_html.py` | Build `output/daily_dashboard_report.html` |
 | `send_report_smtp.py` | Email the report |
 | `todo.py` | Todoist tasks / reading queue |
+| `deliver_report.py` | Archive a report to the calendar, then notify/email per `DELIVERY` |
+| `report_snapshot.py` | Structured snapshot of a report, used by the calendar's change view |
+| `compare_reports.py` / `run_compare.sh` | Validate two report ids and run the `report-compare` skill via `AGENT_CLI` |
 
 ## Development
 

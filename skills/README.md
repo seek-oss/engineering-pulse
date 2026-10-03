@@ -26,6 +26,17 @@ event ledger, and a per-ticket table. Suitable for browsers, Gmail and Outlook.
 Reports are delivered via `scripts/deliver_report.py` (archive to the report calendar,
 then notify and/or email per `DELIVERY`).
 
+## `report-compare`
+
+Written comparison of two archived reports of the same type (Engineering Pulse or
+sprint report): what changed, what to watch, and next steps. Started from the report
+calendar's Compare view or `make compare A=<id> B=<id>`; `scripts/run_compare.sh`
+validates the ids, writes a context file and runs this skill through `AGENT_CLI`.
+
+**Path:** `skills/report-compare/SKILL.md` (single file)
+
+**Requires:** the local report archive (`output/reports/`); no MCP access.
+
 ## Install
 
 | Harness | How |

@@ -54,9 +54,15 @@ SMTP_TO=recipient@example.com
 `output/daily_dashboard_report.html`; args include `--out`, `--dashboards-dir`,
 `--output-dir`, `--prs`, `--todos`, `--extras-dir`, `--stakeholders-dir`, `--extra LABEL:FILE`
 
-**Deliver:** `scripts/deliver_report.py send --type pulse|sprint [--subject S] FILE` —
-archives via `scripts/report_archive.py`, then notifies (`scripts/notify_report.py`)
-and/or emails (`scripts/send_report_smtp.py`) per `DELIVERY`.
+**Deliver:** `scripts/deliver_report.py send --type pulse|sprint|compare [--subject S] FILE` —
+archives via `scripts/report_archive.py` (which stores a structured snapshot from
+`scripts/report_snapshot.py` for the calendar's change view), then notifies
+(`scripts/notify_report.py`) and/or emails (`scripts/send_report_smtp.py`) per `DELIVERY`.
+
+**Compare:** `scripts/run_compare.sh <id-A> <id-B>` (or `make compare A= B=`) validates
+the ids with `scripts/compare_reports.py prepare`, writes
+`output/compare/context-<A>-vs-<B>.json`, and runs the `report-compare` skill through
+`AGENT_CLI`. Log: `/tmp/engineering-pulse-compare.log`.
 
 **Schedule:** `scripts/schedule.py show` / `set --days mon-sun --times 10:00` — edits the
 installed LaunchAgent plist and reloads it.

@@ -14,6 +14,7 @@ from scripts.report_archive import (
     load_manifest,
     prune,
     record_failure,
+    save_manifest,
     with_external_links,
 )
 
@@ -94,6 +95,36 @@ class TestArchive:
         html = (root / "index.html").read_text()
         assert html.count("</script>") == 2  # data block + app script only
         assert _embedded_data(root)["entries"][0]["title"] == "x </script> y"
+
+
+class TestSnapshots:
+    SPRINT_BODY = '<svg data-current-scope="8" data-current-completed="3"></svg>'
+
+    def test_archive_stores_snapshot(self, tmp_path):
+        root = tmp_path / "reports"
+        entry, _ = archive(_report(tmp_path, body=self.SPRINT_BODY), "sprint", root=root)
+        assert entry["snapshot"]["totals"] == {"scope": 8, "completed": 3}
+        assert _embedded_data(root)["entries"][0]["snapshot"] == entry["snapshot"]
+
+    def test_report_without_data_gets_null_snapshot(self, tmp_path):
+        entry, _ = archive(_report(tmp_path), "pulse", root=tmp_path / "reports")
+        assert "snapshot" in entry and entry["snapshot"] is None
+
+    def test_build_index_backfills_older_entries(self, tmp_path):
+        root = tmp_path / "reports"
+        entry, _ = archive(_report(tmp_path, body=self.SPRINT_BODY), "sprint", root=root)
+        entries = load_manifest(root)
+        del entries[0]["snapshot"]
+        save_manifest(root, entries)
+
+        build_index(root)
+
+        assert load_manifest(root)[0]["snapshot"] == entry["snapshot"]
+
+    def test_compare_type_is_archived(self, tmp_path):
+        entry, _ = archive(_report(tmp_path), "compare", root=tmp_path / "reports")
+        assert entry["path"].endswith("compare-" + entry["path"].rsplit("-", 1)[1])
+        assert entry["snapshot"] is None
 
 
 class TestExternalLinks:

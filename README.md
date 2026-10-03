@@ -107,6 +107,10 @@ scripts/
   todo.py                        ← Todoist-backed tasks & reading queue
   deliver_report.py              ← archive + notify/email per DELIVERY
   report_archive.py              ← report archive, manifest, calendar index.html
+  report_snapshot.py             ← structured snapshot of a report (for changes / compare)
+  compare_reports.py             ← validate two report ids, write the compare context
+  run_compare.sh                 ← run the report-compare skill through AGENT_CLI
+  install_url_handler.sh         ← register engineering-pulse:// links (macOS)
   notify_report.py               ← macOS "report ready" notification
   schedule.py                    ← show / change the LaunchAgent schedule
   send_report_smtp.py            ← sends HTML report via SMTP
@@ -204,6 +208,31 @@ notification), `email` (SMTP), `both`, or `none` (local file only — no notific
 email). The installer installs `terminal-notifier` via Homebrew so clicking the
 notification opens the report; without Homebrew you get a plain banner. To import
 reports generated before the archive existed, run `.venv/bin/python scripts/report_archive.py backfill`.
+
+### Changes between reports and Compare
+
+When you view a report on the calendar, the bar above it summarises what changed since
+the previous report of the same type; **Show changes** lists the details:
+
+- **Sprint report:** tickets finished, other status changes, tickets added to or removed
+  from the sprint, and the completed / remaining / scope totals.
+- **Engineering Pulse:** health metrics that changed (band changes first), new PRs in
+  the review queue and PRs that left it, and new stakeholder messages (links that were
+  not in the previous report).
+
+**⇄ Compare** (top of the calendar) compares any two reports of the same type, for
+example two sprint reports a month apart. **Ask the agent to compare** runs the
+[`report-compare`](skills/report-compare/SKILL.md) skill through `AGENT_CLI` in the
+background; the written comparison is archived to the calendar (grey dot) and you get a
+notification when it is ready. The button uses an `engineering-pulse://` link that the
+installer registers with a small helper app (`~/Applications/Engineering Pulse.app`).
+Without the helper, run the same thing from Terminal:
+
+```bash
+cd ~/.engineering-pulse
+make compare A=sprint-20260924-123457 B=sprint-20261003-184413   # ids are shown on the Compare view
+tail -f /tmp/engineering-pulse-compare.log
+```
 
 ---
 

@@ -41,7 +41,12 @@ from scripts.report_archive import (
 )
 
 DELIVERY_MODES = ("notify", "email", "both", "none")
+RUN_LOGS = {"compare": "/tmp/engineering-pulse-compare.log"}
 console = Console()
+
+
+def run_log(report_type: str) -> str:
+    return RUN_LOGS.get(report_type, "/tmp/daily-dashboard.log")
 
 
 def delivery_mode() -> str:
@@ -125,7 +130,7 @@ def ensure(
     if delivery_mode() in ("notify", "both"):
         notify(
             f"{TYPE_LABELS[report_type]} run failed",
-            "No report was produced — check /tmp/daily-dashboard.log",
+            f"No report was produced — check {run_log(report_type)}",
             open_target=root / "index.html",
             group=f"engineering-pulse-{report_type}",
         )

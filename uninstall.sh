@@ -33,6 +33,7 @@ echo ""
 warn "This will remove:"
 echo -e "  ${DIM}  • LaunchAgent  $PLIST_PATH${RESET}"
 echo -e "  ${DIM}  • Runner       $RUNNER_SCRIPT${RESET}"
+echo -e "  ${DIM}  • Link handler $HOME/Applications/Engineering Pulse.app${RESET}"
 echo -e "  ${DIM}  • Install dir  $INSTALL_DIR${RESET}"
 echo ""
 read -r -p "  Proceed? [y/N] " CONFIRM
@@ -59,7 +60,13 @@ else
   info "Runner script not found — skipping"
 fi
 
-# 3. Remove install directory
+# 3. Remove the engineering-pulse:// link handler app
+if [ -f "$INSTALL_DIR/scripts/install_url_handler.sh" ]; then
+  bash "$INSTALL_DIR/scripts/install_url_handler.sh" --uninstall >/dev/null 2>&1 || true
+  success "Link handler removed"
+fi
+
+# 4. Remove install directory
 if [ -d "$INSTALL_DIR" ]; then
   rm -rf "$INSTALL_DIR"
   success "Install directory removed: $INSTALL_DIR"

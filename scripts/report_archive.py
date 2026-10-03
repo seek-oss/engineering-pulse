@@ -34,11 +34,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 from rich.console import Console
+from scripts.report_snapshot import extract as extract_snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "output"
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "report_index.html.tmpl"
-TYPE_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report"}
+TYPE_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report", "compare": "Comparison"}
 DEFAULT_RETENTION_DAYS = 90
 
 _TITLE_RE = re.compile(r"<title[^>]*>([\s\S]*?)</title>", re.IGNORECASE)
@@ -175,6 +176,7 @@ def archive(
             "path": rel.as_posix(),
             "sha256": digest,
             "source": src.name,
+            "snapshot": extract_snapshot(text, report_type),
         }
     )
     entries.append(entry)
@@ -312,9 +314,24 @@ def render_index(data: dict) -> str:
     return TEMPLATE.read_text(encoding="utf-8").replace("__REPORT_DATA__", payload)
 
 
+def _backfill_snapshots(root: Path) -> None:
+    entries = load_manifest(root)
+    changed = False
+    for entry in entries:
+        if "snapshot" in entry or entry.get("status") != "ok" or not entry.get("path"):
+            continue
+        path = root / entry["path"]
+        if path.is_file():
+            entry["snapshot"] = extract_snapshot(path.read_text(encoding="utf-8"), entry["type"])
+            changed = True
+    if changed:
+        save_manifest(root, entries)
+
+
 def build_index(root: Path | None = None) -> Path:
     root = root or reports_dir()
     root.mkdir(parents=True, exist_ok=True)
+    _backfill_snapshots(root)
     data = index_data(root)
     index = root / "index.html"
     index.write_text(render_index(data), encoding="utf-8")

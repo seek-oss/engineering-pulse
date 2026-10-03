@@ -26,6 +26,7 @@ help:
 	@echo "  make update       Pull latest code + reinstall dependencies"
 	@echo "  make test         Run the test suite with coverage"
 	@echo "  make reports      Open the report calendar in your browser"
+	@echo "  make compare A=<id> B=<id>  Ask the agent to compare two archived reports"
 	@echo "  make schedule-show Show the scheduled days and times"
 	@echo "  make schedule     Reload the LaunchAgent (after plist changes)"
 	@echo "  make unschedule   Unload the LaunchAgent (pause the schedule)"
@@ -74,6 +75,12 @@ schedule-show:
 reports:
 	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/report_archive.py build-index
 	@open "$(INSTALL_DIR)/output/reports/index.html"
+
+.PHONY: compare
+compare:
+	@test -n "$(A)" -a -n "$(B)" || { echo "Usage: make compare A=<report-id> B=<report-id> (ids are on the calendar's Compare view)"; exit 2; }
+	@echo "→  Comparing $(A) with $(B) (log: /tmp/engineering-pulse-compare.log)…"
+	@bash "$(INSTALL_DIR)/scripts/run_compare.sh" "$(A)" "$(B)"
 
 .PHONY: schedule
 schedule:

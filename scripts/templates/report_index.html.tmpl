@@ -8,7 +8,8 @@
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --text: #1f2933; --muted: #6b7280; --line: #e5e7eb;
     --off: #eef0f3; --off-text: #a3a9b3; --weekend: #f3f4f6; --accent: #2563eb;
-    --pulse: #3b82f6; --sprint: #8b5cf6; --fail: #ef4444; --ok: #16a34a; --today: #f59e0b;
+    --pulse: #3b82f6; --sprint: #8b5cf6; --compare: #9ca3af; --fail: #ef4444; --ok: #16a34a;
+    --today: #f59e0b; --watch: #d97706;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -27,10 +28,12 @@
   header.top .spacer { flex: 1; }
   .btn { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
   .btn:hover { border-color: var(--accent); }
+  a.btn { color: inherit; text-decoration: none; white-space: nowrap; }
   .btn[disabled] { opacity: .4; cursor: default; border-color: var(--line); }
   .legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; }
   .dot.pulse { background: var(--pulse); } .dot.sprint { background: var(--sprint); }
+  .dot.compare { background: var(--compare); }
   .dot.fail { background: transparent; border: 2px solid var(--fail); }
   main { max-width: 1100px; margin: 0 auto; padding: 20px; }
 
@@ -93,6 +96,30 @@
          white-space: pre-wrap; word-break: break-all; }
   .cmd .copy { position: absolute; top: 6px; right: 6px; font-size: 11px; padding: 2px 8px; }
   .hint { color: var(--muted); font-size: 12.5px; }
+
+  /* Changes and Compare */
+  .muted { color: var(--muted); }
+  .good { color: var(--ok); } .bad { color: var(--fail); } .watch { color: var(--watch); }
+  .summary-line { color: var(--muted); font-size: 12.5px; }
+  .changes { max-height: 40vh; overflow: auto; padding: 4px 20px 12px; background: var(--panel);
+             border-bottom: 1px solid var(--line); }
+  .diff h4 { margin: 12px 0 4px; font-size: 13px; }
+  .diff ul { margin: 0; padding-left: 18px; }
+  .diff li { margin: 2px 0; }
+  .band { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 11px; color: #fff; }
+  .band.red { background: var(--fail); } .band.yellow { background: var(--watch); }
+  .band.green { background: var(--ok); } .band.grey { background: var(--compare); }
+  #compare-view { display: none; }
+  body.compare #calendar-view { display: none; }
+  body.compare #compare-view { display: block; }
+  .cmp-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cmp-bar h2 { margin: 0 8px 0 0; font-size: 20px; }
+  select { font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--text); max-width: 360px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: 14px 18px; margin-top: 14px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; }
+  a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; display: inline-block; }
 </style>
 </head>
 <body>
@@ -101,10 +128,12 @@
   <div class="legend">
     <span><span class="dot pulse"></span> Engineering Pulse</span>
     <span><span class="dot sprint"></span> Sprint report</span>
+    <span><span class="dot compare"></span> Comparison</span>
     <span><span class="dot fail"></span> Failed run</span>
   </div>
   <div class="spacer"></div>
   <span class="hint" id="generated"></span>
+  <a class="btn" href="#/compare" title="Compare two reports">⇄ Compare</a>
   <button class="btn" id="open-settings" title="Schedule &amp; delivery settings">⚙ Settings</button>
 </header>
 
@@ -133,7 +162,12 @@
   </div>
   <div class="sub-bar">
     <div class="chips" id="chips"></div>
+    <span class="spacer" style="flex:1"></span>
+    <span class="summary-line" id="changes-summary"></span>
+    <button class="btn" id="toggle-changes" hidden>Show changes</button>
+    <a class="btn" id="compare-prev" hidden>Compare…</a>
   </div>
+  <div class="changes diff" id="changes" hidden></div>
   <div class="viewer" id="viewer"></div>
   <div class="foot">
     <button class="btn" id="prev-report">← Previous</button>
@@ -144,6 +178,25 @@
     <a id="open-tab" target="_blank" rel="noopener">Open in new tab</a>
   </div>
 </section>
+
+<main id="compare-view">
+  <div class="cmp-bar">
+    <a class="btn" href="#">← Calendar</a>
+    <h2>Compare reports</h2>
+    <select id="cmp-type" aria-label="Report type"></select>
+  </div>
+  <div class="cmp-bar" style="margin-top:12px">
+    <label>From <select id="cmp-a" aria-label="Older report"></select></label>
+    <button class="btn" id="cmp-swap" title="Swap the two reports">⇄</button>
+    <label>To <select id="cmp-b" aria-label="Newer report"></select></label>
+  </div>
+  <div class="card">
+    <h3 id="cmp-title"></h3>
+    <div class="summary-line" id="cmp-summary"></div>
+    <div class="diff" id="cmp-diff"></div>
+  </div>
+  <div class="card" id="cmp-agent"></div>
+</main>
 
 <dialog id="settings">
   <div class="dlg-head">
@@ -186,6 +239,123 @@
   }
 
   $("generated").textContent = DATA.generated ? `Updated ${DATA.generated.replace("T", " ").slice(0, 16)}` : "";
+
+  /* ── Diff between two report snapshots ──────────────────────────────── */
+  const DIFF_TYPES = new Set(["pulse", "sprint"]);
+  const byId = Object.fromEntries(entries.map((e) => [e.id, e]));
+  const DONE_RE = /^(done|closed|resolved|released|complete)/i;
+  const BAND_RANK = { red: 0, yellow: 1, green: 2 };
+  const toNum = (s) => { const m = String(s).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+  const signed = (d) => `${d > 0 ? "+" : ""}${Math.round(d * 100) / 100}`;
+  const when = (e) => `${parseYmd(e.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${e.time}`;
+
+  function delta(oldV, newV, goodWhenUp) {
+    const d = newV - oldV;
+    if (!d) return el("span", { class: "muted" }, " (no change)");
+    const cls = goodWhenUp == null ? "muted" : (d > 0) === goodWhenUp ? "good" : "bad";
+    return el("span", { class: cls }, ` (${signed(d)})`);
+  }
+
+  function group(title, items) {
+    return items.length ? el("div", {}, el("h4", {}, `${title} (${items.length})`), el("ul", {}, items)) : null;
+  }
+
+  function diffSprint(a, b) {
+    const summary = [], groups = [];
+    const ta = a.totals || {}, tb = b.totals || {};
+    const totals = [];
+    for (const [k, label, goodUp] of [["completed", "Completed", true], ["remaining", "Remaining", false], ["scope", "Scope", null]]) {
+      if (ta[k] == null || tb[k] == null) continue;
+      totals.push(el("li", {}, `${label}: ${ta[k]} → ${tb[k]}`, delta(ta[k], tb[k], goodUp)));
+    }
+    if (totals.length) groups.push(el("div", {}, el("h4", {}, "Totals"), el("ul", {}, totals)));
+    const ka = a.tickets || {}, kb = b.tickets || {};
+    const finished = [], moved = [], added = [], removed = [];
+    const line = (key, t, extra) => el("li", {}, el("strong", {}, key), ` ${t.summary}`, extra ? el("span", { class: "muted" }, ` — ${extra}`) : null);
+    for (const [key, t] of Object.entries(kb)) {
+      const old = ka[key];
+      if (!old) added.push(line(key, t, `${t.status}${t.assignee && t.assignee !== "—" ? ", " + t.assignee : ""}`));
+      else if (old.status !== t.status) {
+        const done = DONE_RE.test(t.status) && !DONE_RE.test(old.status);
+        (done ? finished : moved).push(line(key, t, `${old.status} → ${t.status}`));
+      }
+    }
+    for (const [key, t] of Object.entries(ka)) if (!(key in kb)) removed.push(line(key, t, `was ${t.status}`));
+    if (finished.length) summary.push(`${finished.length} finished`);
+    if (moved.length) summary.push(`${moved.length} status change${moved.length > 1 ? "s" : ""}`);
+    if (added.length) summary.push(`${added.length} added`);
+    if (removed.length) summary.push(`${removed.length} removed`);
+    groups.push(group("Finished", finished), group("Status changed", moved), group("Added to sprint", added), group("Removed from sprint", removed));
+    return { summary, groups };
+  }
+
+  function diffPulse(a, b) {
+    const summary = [], groups = [];
+    const ma = a.metrics || {}, mb = b.metrics || {};
+    const metricItems = [];
+    let worse = 0, better = 0;
+    for (const name of new Set([...Object.keys(ma), ...Object.keys(mb)])) {
+      const o = ma[name], n = mb[name];
+      if (!o || !n) {
+        metricItems.push({ rank: 1, node: el("li", {}, `${name}: `, n ? `new (${n.value})` : `no longer reported (was ${o.value})`) });
+        continue;
+      }
+      if (o.value === n.value && o.band === n.band) continue;
+      const parts = [`${name}: ${o.value} → ${n.value}`];
+      const ov = toNum(o.value), nv = toNum(n.value);
+      if (ov != null && nv != null && ov !== nv) parts.push(delta(ov, nv, null));
+      let rank = 2;
+      if (o.band !== n.band) {
+        const dr = (BAND_RANK[n.band] ?? -1) - (BAND_RANK[o.band] ?? -1);
+        if (dr < 0) { worse++; rank = 0; } else if (dr > 0) better++;
+        parts.push(" ", el("span", { class: `band ${o.band}` }, o.band || "?"), " → ", el("span", { class: `band ${n.band}` }, n.band || "?"));
+      }
+      metricItems.push({ rank, node: el("li", {}, parts) });
+    }
+    metricItems.sort((x, y) => x.rank - y.rank);
+    if (metricItems.length) {
+      summary.push(`${metricItems.length} metric${metricItems.length > 1 ? "s" : ""} changed${worse ? `, ${worse} worse` : ""}${better ? `, ${better} better` : ""}`);
+    }
+    groups.push(group("Health score changes", metricItems.map((m) => m.node)));
+
+    const pa = a.prs || {}, pb = b.prs || {};
+    const prLine = (url, p) => el("li", {}, el("a", { href: url, target: "_blank", rel: "noopener" }, p.title), el("span", { class: "muted" }, ` — ${p.repo}, ${p.author}`));
+    const newPrs = Object.entries(pb).filter(([u]) => !(u in pa)).map(([u, p]) => prLine(u, p));
+    const gone = Object.entries(pa).filter(([u]) => !(u in pb)).map(([u, p]) => prLine(u, p));
+    if (newPrs.length) summary.push(`${newPrs.length} new PR${newPrs.length > 1 ? "s" : ""} to review`);
+    if (gone.length) summary.push(`${gone.length} PR${gone.length > 1 ? "s" : ""} left the queue`);
+    groups.push(group("New PRs awaiting review", newPrs), group("Left the review queue", gone));
+
+    const sa = a.stakeholders || {}, sb = b.stakeholders || {};
+    // Card titles are agent-written and can vary between runs, so match messages by link alone.
+    const msgKey = (href) => href.split(/[?#]/)[0];
+    const seen = new Set(Object.values(sa).flatMap((c) => Object.keys(c.links || {}).map(msgKey)));
+    const threads = [];
+    for (const [person, card] of Object.entries(sb)) {
+      for (const [href, text] of Object.entries(card.links || {})) {
+        if (seen.has(msgKey(href))) continue;
+        seen.add(msgKey(href));
+        threads.push(el("li", {}, el("strong", {}, person), ": ", el("a", { href, target: "_blank", rel: "noopener" }, text || href)));
+      }
+    }
+    if (threads.length) summary.push(`${threads.length} new stakeholder message${threads.length > 1 ? "s" : ""}`);
+    groups.push(group("New stakeholder messages", threads));
+    return { summary, groups };
+  }
+
+  function diffEntries(a, b) {
+    if (!a.snapshot || !b.snapshot) {
+      return { summary: ["no structured data for one of these reports (older format)"], body: null };
+    }
+    const { summary, groups } = (b.type === "sprint" ? diffSprint : diffPulse)(a.snapshot, b.snapshot);
+    const shown = groups.filter(Boolean);
+    return { summary, body: shown.length ? el("div", {}, shown) : null };
+  }
+
+  function previousOf(entry) {
+    const same = entries.filter((e) => e.type === entry.type && e.status === "ok" && e.timestamp < entry.timestamp);
+    return same[same.length - 1] || null;
+  }
 
   /* ── Calendar ───────────────────────────────────────────────────────── */
   let month = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
@@ -303,7 +473,7 @@
       viewer.replaceChildren(el("div", { class: "fail-panel" },
         el("h3", {}, `${TYPES[current.type] || current.type} run failed at ${current.time}`),
         el("p", {}, current.note || "The scheduled run did not produce a report."),
-        el("p", { class: "hint" }, "Check the run log: tail -200 /tmp/daily-dashboard.log")));
+        el("p", { class: "hint" }, `Check the run log: tail -200 ${current.type === "compare" ? "/tmp/engineering-pulse-compare.log" : "/tmp/daily-dashboard.log"}`)));
       link.removeAttribute("href");
     } else {
       const frame = viewer.querySelector("iframe");
@@ -313,7 +483,33 @@
       link.href = current.path;
       document.title = `${current.title} — ${current.time}`;
     }
+    renderChanges(current);
   }
+
+  let showChanges = false;
+
+  function renderChanges(current) {
+    const box = $("changes"), sum = $("changes-summary"), btn = $("toggle-changes"), cmp = $("compare-prev");
+    const diffable = current && current.status === "ok" && DIFF_TYPES.has(current.type);
+    const prev = diffable ? previousOf(current) : null;
+    btn.hidden = true; cmp.hidden = true; box.hidden = true;
+    if (!prev) {
+      sum.textContent = diffable ? "First report of this type — nothing to compare yet." : "";
+      return;
+    }
+    const { summary, body } = diffEntries(prev, current);
+    sum.textContent = `Since ${when(prev)}: ${summary.join(" · ") || "no changes"}`;
+    cmp.hidden = false;
+    cmp.href = `#/compare/${prev.id}/${current.id}`;
+    if (body && summary.length) {
+      btn.hidden = false;
+      btn.textContent = showChanges ? "Hide changes" : "Show changes";
+      box.replaceChildren(body);
+      box.hidden = !showChanges;
+    }
+  }
+
+  $("toggle-changes").onclick = () => { showChanges = !showChanges; renderDay(); };
 
   function step(delta) {
     const shown = visible();
@@ -334,7 +530,64 @@
   $("prev-day").onclick = () => stepDay(-1);
   $("next-day").onclick = () => stepDay(1);
 
+  /* ── Compare view ───────────────────────────────────────────────────── */
+  let cmpType = null;
+  const comparable = (type) => entries.filter((e) => e.type === type && e.status === "ok").reverse();
+  const optionLabel = (e) => `${when(e)} — ${e.title}`;
+
+  function fillSelect(select, list, selected) {
+    select.replaceChildren(...list.map((e) => el("option", { value: e.id, selected: e.id === selected }, optionLabel(e))));
+  }
+
+  function renderCompare(aId, bId) {
+    const types = [...DIFF_TYPES].filter((t) => comparable(t).length);
+    let a = byId[aId], b = byId[bId];
+    const type = (b && DIFF_TYPES.has(b.type) && b.type) || (types.includes(cmpType) && cmpType) || types[0];
+    cmpType = type;
+    const list = type ? comparable(type) : [];
+    if (!b || b.type !== type) b = list[0];
+    if (!a || a.type !== type) a = list[1] || null;
+
+    $("cmp-type").replaceChildren(...types.map((t) => el("option", { value: t, selected: t === type }, TYPES[t] || t)));
+    fillSelect($("cmp-a"), list, a && a.id);
+    fillSelect($("cmp-b"), list, b && b.id);
+    document.title = "Compare reports — Engineering Pulse";
+
+    const agent = $("cmp-agent");
+    if (!a || !b || a.id === b.id) {
+      $("cmp-title").textContent = list.length < 2 ? "Need at least two reports of the same type to compare." : "Pick two different reports.";
+      $("cmp-summary").textContent = "";
+      $("cmp-diff").replaceChildren();
+      agent.hidden = true;
+      return;
+    }
+    $("cmp-title").textContent = `Changes from ${when(a)} to ${when(b)}`;
+    const { summary, body } = diffEntries(a, b);
+    $("cmp-summary").textContent = summary.join(" · ") || "No changes in tracked fields.";
+    $("cmp-diff").replaceChildren(body || "");
+
+    agent.hidden = false;
+    const existing = entries.filter((e) => e.type === "compare" && e.status === "ok" && e.source === `compare-${a.id}-vs-${b.id}.html`).pop();
+    const cd = `cd "${DATA.install_dir}"`;
+    agent.replaceChildren(
+      el("h3", {}, "Written comparison by the agent"),
+      existing ? el("p", {}, "Already done: ", el("a", { href: `#/day/${existing.date}/${existing.id}` }, `${existing.title} (${when(existing)})`)) : null,
+      el("p", { class: "hint" },
+        "The agent reads both reports and writes a short comparison report: what moved, what is at risk, and what to look at next. ",
+        "It runs in the background on this Mac (about 1–3 minutes). You get a notification when it is ready, and it appears in the calendar as a grey dot."),
+      el("a", { class: "btn primary", href: `engineering-pulse://compare?a=${encodeURIComponent(a.id)}&b=${encodeURIComponent(b.id)}` }, existing ? "Run the agent again" : "Ask the agent to compare"),
+      el("p", { class: "hint" }, "If nothing happens, the link handler is not installed (re-run install.sh), or run it from Terminal:"),
+      commandBlock(`${cd}\nmake compare A=${a.id} B=${b.id}`),
+    );
+  }
+
+  $("cmp-type").onchange = (ev) => { cmpType = ev.target.value; location.hash = "#/compare"; };
+  $("cmp-a").onchange = () => { location.hash = `#/compare/${$("cmp-a").value}/${$("cmp-b").value}`; };
+  $("cmp-b").onchange = () => { location.hash = `#/compare/${$("cmp-a").value}/${$("cmp-b").value}`; };
+  $("cmp-swap").onclick = () => { location.hash = `#/compare/${$("cmp-b").value}/${$("cmp-a").value}`; };
+
   document.addEventListener("keydown", (ev) => {
+    if (document.body.classList.contains("compare") && ev.key === "Escape" && !$("settings").open) { location.hash = ""; return; }
     if (!document.body.classList.contains("day") || $("settings").open) return;
     if (ev.key === "ArrowLeft") { step(-1); ev.preventDefault(); }
     else if (ev.key === "ArrowRight") { step(1); ev.preventDefault(); }
@@ -343,6 +596,14 @@
 
   /* ── Routing ────────────────────────────────────────────────────────── */
   function route() {
+    const c = location.hash.match(/^#\/compare(?:\/([^/]+)\/([^/]+))?$/);
+    if (c) {
+      document.body.classList.remove("day");
+      document.body.classList.add("compare");
+      renderCompare(c[1] && decodeURIComponent(c[1]), c[2] && decodeURIComponent(c[2]));
+      return;
+    }
+    document.body.classList.remove("compare");
     const m = location.hash.match(/^#\/day\/(\d{4}-\d{2}-\d{2})(?:\/(.+))?$/);
     if (m && byDate[m[1]]) {
       if (day !== m[1]) typeFilter = "all";
