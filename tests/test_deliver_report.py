@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from scripts.deliver_report import delivery_mode, ensure, send
+from scripts.deliver_report import delivery_mode, ensure, notification_text, send
 from scripts.report_archive import load_manifest
 
 
@@ -41,6 +41,40 @@ def _report(tmp_path, body="x"):
 def test_delivery_mode(monkeypatch, value, expected):
     monkeypatch.setenv("DELIVERY", value)
     assert delivery_mode() == expected
+
+
+ENTRY = {"title": "Daily Dashboard — team-a", "date": "2026-10-02", "time": "09:00"}
+
+
+def test_notification_text_defaults(monkeypatch):
+    for key in ("NOTIFY_TITLE", "NOTIFY_SUBTITLE", "NOTIFY_MESSAGE"):
+        monkeypatch.delenv(key, raising=False)
+    assert notification_text(ENTRY, "pulse") == (
+        "Engineering Pulse ready",
+        "Fri 2026-10-02 · 09:00",
+        "Daily Dashboard — team-a — click to open",
+    )
+
+
+def test_notification_text_from_env(monkeypatch):
+    monkeypatch.setenv("NOTIFY_TITLE", "📊 {type_label} · {time}")
+    monkeypatch.setenv("NOTIFY_SUBTITLE", "")
+    monkeypatch.setenv("NOTIFY_MESSAGE", "{title} {unknown}")
+    title, subtitle, message = notification_text(ENTRY, "sprint")
+    assert title == "📊 Sprint report · 09:00"
+    assert subtitle == "Fri 2026-10-02 · 09:00"  # empty value falls back to the default
+    assert message == "Daily Dashboard — team-a {unknown}"
+
+
+def test_notification_text_bad_template_falls_back(monkeypatch):
+    monkeypatch.setenv("NOTIFY_TITLE", "{broken")
+    assert notification_text(ENTRY, "pulse")[0] == "Engineering Pulse ready"
+
+
+def test_send_notify_uses_templates(tmp_path, monkeypatch, notify, email):
+    monkeypatch.setenv("NOTIFY_MESSAGE", "Open {type_label}")
+    send(_report(tmp_path), "pulse", root=tmp_path / "reports")
+    assert notify.call_args.args[1] == "Open Engineering Pulse"
 
 
 def test_send_notify_only(tmp_path, notify, email):
