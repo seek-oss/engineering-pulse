@@ -59,37 +59,11 @@ def _retention_days() -> int:
         return DEFAULT_RETENTION_DAYS
 
 
-NOTIFY_DEFAULTS = {
-    "NOTIFY_TITLE": "{type_label} ready",
-    "NOTIFY_SUBTITLE": "{weekday} {date} · {time}",
-    "NOTIFY_MESSAGE": "{title} — click to open",
-}
-
-
-class _KeepUnknown(dict):
-    def __missing__(self, key: str) -> str:
-        return "{" + key + "}"
-
-
 def notification_text(entry: dict, report_type: str) -> tuple[str, str, str]:
-    """Return (title, subtitle, message) from the NOTIFY_* templates in .env."""
-    fields = _KeepUnknown(
-        type=report_type,
-        type_label=TYPE_LABELS[report_type],
-        title=entry["title"],
-        date=entry["date"],
-        time=entry["time"],
-        weekday=datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%a"),
-    )
-    texts = []
-    for key, default in NOTIFY_DEFAULTS.items():
-        template = os.environ.get(key) or default
-        try:
-            texts.append(template.format_map(fields))
-        except (ValueError, IndexError):
-            console.print(f"[yellow]Invalid {key} template; using default[/yellow]")
-            texts.append(default.format_map(fields))
-    return texts[0], texts[1], texts[2]
+    """Return (title, subtitle, message), e.g. ("Engineering Pulse ready", "Sat 3 Oct · 18:22", <report title>)."""
+    day = datetime.strptime(entry["date"], "%Y-%m-%d")
+    subtitle = f"{day:%a} {day.day} {day:%b} · {entry['time']}"
+    return f"{TYPE_LABELS[report_type]} ready", subtitle, entry["title"]
 
 
 def send_email(subject: str, report: Path) -> int:

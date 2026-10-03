@@ -10,7 +10,6 @@
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `DELIVERY` | no | `notify` (default, macOS notification), `email`, `both`, or `none` (local file only). Reports are always archived. |
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
-| `NOTIFY_TITLE` / `NOTIFY_SUBTITLE` / `NOTIFY_MESSAGE` | no | Notification text templates; placeholders `{type_label}`, `{title}`, `{date}`, `{weekday}`, `{time}`, `{type}` (see `.env.example`) |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
 | `REPORTS_DIR` | no | Archive root (default `output/reports`) |
