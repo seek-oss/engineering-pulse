@@ -109,9 +109,17 @@ def add(
     fix = None
     if server and agent in AGENT_LABELS:
         fix = {"kind": "mcp_login", "agent": agent, "server": server}
-    issue = {"source": source, "message": message, "fix": fix}
-    issues = [i for i in data.get("issues") or [] if i != issue]
-    issues.append(issue)
+    issues = [i for i in data.get("issues") or [] if isinstance(i, dict)]
+    existing = next((i for i in issues if i.get("source") == source), None)
+    if existing is not None:
+        # One row per source: the first (usually preflight's) wording stays; a sign-in
+        # fix found later is kept.
+        if fix and not existing.get("fix"):
+            existing["fix"] = fix
+        issue = existing
+    else:
+        issue = {"source": source, "message": message, "fix": fix}
+        issues.append(issue)
     data["issues"] = issues
     _write(report_type, data, root)
     return issue
@@ -217,10 +225,11 @@ def preflight_issues(
             continue
         auth = next((s for s, st in matches.items() if st == NEEDS_AUTH), None)
         if auth:
+            server = "" if auth.lower() == name.lower() else f" ({auth})"
             found.append(
                 {
                     "source": key,
-                    "message": f"{name} MCP ({auth}) needs you to sign in for {label}.",
+                    "message": f"{name} MCP{server} needs you to sign in ({label}).",
                     "fix": {"kind": "mcp_login", "agent": agent, "server": auth},
                 }
             )

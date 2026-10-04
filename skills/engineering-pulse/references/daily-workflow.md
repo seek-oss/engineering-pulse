@@ -23,8 +23,11 @@ python3 scripts/run_issues.py add --type pulse --source github \
   --message "GitHub MCP search failed: <short reason>" [--server <MCP server name>]
 ```
 
-Pass `--server` only when signing in to that MCP server would fix it; the report then
-shows a **Sign in** button. Never stop early: render with whatever data this run produced
+Use one of these `--source` names: `datadog`, `github`, `glean`, `todoist`, `atlassian`.
+The box keeps one row per source, so first check `python3 scripts/run_issues.py show
+--type pulse` and skip problems already listed (preflight records MCP sign-in and
+missing dashboards before you start). Pass `--server` only when signing in to that MCP
+server would fix it; the report then shows a **Sign in** button. Never stop early: render with whatever data this run produced
 and deliver. `deliver_report.py send` puts the recorded problems in a red box at the top
 of the report.
 

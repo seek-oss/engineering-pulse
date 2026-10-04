@@ -14,6 +14,15 @@ from urllib.parse import urlencode
 
 MARKER = "data-ep-issues"
 TYPE_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report", "compare": "Comparison"}
+SOURCE_LABELS = {
+    "datadog": "Datadog",
+    "github": "GitHub",
+    "atlassian": "Jira",
+    "jira": "Jira",
+    "glean": "Glean",
+    "todoist": "Todoist",
+    "agent": "Run",
+}
 RERUN_TYPES = ("pulse", "sprint")
 
 _BOX_RE = re.compile(rf"<div {MARKER}[\s\S]*?<!--/ep-issues-->", re.IGNORECASE)
@@ -37,8 +46,13 @@ def rerun_link(report_type: str) -> str:
     return _link({"type": report_type}, "run")
 
 
+def _fixable(issue: dict) -> bool:
+    return bool((issue.get("fix") or {}).get("kind"))
+
+
 def _row(issue: dict) -> str:
-    source = html.escape(str(issue.get("source") or "run").capitalize())
+    raw = str(issue.get("source") or "agent")
+    source = html.escape(SOURCE_LABELS.get(raw.lower(), raw.capitalize()))
     message = html.escape(str(issue.get("message") or ""))
     fix = issue.get("fix") or {}
     button = ""
@@ -58,13 +72,13 @@ def render_issue_box(issues: list[dict], report_type: str) -> str:
         return ""
     count = len(issues)
     heading = f"{count} problem{'s' if count != 1 else ''} in this run"
-    fixable = any((i.get("fix") or {}).get("kind") for i in issues)
+    fixable = any(_fixable(i) for i in issues)
     footer = ""
     if fixable and report_type in RERUN_TYPES:
         href = html.escape(rerun_link(report_type))
         footer = (
-            f'<p style="margin:12px 0 0"><a href="{href}" style="{_BUTTON}">'
-            "Re-run this report</a> after signing in.</p>"
+            '<p style="margin:12px 0 0">After signing in: '
+            f'<a href="{href}" style="{_BUTTON}">Re-run this report</a></p>'
         )
     if fixable:
         footer += (
@@ -72,7 +86,7 @@ def render_issue_box(issues: list[dict], report_type: str) -> str:
             "Buttons work when this report is opened on the Mac where Engineering Pulse "
             "is installed.</p>"
         )
-    rows = "".join(_row(i) for i in issues)
+    rows = "".join(_row(i) for i in sorted(issues, key=lambda i: not _fixable(i)))
     return (
         f"<div {MARKER} "
         'style="max-width:900px;margin:16px auto;padding:16px 20px;background:#fff5f5;'

@@ -64,6 +64,26 @@ class TestStore:
         add("pulse", "github", "same")
         assert len(load("pulse")) == 1
 
+    def test_one_row_per_source_keeps_first_wording(self):
+        add("pulse", "github", "GitHub MCP needs you to sign in (Cursor CLI).")
+        add("pulse", "github", "GitHub MCP not signed in; PR queue not fetched")
+        add("pulse", "datadog", "No dashboards")
+        stored = load("pulse")
+        assert [i["source"] for i in stored] == ["github", "datadog"]
+        assert stored[0]["message"] == "GitHub MCP needs you to sign in (Cursor CLI)."
+
+    def test_merge_keeps_a_later_sign_in_fix(self):
+        add("pulse", "github", "first")
+        add("pulse", "github", "second", server="GitHub", agent="cursor")
+        (issue,) = load("pulse")
+        assert issue["message"] == "first"
+        assert issue["fix"]["server"] == "GitHub"
+
+    def test_merge_does_not_drop_existing_fix(self):
+        add("pulse", "github", "first", server="GitHub", agent="cursor")
+        add("pulse", "github", "second")
+        assert load("pulse")[0]["fix"]["server"] == "GitHub"
+
     def test_server_with_known_agent_gets_login_fix(self):
         issue = add("pulse", "github", "sign in", server="GitHub", agent="cursor")
         assert issue["fix"] == {"kind": "mcp_login", "agent": "cursor", "server": "GitHub"}
@@ -154,7 +174,15 @@ class TestPreflightIssues:
         found = preflight_issues("pulse", "cursor", servers, env=ENV_MIN, dashboards=True)
         github = next(i for i in found if i["source"] == "github")
         assert github["fix"] == {"kind": "mcp_login", "agent": "cursor", "server": "GitHub"}
-        assert "Cursor CLI" in github["message"]
+        assert github["message"] == "GitHub MCP needs you to sign in (Cursor CLI)."
+
+    def test_sign_in_message_names_server_when_different(self):
+        servers = parse_mcp_list("claude", CLAUDE_LIST)
+        found = preflight_issues("pulse", "claude", servers, env=ENV_MIN, dashboards=False)
+        github = next(i for i in found if i["source"] == "github")
+        assert (
+            github["message"] == "GitHub MCP (acme-github-mcp) needs you to sign in (Claude Code)."
+        )
 
     def test_failed_server_explains_without_button(self):
         servers = parse_mcp_list("cursor", CURSOR_LIST)

@@ -40,8 +40,30 @@ class TestRenderIssueBox:
     def test_rerun_when_fixable(self):
         box = render_issue_box([_issue("x", LOGIN)], "sprint")
         assert "engineering-pulse://run?type=sprint" in box
-        assert "Re-run this report" in box
+        assert "After signing in: <a" in box
+        assert ">Re-run this report</a></p>" in box
         assert "opened on the Mac" in box
+
+    def test_source_labels(self):
+        box = render_issue_box(
+            [_issue(source="github"), _issue(source="atlassian"), _issue(source="custom")],
+            "pulse",
+        )
+        assert "<strong>GitHub:</strong>" in box
+        assert "<strong>Jira:</strong>" in box
+        assert "<strong>Custom:</strong>" in box
+        assert "Github:" not in box
+
+    def test_fixable_rows_come_first(self):
+        box = render_issue_box(
+            [
+                _issue("no dashboards", source="datadog"),
+                _issue("sign in", LOGIN),
+                _issue("third problem"),
+            ],
+            "pulse",
+        )
+        assert box.index("sign in") < box.index("no dashboards") < box.index("third problem")
 
     def test_no_rerun_without_fixable_issue(self):
         box = render_issue_box([_issue()], "pulse")
