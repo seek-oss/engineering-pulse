@@ -45,6 +45,8 @@ SVG_RE = re.compile(r"<svg\b[\s\S]*?</svg>", re.IGNORECASE)
 _STYLE_RE = re.compile(r"<style\b[^>]*>([\s\S]*?)</style>", re.IGNORECASE)
 _VIEWBOX_RE = re.compile(r'viewBox="\s*[\d.+-]+[\s,]+[\d.+-]+[\s,]+([\d.]+)', re.IGNORECASE)
 _CHART_NAME_RE = re.compile(r'(?:data-chart|aria-label)="([^"]+)"', re.IGNORECASE)
+# The report's "more features" badge needs <details>, which mail clients don't support.
+HINTS_RE = re.compile(r"<!--ep-hints-->[\s\S]*?<!--/ep-hints-->")
 PNG_ZOOM = 2
 CHART_FALLBACK_NOTE = (
     '<p style="color:#667085;font-style:italic;">'
@@ -106,7 +108,7 @@ def inline_svg_charts(body: str, render=None) -> tuple[str, list[tuple[str, byte
 
 
 def _build_html_message(body: str, attachment: Path | None = None) -> MIMEMultipart:
-    html_body, images = inline_svg_charts(body)
+    html_body, images = inline_svg_charts(HINTS_RE.sub("", body))
     chart_count = len(SVG_RE.findall(body))
 
     alternative = MIMEMultipart("alternative")

@@ -166,6 +166,18 @@ class TestBuildHtmlMessage:
         assert "cid:chart-1@engineering-pulse" in html_body
         assert "<svg" not in html_body
 
+    def test_feature_hints_removed_from_email(self):
+        body = (
+            "<!doctype html><html><body><!--ep-hints--><details class='hints'>"
+            "<summary>2 more features</summary></details><!--/ep-hints--><p>Dashboard</p>"
+            "</body></html>"
+        )
+        msg = email.message_from_string(_build_html_message(body).as_string())
+        html_part = next(p for p in msg.walk() if p.get_content_type() == "text/html")
+        html_body = html_part.get_payload(decode=True).decode()
+        assert "more features" not in html_body
+        assert "<p>Dashboard</p>" in html_body
+
     def test_no_svg_keeps_plain_alternative(self):
         body = "<!doctype html><html><body><p>Dashboard</p></body></html>"
         msg = _build_html_message(body)

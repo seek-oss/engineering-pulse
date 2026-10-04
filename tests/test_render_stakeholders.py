@@ -86,14 +86,14 @@ def _run(
 class TestStakeholderPulseWiring:
     def test_omits_section_when_dir_missing(self, tmp_path: Path) -> None:
         html, _ = _run(tmp_path, stakeholders_dir=tmp_path / "missing")
-        assert "Stakeholder Pulse" not in html
+        assert "— Stakeholder Pulse" not in html
 
     def test_omits_section_when_dir_only_has_underscore_files(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
         sdir.mkdir()
         (sdir / "_example.md").write_text("# example\n", encoding="utf-8")
         html, _ = _run(tmp_path, stakeholders_dir=sdir)
-        assert "Stakeholder Pulse" not in html
+        assert "— Stakeholder Pulse" not in html
 
     def test_deletes_stale_cards_when_stakeholders_env_unset(self, tmp_path: Path) -> None:
         sdir = tmp_path / "stakeholders"
@@ -102,7 +102,7 @@ class TestStakeholderPulseWiring:
         stale.write_text("# Jane Doe\n\n- old\n", encoding="utf-8")
         (sdir / "_keep.md").write_text("# keep\n", encoding="utf-8")
         html, _ = _run(tmp_path, stakeholders_dir=sdir, stakeholders_env=None)
-        assert "Stakeholder Pulse" not in html
+        assert "— Stakeholder Pulse" not in html
         assert not stale.is_file()
         assert (sdir / "_keep.md").is_file()
 

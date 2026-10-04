@@ -57,6 +57,7 @@ from extras_plugin import parse_extra, render_extras_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
 
 _SINCE: float | None = None
+HINTS_START, HINTS_END = "<!--ep-hints-->", "<!--/ep-hints-->"
 
 
 def _fresh(path: Path) -> bool:
@@ -116,6 +117,68 @@ def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
                     f"Warning: could not remove stale stakeholder card {path}: {exc}",
                     file=sys.stderr,
                 )
+
+
+def _config_values(dotenv_override: Path | None = None) -> dict[str, str]:
+    """Settings from the repo `.env` file (same source as STAKEHOLDERS), else the environment."""
+    path = ROOT / ".env" if dotenv_override is None else dotenv_override
+    if path.is_file():
+        return {k: v or "" for k, v in (dotenv_values(path) or {}).items()}
+    return dict(os.environ)
+
+
+def feature_hints(config: dict[str, str], stakeholders_on: bool) -> list[tuple[str, str]]:
+    """(title, html) for optional parts that are switched off, with how to turn each on."""
+    hints = []
+    if not stakeholders_on:
+        hints.append(
+            (
+                "Stakeholder Pulse",
+                "A card per person with what they said and asked for in Slack this week, "
+                "found with Glean MCP. Connect Glean MCP in your agent, then add "
+                "<code>STAKEHOLDERS=Jane Doe,jane@example.com</code> to <code>.env</code>.",
+            )
+        )
+    if not (config.get("SPRINT_BOARD") or "").strip():
+        hints.append(
+            (
+                "Sprint report",
+                "A daily sprint report with burn-up and burn-down charts from Jira "
+                "(Atlassian MCP). Describe your board in one sentence as "
+                '<code>SPRINT_BOARD="..."</code> in <code>.env</code>.',
+            )
+        )
+    if not (config.get("TODOIST_API_TOKEN") or "").strip():
+        hints.append(
+            (
+                "My Queue",
+                "Your Todoist tasks and reading list in this report. Add "
+                "<code>TODOIST_API_TOKEN</code> to <code>.env</code> "
+                "(Todoist &gt; Settings &gt; Integrations &gt; Developer).",
+            )
+        )
+    return hints
+
+
+def render_feature_hints(hints: list[tuple[str, str]]) -> str:
+    """Top-right badge that opens a list of features you can switch on; '' if none."""
+    if not hints:
+        return ""
+    count = len(hints)
+    items = "".join(
+        f'<li><div class="hint-title">{html_mod.escape(title)}</div>'
+        f'<div class="hint-body">{body}</div></li>'
+        for title, body in hints
+    )
+    return (
+        f'{HINTS_START}<details class="hints">'
+        f'<summary title="Features you can add">&#10022; {count} more '
+        f"feature{'s' if count != 1 else ''}</summary>"
+        f'<div class="hint-panel"><div class="hint-head">You can also add</div>'
+        f'<ul>{items}</ul><div class="hint-foot">Full list: '
+        "<code>skills/engineering-pulse/references/env-and-paths.md</code></div></div>"
+        f"</details>{HINTS_END}"
+    )
 
 
 def _render_stakeholder_section(
@@ -377,6 +440,9 @@ def main() -> None:
 
     team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
     today = date.today().isoformat()
+    hints_html = render_feature_hints(
+        feature_hints(_config_values(stakeholder_dotenv), bool(stakeholder_names))
+    )
 
     # Header / footer dashboard links
     header_links = "\n      ".join(
@@ -405,9 +471,30 @@ def main() -> None:
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f7f7f8; color: #1a1a2e; }}
   .wrapper {{ max-width: 660px; margin: 0 auto; padding: 24px 16px; }}
   .header {{
+    position: relative;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     color: #fff; padding: 32px 28px; border-radius: 12px; margin-bottom: 24px;
   }}
+  .hints {{ position: absolute; top: 14px; right: 14px; z-index: 5; }}
+  .hints summary {{
+    list-style: none; cursor: pointer; font-size: 12px; font-weight: 700;
+    color: #1a1a2e; background: #fbd38d; padding: 5px 11px; border-radius: 999px;
+    box-shadow: 0 0 0 3px rgba(251, 211, 141, 0.25);
+  }}
+  .hints summary::-webkit-details-marker {{ display: none; }}
+  .hints[open] summary {{ background: #f6ad55; }}
+  .hint-panel {{
+    position: absolute; right: 0; top: 34px; width: 300px; background: #fff; color: #2d3748;
+    border-radius: 10px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    font-size: 13px; line-height: 1.5;
+  }}
+  .hint-head {{ font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }}
+  .hint-panel ul {{ list-style: none; }}
+  .hint-panel li {{ padding: 8px 0; border-top: 1px solid #edf2f7; }}
+  .hint-title {{ font-weight: 700; color: #c05621; }}
+  .hint-body code, .hint-foot code {{ background: #edf2f7; padding: 1px 4px; border-radius: 3px; font-size: 11px; }}
+  .hint-foot {{ margin-top: 8px; font-size: 11px; color: #718096; }}
+  .hints + h1 {{ padding-right: 150px; }}
   .header h1 {{ font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }}
   .header .subtitle {{ font-size: 14px; color: #a0aec0; margin-bottom: 14px; }}
   .header .links {{ display: flex; gap: 16px; flex-wrap: wrap; }}
@@ -492,6 +579,7 @@ def main() -> None:
 <body>
 <div class="wrapper">
   <div class="header">
+    {hints_html}
     <h1>Daily Dashboard — {html_mod.escape(team)}</h1>
     <div class="subtitle">{today} (past 7 days)</div>
     <div class="links">

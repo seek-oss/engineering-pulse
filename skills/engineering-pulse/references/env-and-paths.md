@@ -76,6 +76,10 @@ report, `deliver_report.py ensure` still delivers one: Pulse is rendered from da
 fetched during this run only (`render_daily_dashboard_html.py --since`), Sprint and
 Compare get a short frame with the problems.
 
+**Feature hints:** when `STAKEHOLDERS`, `SPRINT_BOARD` or `TODOIST_API_TOKEN` is unset,
+the Pulse header shows a "✦ N more features" badge at the top right. Clicking it lists
+what each feature adds and how to switch it on. Email copies leave the badge out.
+
 **Compare:** `scripts/run_compare.sh <id-A> <id-B>` (or `make compare A= B=`) validates
 the ids with `scripts/compare_reports.py prepare`, writes
 `output/compare/context-<A>-vs-<B>.json`, and runs the `report-compare` skill through

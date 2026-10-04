@@ -108,7 +108,7 @@ class TestOptionalInputs:
         (base_dirs / "output" / "todos.json").unlink()
         html = _run(base_dirs)
         assert "Part A — PR Review Queue" in html
-        assert "My Queue" not in html
+        assert "— My Queue" not in html
 
     def test_missing_prs_shows_not_fetched(self, base_dirs: Path) -> None:
         (base_dirs / "output" / "github_prs.json").unlink()
@@ -122,6 +122,38 @@ class TestOptionalInputs:
         html = _run(base_dirs)
         assert "inbox clear" in html
         assert "PR data not fetched" not in html
+
+
+class TestFeatureHints:
+    """Top-right badge listing optional parts that are switched off."""
+
+    def _run_with_env(self, base_dirs: Path, dotenv: str) -> str:
+        env_file = base_dirs / "settings.env"
+        env_file.write_text(dotenv, encoding="utf-8")
+        return _run(base_dirs, "--stakeholders-dotenv", str(env_file))
+
+    def test_all_optional_parts_off(self, base_dirs: Path) -> None:
+        html = self._run_with_env(base_dirs, "# nothing optional set\n")
+        assert "3 more features" in html
+        for title in ("Stakeholder Pulse", "Sprint report", "My Queue"):
+            assert f'<div class="hint-title">{title}</div>' in html
+        assert "Glean MCP" in html and "STAKEHOLDERS=" in html
+        assert html.index('class="hints"') < html.index("<h1>")
+
+    def test_only_missing_parts_are_listed(self, base_dirs: Path) -> None:
+        html = self._run_with_env(
+            base_dirs, 'SPRINT_BOARD="fictional board"\nTODOIST_API_TOKEN=x\n'
+        )
+        assert "1 more feature<" in html
+        assert '<div class="hint-title">Stakeholder Pulse</div>' in html
+        assert '<div class="hint-title">Sprint report</div>' not in html
+
+    def test_no_badge_when_everything_is_on(self, base_dirs: Path) -> None:
+        html = self._run_with_env(
+            base_dirs, 'STAKEHOLDERS=Jane Doe\nSPRINT_BOARD="x"\nTODOIST_API_TOKEN=x\n'
+        )
+        assert 'class="hints"' not in html
+        assert "<!--ep-hints-->" not in html
 
 
 class TestSince:
@@ -144,7 +176,7 @@ class TestSince:
         html = _run(base_dirs, "--since", str(time.time() - 60))
         assert "OldWidget" not in html
         assert "PR data not fetched" in html
-        assert "My Queue" not in html
+        assert "— My Queue" not in html
         assert "Part A — PR Review Queue" in html
 
     def test_fresh_inputs_are_used(self, base_dirs: Path) -> None:
