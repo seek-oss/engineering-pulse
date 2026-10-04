@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -121,6 +122,55 @@ class TestOptionalInputs:
         html = _run(base_dirs)
         assert "inbox clear" in html
         assert "PR data not fetched" not in html
+
+
+class TestSince:
+    """--since (fallback report): inputs written before the run started are ignored."""
+
+    def _age(self, path: Path, hours: int = 3) -> None:
+        old = time.time() - hours * 3600
+        os.utime(path, (old, old))
+
+    def test_stale_inputs_are_ignored(self, base_dirs: Path) -> None:
+        (base_dirs / "dashboards" / "alpha.md").write_text(
+            "# Alpha\n- **URL:** `https://example.com/alpha`\n- **Slug:** `alpha`\n",
+            encoding="utf-8",
+        )
+        snap = base_dirs / "output" / "alpha_metric_results.json"
+        _write_snapshot(snap, [{"widget_title": "OldWidget", "series": [{"latest": 1.0}]}])
+        for path in (snap, base_dirs / "output" / "github_prs.json"):
+            self._age(path)
+        self._age(base_dirs / "output" / "todos.json")
+        html = _run(base_dirs, "--since", str(time.time() - 60))
+        assert "OldWidget" not in html
+        assert "PR data not fetched" in html
+        assert "My Queue" not in html
+        assert "Part A — PR Review Queue" in html
+
+    def test_fresh_inputs_are_used(self, base_dirs: Path) -> None:
+        _write_prs(
+            base_dirs / "output" / "github_prs.json",
+            [
+                {
+                    "number": 7,
+                    "title": "Fresh change",
+                    "repo": "acme-corp/widgets",
+                    "author": "alice",
+                    "age_days": 1,
+                    "updated_days": 0,
+                    "url": "https://github.com/acme-corp/widgets/pull/7",
+                    "labels": [],
+                    "draft": False,
+                }
+            ],
+        )
+        html = _run(base_dirs, "--since", str(time.time() - 60))
+        assert "Fresh change" in html
+        assert "Part B — My Queue" in html
+
+    def test_without_since_old_files_still_render(self, base_dirs: Path) -> None:
+        self._age(base_dirs / "output" / "todos.json")
+        assert "Part B — My Queue" in _run(base_dirs)
 
 
 class TestDashboardOrdering:

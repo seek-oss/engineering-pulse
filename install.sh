@@ -449,6 +449,19 @@ source "\$INSTALL_DIR/.venv/bin/activate"
 
 PROMPT=\$(cat "\$INSTALL_DIR/skills/engineering-pulse/SKILL.md")
 AGENT=\$(resolve_agent)
+PY="\$INSTALL_DIR/.venv/bin/python"
+export EP_RUN_ID="\$(date +%s)-\$\$"
+
+# ── One run at a time (schedule, make run, and the report's Re-run button). ─
+LOCK_DIR=\${EP_LOCK_DIR:-/tmp/engineering-pulse-run.lock}
+if [[ -d "\$LOCK_DIR" && -n \$(find "\$LOCK_DIR" -maxdepth 0 -mmin +180 2>/dev/null) ]]; then
+  rmdir "\$LOCK_DIR" 2>/dev/null || true
+fi
+if ! mkdir "\$LOCK_DIR" 2>/dev/null; then
+  printf '%s\n' "[\$(date)] Another report run is in progress — skipped" | tee -a "\$LOG_FILE"
+  exit 0
+fi
+trap 'rmdir "\$LOCK_DIR" 2>/dev/null' EXIT
 
 set -o pipefail
 
@@ -478,9 +491,21 @@ ensure_delivered() {
     >>"\$LOG_FILE" 2>&1 || true
 }
 
+# ── Helper: start the problems list shown in the report's red box, with what
+# can be checked before the agent starts (MCP sign-in, dashboards). ─────────
+prepare_issues() {
+  "\$PY" "\$INSTALL_DIR/scripts/run_issues.py" reset --type "\$1" >>"\$LOG_FILE" 2>&1 || true
+  "\$PY" "\$INSTALL_DIR/scripts/run_issues.py" preflight --type "\$1" --agent "\$AGENT" \
+    >>"\$LOG_FILE" 2>&1 || true
+}
+
 # ── Helper: is this report enabled? SCHEDULED_REPORTS in .env (pulse,sprint |
-# pulse | sprint | none) decides for scheduled runs and make run alike. ────────
+# pulse | sprint | none) decides for scheduled runs and make run alike.
+# ENGINEERING_PULSE_ONLY (set by the Re-run button) narrows it to one report. ─
 report_enabled() {
+  if [[ -n \${ENGINEERING_PULSE_ONLY:-} && \$ENGINEERING_PULSE_ONLY != "\$1" ]]; then
+    return 1
+  fi
   [[ ",\${SCHEDULED_REPORTS:-pulse,sprint}," == *",\$1,"* ]] && return 0
   printf '%s\n' "[\$(date)] \$1 report paused (SCHEDULED_REPORTS=\${SCHEDULED_REPORTS}) — skipped" >> "\$LOG_FILE"
   return 1
@@ -490,6 +515,7 @@ report_enabled() {
 _ec=0
 if report_enabled pulse; then
   pulse_start=\$(date +%s)
+  prepare_issues pulse
   run_skill_step "daily-dashboard" "\$PROMPT"
   _ec=\$?
   ensure_delivered --type pulse --since "\$pulse_start" --agent-exit "\$_ec" \
@@ -504,6 +530,7 @@ SPRINT_SKILL="\$INSTALL_DIR/skills/sprint-report/SKILL.md"
 if [[ -n \${SPRINT_BOARD:-} && -f "\$SPRINT_SKILL" ]] && report_enabled sprint; then
   SPRINT_PROMPT=\$(cat "\$SPRINT_SKILL")
   sprint_start=\$(date +%s)
+  prepare_issues sprint
   run_skill_step "sprint-report" "\$SPRINT_PROMPT"
   sprint_ec=\$?
   today=\$(date +%Y-%m-%d)

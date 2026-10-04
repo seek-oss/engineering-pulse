@@ -51,6 +51,7 @@ AGENT=$(resolve_agent)
 
 log "Starting compare $A vs $B (agent=$AGENT)"
 start=$(date +%s)
+"$PY" scripts/run_issues.py reset --type compare >>"$LOG_FILE" 2>&1 || true
 if [[ -t 1 ]]; then
   run_agent "$AGENT" "$PROMPT" "$INSTALL_DIR" 2>&1 | tee -a "$LOG_FILE"
   ec=${PIPESTATUS[0]}

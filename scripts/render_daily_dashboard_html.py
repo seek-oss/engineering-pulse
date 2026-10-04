@@ -56,6 +56,13 @@ from dashboards_plugin import (  # noqa: E402
 from extras_plugin import parse_extra, render_extras_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
 
+_SINCE: float | None = None
+
+
+def _fresh(path: Path) -> bool:
+    """True if ``path`` exists and, with --since, was written during this run."""
+    return path.is_file() and (_SINCE is None or path.stat().st_mtime >= _SINCE)
+
 
 def _load(path: Path) -> Any:
     if not path.is_file():
@@ -128,7 +135,7 @@ def _render_stakeholder_section(
     for name in names:
         slug = _stakeholder_slug(name)
         card_path = stakeholders_dir / f"{slug}.md"
-        if card_path.is_file():
+        if _fresh(card_path):
             extra = parse_extra(card_path)
             title = extra.title or name
             body = extra.body_html
@@ -250,8 +257,17 @@ def main() -> None:
         metavar="PATH",
         help=argparse.SUPPRESS,
     )
+    ap.add_argument(
+        "--since",
+        type=float,
+        default=None,
+        metavar="EPOCH",
+        help="Ignore input files written before this time (used for a run's fallback report)",
+    )
     args = ap.parse_args()
 
+    global _SINCE
+    _SINCE = args.since
     load_dotenv(ROOT / ".env")
 
     stakeholder_dotenv: Path | None = None
@@ -259,8 +275,8 @@ def main() -> None:
         stakeholder_dotenv = args.stakeholders_dotenv.expanduser().resolve()
 
     prs_path, todos_path = ROOT / args.prs, ROOT / args.todos
-    prs_data = _load(prs_path) if prs_path.is_file() else None
-    todos = _load(todos_path) if todos_path.is_file() else None
+    prs_data = _load(prs_path) if _fresh(prs_path) else None
+    todos = _load(todos_path) if _fresh(todos_path) else None
     if prs_data is None:
         print(f"Note: {args.prs} not found; PR Review Queue shows 'not fetched'.", file=sys.stderr)
     if todos is None:
@@ -274,7 +290,8 @@ def main() -> None:
     dashboard_records: list[tuple[Dashboard, dict[str, Any]]] = []
     for md_path in discover_dashboards(ROOT / args.dashboards_dir):
         dash = parse_dashboard(md_path)
-        snap = load_snapshot(dash.slug, output_dir)
+        snap_path = output_dir / f"{dash.slug}_metric_results.json"
+        snap = load_snapshot(dash.slug, output_dir) if _fresh(snap_path) else None
         if snap is None:
             print(
                 f"Warning: snapshot output/{dash.slug}_metric_results.json not "

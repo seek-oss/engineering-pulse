@@ -5,6 +5,29 @@
 Run **all Datadog dashboards** defined under `prompts/dashboards/`, produce a **single
 focused HTML report**, archive it to the report calendar, and notify and/or email per `DELIVERY`.
 
+## Problems box — always deliver a report
+
+Start every run with:
+
+```bash
+python3 scripts/run_issues.py start --type pulse
+```
+
+(Scheduled runs already started the list and checked MCP sign-in; `start` keeps that.)
+
+When a step fails or is skipped for a reason the user has to fix (MCP not signed in, a
+search or extract errors, no dashboards), record it and **carry on with the other steps**:
+
+```bash
+python3 scripts/run_issues.py add --type pulse --source github \
+  --message "GitHub MCP search failed: <short reason>" [--server <MCP server name>]
+```
+
+Pass `--server` only when signing in to that MCP server would fix it; the report then
+shows a **Sign in** button. Never stop early: render with whatever data this run produced
+and deliver. `deliver_report.py send` puts the recorded problems in a red box at the top
+of the report.
+
 ---
 
 ## Step 1 — Extract Datadog Dashboards

@@ -65,6 +65,17 @@ archives via `scripts/report_archive.py` (which stores a structured snapshot fro
 `scripts/report_snapshot.py` for the calendar's change view), then notifies
 (`scripts/notify_report.py`) and/or emails (`scripts/send_report_smtp.py`) per `DELIVERY`.
 
+**Problems box:** `scripts/run_issues.py` keeps this run's problems in
+`output/run_issues/<type>.json`. The runner resets it and checks MCP sign-in through the
+agent CLI (`agent mcp list` / `claude mcp list`) before each report; the agent adds
+problems as steps fail. `deliver_report.py send` shows them in a red box at the top of
+the report (`scripts/issue_box.py`). Buttons: **Sign in to <server>**
+(`engineering-pulse://auth`, opens Terminal) and **Re-run this report**
+(`engineering-pulse://run`), handled by `scripts/fix_link.py`. If the agent writes no
+report, `deliver_report.py ensure` still delivers one: Pulse is rendered from data
+fetched during this run only (`render_daily_dashboard_html.py --since`), Sprint and
+Compare get a short frame with the problems.
+
 **Compare:** `scripts/run_compare.sh <id-A> <id-B>` (or `make compare A= B=`) validates
 the ids with `scripts/compare_reports.py prepare`, writes
 `output/compare/context-<A>-vs-<B>.json`, and runs the `report-compare` skill through

@@ -147,6 +147,7 @@ def archive(
     root: Path | None = None,
     when: datetime | None = None,
     rebuild: bool = True,
+    issues: int = 0,
 ) -> tuple[dict, bool]:
     """Copy ``src`` into the archive. Returns (entry, created); identical content is not re-added."""
     _check_type(report_type)
@@ -179,6 +180,8 @@ def archive(
             "snapshot": extract_snapshot(text, report_type),
         }
     )
+    if issues:
+        entry["issues"] = issues
     entries.append(entry)
     save_manifest(root, entries)
     if rebuild:

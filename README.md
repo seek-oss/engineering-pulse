@@ -215,6 +215,23 @@ email). The installer installs `terminal-notifier` via Homebrew so clicking the
 notification opens the report; without Homebrew you get a plain banner. To import
 reports generated before the archive existed, run `.venv/bin/python scripts/report_archive.py backfill`.
 
+### When something goes wrong
+
+Every run delivers a report, even when a data source or the agent fails. Problems from
+that run appear in a **red box at the top of the report**, and everything that could
+still be generated appears below it. The notification says how many problems there were.
+
+- **MCP server not signed in** (checked through your agent CLI before each run): the box
+  shows **Sign in to <server>**, which opens Terminal at the sign-in step
+  (`agent mcp login <server>` for Cursor; `/mcp` inside Claude Code), and **Re-run this
+  report** once you have signed in.
+- **Anything a click cannot fix** (no dashboards yet, an MCP server not added to your
+  agent, the agent stopping early): the box explains what happened and what to do; the
+  run log is `/tmp/daily-dashboard.log`.
+
+The buttons use the same `engineering-pulse://` helper app as Compare and Settings, so
+they work when the report is opened on the Mac where Engineering Pulse is installed.
+
 ### Changes between reports and Compare
 
 When you view a report on the calendar, the bar above it summarises what changed since

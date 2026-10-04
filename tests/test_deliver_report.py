@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from scripts.deliver_report import delivery_mode, ensure, notification_text, send
+from scripts import deliver_report, run_issues
+from scripts.deliver_report import agent_message, delivery_mode, ensure, notification_text, send
+from scripts.issue_box import MARKER
 from scripts.report_archive import load_manifest
 
 
@@ -98,12 +100,67 @@ def test_send_none_archives_only(tmp_path, monkeypatch, notify, email):
     email.assert_not_called()
 
 
-def test_ensure_failure_with_none_does_not_notify(tmp_path, monkeypatch, notify, email):
+@pytest.fixture
+def out_dir(tmp_path, monkeypatch):
+    """Point fallback reports at tmp and stub the pulse renderer."""
+    monkeypatch.setattr(deliver_report, "ROOT", tmp_path)
+    with patch("scripts.deliver_report._render_pulse", return_value=False) as render:
+        yield render
+
+
+def test_ensure_failure_with_none_does_not_notify(tmp_path, monkeypatch, notify, email, out_dir):
     monkeypatch.setenv("DELIVERY", "none")
     root = tmp_path / "reports"
     assert ensure("pulse", datetime.now(), None, root=root) == 1
-    assert load_manifest(root)[0]["status"] == "failed"
+    assert load_manifest(root)[0]["status"] == "ok"
     notify.assert_not_called()
+
+
+def test_notification_text_counts_problems():
+    assert notification_text({**ENTRY, "issues": 1}, "pulse")[0] == (
+        "Engineering Pulse ready — 1 problem"
+    )
+    assert notification_text({**ENTRY, "issues": 3}, "sprint")[0] == (
+        "Sprint report ready — 3 problems"
+    )
+
+
+class TestSendProblems:
+    def test_injects_box_and_counts(self, tmp_path, notify, email):
+        run_issues.reset("pulse")
+        run_issues.add(
+            "pulse", "github", "GitHub MCP needs sign-in", server="GitHub", agent="cursor"
+        )
+        root = tmp_path / "reports"
+        report = _report(tmp_path)
+        assert send(report, "pulse", root=root) == 0
+        entry = load_manifest(root)[0]
+        assert entry["issues"] == 1
+        archived = (root / entry["path"]).read_text()
+        assert MARKER in archived and "Sign in to GitHub" in archived
+        assert MARKER in report.read_text()
+        assert notify.call_args.args[0] == "Engineering Pulse ready — 1 problem"
+
+    def test_no_problems_no_box(self, tmp_path, notify, email):
+        root = tmp_path / "reports"
+        send(_report(tmp_path), "pulse", root=root)
+        entry = load_manifest(root)[0]
+        assert "issues" not in entry
+        assert MARKER not in (root / entry["path"]).read_text()
+
+    def test_old_box_removed_when_run_is_clean(self, tmp_path, notify, email):
+        run_issues.add("pulse", "github", "old problem")
+        report = _report(tmp_path)
+        send(report, "pulse", root=tmp_path / "r1")
+        run_issues.reset("pulse")
+        send(report, "pulse", root=tmp_path / "r2")
+        assert MARKER not in report.read_text()
+
+    def test_problems_of_other_type_ignored(self, tmp_path, notify, email):
+        run_issues.add("sprint", "atlassian", "Jira down")
+        root = tmp_path / "reports"
+        send(_report(tmp_path), "pulse", root=root)
+        assert "issues" not in load_manifest(root)[0]
 
 
 def test_send_duplicate_skips_notify(tmp_path, notify, email):
@@ -131,18 +188,63 @@ class TestEnsure:
         assert load_manifest(root)[0]["status"] == "ok"
         notify.assert_called_once()
 
-    def test_records_failure_for_stale_report(self, tmp_path, notify, email):
+    def test_stale_report_gets_fallback_not_old_copy(self, tmp_path, notify, email, out_dir):
         root = tmp_path / "reports"
-        report = _report(tmp_path)
+        report = _report(tmp_path, body="yesterday")
         old = (datetime.now() - timedelta(hours=3)).timestamp()
         os.utime(report, (old, old))
         assert ensure("pulse", datetime.now() - timedelta(minutes=5), report, 3, root=root) == 1
         entry = load_manifest(root)[0]
-        assert entry["status"] == "failed"
-        assert "code 3" in entry["note"]
-        assert "failed" in notify.call_args.args[0]
+        assert entry["status"] == "ok"
+        assert entry["issues"] == 1
+        archived = (root / entry["path"]).read_text()
+        assert "yesterday" not in archived
+        assert "exit code 3" in archived
+        assert "No sections could be generated" in archived
+        assert notify.call_args.args[0] == "Engineering Pulse ready — 1 problem"
 
-    def test_records_failure_when_no_report(self, tmp_path, notify, email):
+    def test_pulse_fallback_uses_renderer_with_since(self, tmp_path, notify, email, out_dir):
+        def render(since, out):
+            out.write_text("<html><title>Daily Dashboard</title><body>fresh PRs</body></html>")
+            return True
+
+        out_dir.side_effect = render
         root = tmp_path / "reports"
-        assert ensure("sprint", datetime.now(), None, root=root) == 1
-        assert load_manifest(root)[0]["type"] == "sprint"
+        start = datetime.now() - timedelta(seconds=5)
+        assert ensure("pulse", start, None, 1, root=root) == 1
+        assert out_dir.call_args.args[0] == start
+        entry = load_manifest(root)[0]
+        archived = (root / entry["path"]).read_text()
+        assert "fresh PRs" in archived
+        assert MARKER in archived
+        assert "exit code 1" in archived
+
+    def test_sprint_fallback_frame(self, tmp_path, notify, email, out_dir):
+        run_issues.reset("sprint")
+        run_issues.add("sprint", "atlassian", "Atlassian MCP needs sign-in")
+        root = tmp_path / "reports"
+        assert ensure("sprint", datetime.now(), None, 130, root=root) == 1
+        entry = load_manifest(root)[0]
+        assert entry["type"] == "sprint"
+        assert entry["issues"] == 2
+        archived = (root / entry["path"]).read_text()
+        assert "Atlassian MCP needs sign-in" in archived
+        assert "interrupted" in archived
+        assert "(incomplete)" in entry["title"]
+        out_dir.assert_not_called()
+
+    def test_fresh_report_with_error_exit_adds_problem(self, tmp_path, notify, email):
+        root = tmp_path / "reports"
+        start = datetime.now() - timedelta(seconds=5)
+        assert ensure("pulse", start, _report(tmp_path), 2, root=root) == 0
+        entry = load_manifest(root)[0]
+        assert entry["issues"] == 1
+        assert "some sections may be missing" in (root / entry["path"]).read_text()
+
+
+class TestAgentMessage:
+    def test_wording(self):
+        assert "interrupted" in agent_message("pulse", 130, False)
+        assert "exit code 4" in agent_message("pulse", 4, False)
+        assert "without writing a report" in agent_message("sprint", 0, False)
+        assert "/tmp/engineering-pulse-compare.log" in agent_message("compare", 1, False)
