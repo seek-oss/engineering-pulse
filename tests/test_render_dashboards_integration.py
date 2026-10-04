@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -154,6 +155,12 @@ class TestFeatureHints:
         )
         assert 'class="hints"' not in html
         assert "<!--ep-hints-->" not in html
+
+
+def test_footer_includes_run_time(base_dirs: Path) -> None:
+    """Re-runs with unchanged data must still differ, or the archive treats them as duplicates."""
+    html = _run(base_dirs)
+    assert re.search(r"Generated \d{4}-\d{2}-\d{2} \d{2}:\d{2} ·", html)
 
 
 class TestSince:

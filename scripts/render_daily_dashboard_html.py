@@ -33,7 +33,7 @@ import os
 import re
 import string
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -592,7 +592,7 @@ def main() -> None:
 
   <div class="footer">
     {footer_links + "<br>" if footer_links else ""}
-    Generated {today} · Past 7 days · Base metric queries only
+    Generated {today} {datetime.now():%H:%M} · Past 7 days · Base metric queries only
   </div>
 </div>
 </body>
