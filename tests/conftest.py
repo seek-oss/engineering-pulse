@@ -1,7 +1,7 @@
 """
 Set required environment variables before any script module is imported.
-Module-level code in the scripts (DD_API_KEY, GITHUB_TOKEN checks) runs
-on import, so these must be set before pytest collects tests.
+Module-level code in the scripts (e.g. DD_API_KEY checks) runs on import,
+so these must be set before pytest collects tests.
 """
 
 import os

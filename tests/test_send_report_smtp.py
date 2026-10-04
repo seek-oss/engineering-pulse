@@ -210,6 +210,42 @@ class TestMain:
                     main()
                 assert exc_info.value.code == 1
 
+    def _send(self, tmp_path, env):
+        report = tmp_path / "report.txt"
+        report.write_text("Body")
+        with patch.object(sys, "argv", ["send_report_smtp.py", "Subject", str(report)]):
+            with patch.dict("os.environ", env, clear=True):
+                with patch("scripts.send_report_smtp.smtplib.SMTP") as mock_smtp:
+                    mock_server = MagicMock()
+                    mock_smtp.return_value.__enter__ = MagicMock(return_value=mock_server)
+                    mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
+                    main()
+        return mock_server.sendmail.call_args[0]
+
+    def test_from_defaults_to_smtp_user(self, tmp_path):
+        env = {k: v for k, v in FULL_ENV.items() if k != "SMTP_FROM"}
+        from_addr, to_addrs, raw = self._send(tmp_path, env)
+        assert from_addr == "sender@gmail.com"
+        assert to_addrs == ["recipient@example.com"]
+        assert "From: sender@gmail.com" in raw
+
+    def test_explicit_smtp_from_wins(self, tmp_path):
+        env = {**FULL_ENV, "SMTP_FROM": "alias@example.com"}
+        from_addr, _, raw = self._send(tmp_path, env)
+        assert from_addr == "alias@example.com"
+        assert "From: alias@example.com" in raw
+
+    @pytest.mark.parametrize("key", ["SMTP_USER", "SMTP_PASSWORD", "SMTP_TO"])
+    def test_each_required_var_is_checked(self, tmp_path, key, capsys):
+        report = tmp_path / "report.txt"
+        report.write_text("Body")
+        env = {k: v for k, v in FULL_ENV.items() if k != key}
+        with patch.object(sys, "argv", ["send_report_smtp.py", "Subject", str(report)]):
+            with patch.dict("os.environ", env, clear=True):
+                with pytest.raises(SystemExit):
+                    main()
+        assert key in capsys.readouterr().err
+
     def test_sends_plain_text_via_starttls(self, tmp_path):
         report = tmp_path / "report.txt"
         report.write_text("Plain text body")

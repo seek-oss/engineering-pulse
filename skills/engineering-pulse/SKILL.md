@@ -9,8 +9,8 @@ description: >
 license: MIT
 compatibility: >
   Requires Python 3.11+, this repository (or ~/.engineering-pulse) as workspace root,
-  .env with SMTP (and GitHub/Todoist as needed); Datadog via Datadog MCP (OAuth);
-  optional Glean MCP for Stakeholder Pulse.
+  .env with team names (SMTP/Todoist optional); Datadog via Datadog MCP and GitHub
+  via GitHub MCP (OAuth); optional Glean MCP for Stakeholder Pulse.
 metadata:
   author: seek-oss
   repository: https://github.com/seek-oss/engineering-pulse
@@ -35,7 +35,7 @@ paths, and script reference.
 ## Workflow
 
 1. **Datadog** — [datadog-mcp-extract.md](references/datadog-mcp-extract.md) (MCP; past 7 days)
-2. **Render prep** — PRs, todos, extras per [daily-workflow.md](references/daily-workflow.md#step-2--build-the-html-report)
+2. **Render prep** — PRs (GitHub MCP), todos, extras per [daily-workflow.md](references/daily-workflow.md#step-2--build-the-html-report)
 3. **Stakeholder Pulse** (if `STAKEHOLDERS` set) — [stakeholder-pulse.md](references/stakeholder-pulse.md)
 4. **Render HTML** — `python3 scripts/render_daily_dashboard_html.py`
 5. **Deliver** (archive + notify/email per `DELIVERY`) — [daily-workflow.md § Step 3](references/daily-workflow.md#step-3--deliver-the-report)

@@ -46,12 +46,13 @@ post_install_guide() {
   echo ""
   echo -e "${BOLD}Next steps${RESET}"
   echo ""
-  echo -e "  ${BOLD}1) Credentials & API keys${RESET} ${CYAN}(required)${RESET}"
+  echo -e "  ${BOLD}1) Your team settings${RESET} ${CYAN}(required)${RESET}"
   echo -e "     Edit: ${MAGENTA}${BOLD}${ENV_FILE}${RESET}"
   if [ -f "$ex" ]; then
-    echo -e "     ${DIM}Template with every variable explained:${RESET} ${MAGENTA}${ex}${RESET}"
+    echo -e "     ${DIM}Template:${RESET} ${MAGENTA}${ex}${RESET}"
   fi
-  echo -e "     ${DIM}GitHub PAT, Datadog API keys, SMTP, optional Todoist — see comments in .env.example.${RESET}"
+  echo -e "     ${DIM}Set DATADOG_TEAMS and GITHUB_TEAM; data comes from Datadog and GitHub MCP in your agent.${RESET}"
+  echo -e "     ${DIM}Optional: STAKEHOLDERS, SPRINT_BOARD, TODOIST_API_TOKEN, SMTP_* for email.${RESET}"
   echo ""
   echo -e "  ${BOLD}2) Agent CLI (required)${RESET}"
   if [[ -n "${SELECTED_AGENT:-}" ]]; then
@@ -376,7 +377,7 @@ else
   if [ -f "$EXAMPLE_ENV" ]; then
     cp "$EXAMPLE_ENV" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
-    success "Created $ENV_FILE from .env.example — replace every placeholder next"
+    success "Created $ENV_FILE from .env.example — set your team names next"
   else
     warn ".env.example not found in clone — creating empty $ENV_FILE"
     : > "$ENV_FILE"

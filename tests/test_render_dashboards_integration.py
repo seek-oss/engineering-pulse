@@ -102,6 +102,27 @@ class TestZeroDashboards:
         assert " ↗</a>" not in html
 
 
+class TestOptionalInputs:
+    def test_missing_todos_omits_my_queue(self, base_dirs: Path) -> None:
+        (base_dirs / "output" / "todos.json").unlink()
+        html = _run(base_dirs)
+        assert "Part A — PR Review Queue" in html
+        assert "My Queue" not in html
+
+    def test_missing_prs_shows_not_fetched(self, base_dirs: Path) -> None:
+        (base_dirs / "output" / "github_prs.json").unlink()
+        html = _run(base_dirs)
+        assert "Part A — PR Review Queue" in html
+        assert "PR data not fetched" in html
+        assert "inbox clear" not in html
+        assert "Part B — My Queue" in html
+
+    def test_empty_prs_still_shows_inbox_clear(self, base_dirs: Path) -> None:
+        html = _run(base_dirs)
+        assert "inbox clear" in html
+        assert "PR data not fetched" not in html
+
+
 class TestDashboardOrdering:
     def test_two_dashboards_shift_pr_queue_to_part_c(self, base_dirs: Path) -> None:
         # Two generic dashboards with snapshots.

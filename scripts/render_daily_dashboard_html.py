@@ -258,8 +258,13 @@ def main() -> None:
     if args.stakeholders_dotenv is not None:
         stakeholder_dotenv = args.stakeholders_dotenv.expanduser().resolve()
 
-    prs_data = _load(ROOT / args.prs)
-    todos = _load(ROOT / args.todos)
+    prs_path, todos_path = ROOT / args.prs, ROOT / args.todos
+    prs_data = _load(prs_path) if prs_path.is_file() else None
+    todos = _load(todos_path) if todos_path.is_file() else None
+    if prs_data is None:
+        print(f"Note: {args.prs} not found; PR Review Queue shows 'not fetched'.", file=sys.stderr)
+    if todos is None:
+        print(f"Note: {args.todos} not found; My Queue omitted.", file=sys.stderr)
 
     stakeholder_names = _parse_stakeholder_names(stakeholder_dotenv)
 
@@ -310,13 +315,20 @@ def main() -> None:
         sections.append((label, _render_generic_section(label, data)))
 
     # 3) PR Review Queue
-    pr_list = prs_data.get("prs") or []
     pr_label = next_label("PR Review Queue")
-    sections.append((pr_label, _render_pr_section(pr_label, pr_list)))
+    if prs_data is None:
+        pr_html = (
+            f'<div class="section-title">{html_mod.escape(pr_label)}</div>\n'
+            '    <div class="banner-grey">PR data not fetched for this report</div>'
+        )
+    else:
+        pr_html = _render_pr_section(pr_label, prs_data.get("prs") or [])
+    sections.append((pr_label, pr_html))
 
-    # 4) My Queue (Todoist)
-    queue_label = next_label("My Queue")
-    sections.append((queue_label, _render_my_queue_section(queue_label, todos)))
+    # 4) My Queue (Todoist) — only when Todoist data exists
+    if todos is not None:
+        queue_label = next_label("My Queue")
+        sections.append((queue_label, _render_my_queue_section(queue_label, todos)))
 
     # 5) Extras (.md cards) — only if any files
     extras_label = f"Part {_part_letter(len(sections))} — Extras"
@@ -419,6 +431,10 @@ def main() -> None:
   .banner-green {{
     background: #f0fff4; border: 2px solid #68d391; border-radius: 10px;
     padding: 18px 24px; text-align: center; font-size: 15px; font-weight: 600; color: #276749;
+  }}
+  .banner-grey {{
+    background: #f7fafc; border: 2px solid #cbd5e0; border-radius: 10px;
+    padding: 18px 24px; text-align: center; font-size: 15px; font-weight: 600; color: #718096;
   }}
   table.pr-table {{
     width: 100%; border-collapse: collapse; font-size: 13px;

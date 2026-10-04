@@ -22,8 +22,8 @@ Read every qualifying `.md` in `prompts/dashboards/`; see `_example.md` for file
 After Step 1, 2C, 2D, and (if applicable) 2F:
 
 ```bash
-python3 scripts/todo.py list --json > output/todos.json   # Step 2D
-python3 scripts/github_prs.py                             # Step 2C
+python3 scripts/todo.py list --json > output/todos.json                  # Step 2D (if token set)
+python3 scripts/github_prs.py --from-mcp output/github_mcp_prs.json      # Step 2C
 python3 scripts/render_daily_dashboard_html.py
 ```
 
@@ -64,9 +64,28 @@ One tile per widget (latest value; grey for null). Tile colours if hand-editing:
 
 ## Step 2C — PR Review Queue
 
+Use **GitHub MCP** (no token needed):
+
+1. `get_me` → your GitHub login.
+2. `search_pull_requests` with `query: "is:open review-requested:@me"`, `perPage: 100`,
+   and `fields: ["number", "title", "draft", "html_url", "user", "labels", "created_at",
+   "updated_at", "repository_url"]`. If more than 100 results, fetch `page: 2` too (stop at
+   200, the same cap as the token path).
+3. If `GITHUB_TEAM` is set (`org/team`; legacy: bare team slug plus `GITHUB_ORG`), run the
+   same search with `query: "is:open team-review-requested:<org>/<team>"`.
+4. Save every response unchanged to `output/github_mcp_prs.json`:
+   `{"username": "<login>", "results": [<response>, <response>, ...]}`, then run:
+
 ```bash
-python3 scripts/github_prs.py
+python3 scripts/github_prs.py --from-mcp output/github_mcp_prs.json
 ```
+
+The script dedupes the searches, drops Renovate PRs and sorts newest first.
+
+**Fallback** — only if GitHub MCP is not available in this session and `GITHUB_TOKEN` is
+set in `.env`: run `python3 scripts/github_prs.py` (GraphQL with the token). If neither is
+available, run `rm -f output/github_prs.json`; the report then says "PR data not fetched"
+instead of showing stale PRs.
 
 Writes `output/github_prs.json`. Renderer shows green “inbox clear” or table:
 **Repo** | **Title** | **Author** | **Age** (red ≥5d, yellow 2–4d, draft muted).
@@ -74,6 +93,9 @@ Writes `output/github_prs.json`. Renderer shows green “inbox clear” or table
 ---
 
 ## Step 2D — Todo & Reading Queue
+
+Only when `TODOIST_API_TOKEN` is set in `.env`. Otherwise run `rm -f output/todos.json`;
+the report then leaves out My Queue.
 
 ```bash
 python3 scripts/todo.py list --json > output/todos.json

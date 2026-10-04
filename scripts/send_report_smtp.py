@@ -4,11 +4,11 @@ Send an email via SMTP. Supports plain text (.txt) and HTML (.html).
 Reads credentials from environment / .env (python-dotenv).
 
 Required env:
-  SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+  SMTP_USER, SMTP_PASSWORD, SMTP_TO
 Defaults (Gmail):
   SMTP_HOST=smtp.gmail.com, SMTP_PORT=587
 Optional:
-  SMTP_TO (required — set in .env)
+  SMTP_FROM (default: SMTP_USER)
   SMTP_USE_TLS (default: true for port 587 — STARTTLS)
 
 Usage:
@@ -151,7 +151,7 @@ def main() -> None:
     port = int(os.environ.get("SMTP_PORT", "587"))
     user = os.environ.get("SMTP_USER")
     password = os.environ.get("SMTP_PASSWORD")
-    from_addr = os.environ.get("SMTP_FROM")
+    from_addr = os.environ.get("SMTP_FROM") or user
     to_addr = os.environ.get("SMTP_TO", "")
     use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
 
@@ -160,7 +160,6 @@ def main() -> None:
         for k, v in [
             ("SMTP_USER", user),
             ("SMTP_PASSWORD", password),
-            ("SMTP_FROM", from_addr),
             ("SMTP_TO", to_addr),
         ]
         if not v

@@ -9,16 +9,23 @@
 | `PI_API_KEY` | experimental | Provider API key if testing `AGENT_CLI=pi` ([in progress](../../../harness/pi-agent/README.md)) |
 | `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `DELIVERY` | no | `notify` (default, macOS notification), `email`, `both`, or `none` (local file only). Reports are always archived. |
-| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
-| `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery |
-| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
-| `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, `none` |
+| `GITHUB_TEAM` | no | Team whose PR reviews you track, as `org/team`. PRs come from GitHub MCP (Step 2C); your own review requests are always included. |
+| `GITHUB_ORG` | legacy | Older `.env` files set `GITHUB_ORG` plus a bare `GITHUB_TEAM` slug; still works |
+| `GITHUB_TOKEN` | fallback | Only when GitHub MCP is not available: PAT with `repo` (read) + `read:org` |
+| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
+| `SMTP_FROM` | no | Sender address (default `SMTP_USER`) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USE_TLS` | no | Defaults `smtp.gmail.com`, `587`, `true` |
+| `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery (Settings panel) |
+| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all; Settings panel) |
+| `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, `none` (Settings panel) |
 | `REPORTS_DIR` | no | Archive root (default `output/reports`) |
-| `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue) |
+| `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue; unset → section omitted) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Pulse names (Glean). **Leave this key out** of `.env` to omit Pulse entirely (ignored if only set via shell `export`). |
-| `GITHUB_TOKEN` | for PRs | PAT with `repo` (read) + `read:org` |
-| `GITHUB_ORG` / `GITHUB_TEAM` | for PRs | Org and team slugs |
+| `SPRINT_BOARD` | for sprint | One sentence describing the sprint board ([sprint-report skill](../../sprint-report/SKILL.md)); unset → no sprint report |
+
+The keys marked *Settings panel* are normally changed from the calendar's Settings panel
+(or `scripts/settings.py`), which writes them to `.env` for you.
 
 ### Gmail SMTP (one-time)
 
@@ -27,11 +34,9 @@
 3. Add to `.env`:
 
 ```bash
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
+DELIVERY=email
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=xxxx xxxx xxxx xxxx
-SMTP_FROM=you@gmail.com
 SMTP_TO=recipient@example.com
 ```
 

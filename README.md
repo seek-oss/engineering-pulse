@@ -154,8 +154,8 @@ cp .env.example .env
 ```
 
 You need:
-- **Datadog** — API key + App key + dashboard URLs
-- **GitHub** — Personal Access Token with `repo` (read) + `read:org` scopes
+- **Datadog MCP** — connected in your agent (OAuth), plus your dashboard URLs
+- **GitHub MCP** — connected in your agent (OAuth); set `GITHUB_TEAM=org/team` in `.env`. A personal access token (`GITHUB_TOKEN`) is only a fallback when MCP is not available
 - **Gmail SMTP** *(only for `DELIVERY=email` or `both`)* — App Password (2FA must be enabled on your Google account)
 - **Todoist** *(optional)* — API token from Settings → Integrations → Developer
 - **Glean MCP** *(optional)* — for Stakeholder Pulse today (readonly Slack token support planned); add it wherever your toolchain supports MCP (commonly Cursor), then set `STAKEHOLDERS` in `.env`
@@ -247,18 +247,18 @@ tail -f /tmp/engineering-pulse-compare.log
 | Variable | Required | Description |
 |---|---|---|
 | `DATADOG_TEAMS` | no | Comma-separated team slugs — filters all queries (Datadog data via **MCP** in the agent session) |
-| `GITHUB_TOKEN` | yes | PAT with `repo` + `read:org` scopes |
-| `GITHUB_ORG` | yes | GitHub org slug |
-| `GITHUB_TEAM` | yes | Team slug for PR review queue |
+| `GITHUB_TEAM` | no | Team for the PR review queue, as `org/team` (PRs via **GitHub MCP**). Older `GITHUB_ORG` + bare team slug still works |
+| `GITHUB_TOKEN` | fallback | PAT with `repo` + `read:org`, only when GitHub MCP is not available |
+| `SPRINT_BOARD` | for sprint | One sentence describing your sprint board; unset → no sprint report |
 | `DELIVERY` | no | `notify` (default), `email`, `both`, or `none` (local file only) — reports are always archived to the calendar |
 | `REPORT_AUTO_OPEN` | no | `1` also opens the report in your browser after each run |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all) |
 | `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, or `none` (paused) |
 | `SMTP_USER` | for email | Gmail address |
 | `SMTP_PASSWORD` | for email | Gmail App Password (16 chars) |
-| `SMTP_FROM` | for email | Sender address |
+| `SMTP_FROM` | no | Sender address (default `SMTP_USER`) |
 | `SMTP_TO` | for email | Recipient address |
-| `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue) |
+| `TODOIST_API_TOKEN` | no | Todoist API token (for todo / reading queue; unset → My Queue omitted) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Names for Pulse (Glean MCP; typically wired through an MCP-capable editor such as Cursor). **Omit this line from `.env` to hide Pulse** (shell `export` alone does not enable it). `STAKEHOLDERS=` explicitly clears tracked names when your dotenv tooling needs an empty value. Prefer `Jane Doe,john.smith@example.com` over first names only. |
 
