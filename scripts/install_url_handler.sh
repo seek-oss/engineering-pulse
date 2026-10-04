@@ -44,7 +44,7 @@ cat >"$src" <<EOF
 on open location theURL
 	if theURL starts with "engineering-pulse://settings" then
 		applySettings(theURL)
-	else if theURL starts with "engineering-pulse://auth" or theURL starts with "engineering-pulse://run" then
+	else if theURL starts with "engineering-pulse://auth" or theURL starts with "engineering-pulse://run" or theURL starts with "engineering-pulse://add-dashboard" then
 		fixLink(theURL)
 	else
 		do shell script "/bin/bash " & quoted form of "$RUNNER" & " --url " & quoted form of theURL & " >/dev/null 2>&1 &"
@@ -75,6 +75,7 @@ end applySettings
 
 -- Red box buttons: fix_link.py validates the link (known agent, listed MCP server,
 -- pulse/sprint only) before opening Terminal or starting a run.
+-- "Add a Datadog dashboard" opens Terminal with the agent and a fixed prompt.
 on fixLink(theURL)
 	try
 		set msg to do shell script quoted form of "$PY" & " " & quoted form of "$FIX" & " handle " & quoted form of theURL

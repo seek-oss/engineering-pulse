@@ -98,6 +98,32 @@ class TestTerminalCommand:
         assert fix_link._applescript_string('say "hi" \\ there') == '"say \\"hi\\" \\\\ there"'
 
 
+class TestAddDashboard:
+    def test_parse(self):
+        assert parse("engineering-pulse://add-dashboard?agent=cursor") == (
+            "add-dashboard",
+            {"agent": "cursor"},
+        )
+
+    @pytest.mark.parametrize("agent,cli", [("cursor", "agent"), ("claude", "claude")])
+    def test_opens_agent_with_prompt(self, terminal, agent, cli):
+        msg = handle(f"engineering-pulse://add-dashboard?agent={agent}")
+        assert msg == "Opened Terminal to add a Datadog dashboard."
+        cmd = terminal.call_args.args[0]
+        assert f"&& {cli} 'Follow skills/engineering-pulse/references/add-dashboard.md" in cmd
+        assert cmd.startswith(f"cd {fix_link.ROOT}") or cmd.startswith(f"cd '{fix_link.ROOT}'")
+
+    @pytest.mark.parametrize("agent", ["pi", "", "cursor;rm"])
+    def test_unknown_agent(self, terminal, agent):
+        with pytest.raises(LinkError, match="Unknown agent"):
+            handle(f"engineering-pulse://add-dashboard?agent={agent}")
+        terminal.assert_not_called()
+
+    def test_command_quotes_install_dir(self):
+        cmd = fix_link.add_dashboard_command("cursor", Path("/opt/ep dir"))
+        assert cmd.startswith("cd '/opt/ep dir' && agent '")
+
+
 class TestRun:
     @pytest.fixture
     def runner(self, tmp_path, monkeypatch):

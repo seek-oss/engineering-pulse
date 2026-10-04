@@ -4,6 +4,11 @@ Interactive workflow to add a Datadog dashboard to the daily report.
 
 ## 1. Gather inputs
 
+Ask for anything the user has not given yet, starting with the dashboard URL: open the
+dashboard in Datadog and copy the address from the browser. Datadog MCP must be signed
+in; if a Datadog tool call fails with an auth error, tell the user to run
+`agent mcp login <server>` (Cursor) or `/mcp` (Claude Code) and try again.
+
 | Input | Example |
 |-------|---------|
 | **Dashboard URL** | `https://app.datadoghq.com/dashboard/abc-xyz/...` |

@@ -101,6 +101,7 @@ def add(
     *,
     server: str | None = None,
     agent: str | None = None,
+    kind: str | None = None,
     root: Path | None = None,
 ) -> dict:
     data = _read(report_type, root)
@@ -109,6 +110,8 @@ def add(
     fix = None
     if server and agent in AGENT_LABELS:
         fix = {"kind": "mcp_login", "agent": agent, "server": server}
+    elif kind == "add_dashboard" and agent in AGENT_LABELS:
+        fix = {"kind": "add_dashboard", "agent": agent}
     issues = [i for i in data.get("issues") or [] if isinstance(i, dict)]
     existing = next((i for i in issues if i.get("source") == source), None)
     if existing is not None:
@@ -210,9 +213,8 @@ def preflight_issues(
         found.append(
             {
                 "source": "datadog",
-                "message": "No Datadog dashboards are set up, so there are no metrics. "
-                "Add one with /add-dashboard (files go in prompts/dashboards/).",
-                "fix": None,
+                "message": "No Datadog dashboards are set up yet, so this report has no metrics.",
+                "fix": {"kind": "add_dashboard", "agent": agent} if agent in AGENT_LABELS else None,
             }
         )
     if servers is None:
@@ -265,6 +267,7 @@ def preflight(report_type: str, agent: str, root: Path | None = None) -> list[di
             issue["message"],
             server=fix.get("server"),
             agent=fix.get("agent"),
+            kind=fix.get("kind"),
             root=root,
         )
     return found

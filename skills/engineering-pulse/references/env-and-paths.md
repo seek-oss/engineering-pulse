@@ -70,7 +70,9 @@ archives via `scripts/report_archive.py` (which stores a structured snapshot fro
 agent CLI (`agent mcp list` / `claude mcp list`) before each report; the agent adds
 problems as steps fail. `deliver_report.py send` shows them in a red box at the top of
 the report (`scripts/issue_box.py`). Buttons: **Sign in to <server>**
-(`engineering-pulse://auth`, opens Terminal) and **Re-run this report**
+(`engineering-pulse://auth`, opens Terminal), **Add a Datadog dashboard**
+(`engineering-pulse://add-dashboard`, opens Terminal with the agent running
+[add-dashboard.md](add-dashboard.md)) and **Re-run this report**
 (`engineering-pulse://run`), handled by `scripts/fix_link.py`. If the agent writes no
 report, `deliver_report.py ensure` still delivers one: Pulse is rendered from data
 fetched during this run only (`render_daily_dashboard_html.py --since`), Sprint and

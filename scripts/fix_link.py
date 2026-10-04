@@ -3,6 +3,7 @@
 
   engineering-pulse://auth?agent=cursor&server=GitHub   open Terminal to sign in to an MCP
   engineering-pulse://run?type=pulse                    re-run one report in the background
+  engineering-pulse://add-dashboard?agent=cursor        open Terminal with the agent adding a dashboard
 
 Usage (called by "Engineering Pulse.app"; errors go to stderr for its dialog):
   python scripts/fix_link.py handle 'engineering-pulse://auth?agent=cursor&server=GitHub'
@@ -30,6 +31,11 @@ EXTRA_PATH = ("/usr/local/bin", "/opt/homebrew/bin", "~/.local/bin", "~/bin")
 LOCK_DIR = Path(os.environ.get("EP_LOCK_DIR") or "/tmp/engineering-pulse-run.lock")
 LOCK_STALE_SECONDS = 3 * 3600
 RUN_TYPES = ("pulse", "sprint")
+ACTIONS = ("auth", "run", "add-dashboard")
+ADD_DASHBOARD_PROMPT = (
+    "Follow skills/engineering-pulse/references/add-dashboard.md to add a Datadog "
+    "dashboard to my daily report. Start by asking me for the dashboard URL."
+)
 
 
 class LinkError(ValueError):
@@ -38,7 +44,7 @@ class LinkError(ValueError):
 
 def parse(url: str) -> tuple[str, dict[str, str]]:
     parts = urlsplit(url)
-    if parts.scheme != "engineering-pulse" or parts.netloc not in ("auth", "run"):
+    if parts.scheme != "engineering-pulse" or parts.netloc not in ACTIONS:
         raise LinkError("Unsupported link.")
     params = {k: v[0] for k, v in parse_qs(parts.query).items() if v}
     return parts.netloc, params
@@ -62,6 +68,11 @@ def terminal_command(agent: str, server: str, install_dir: Path = ROOT) -> str:
         return f"{cd} && agent mcp login {shlex.quote(server)}"
     hint = f"In Claude Code, type /mcp, choose {server}, and sign in. Then close this window."
     return f"{cd} && echo {shlex.quote(hint)} && claude"
+
+
+def add_dashboard_command(agent: str, install_dir: Path = ROOT) -> str:
+    cli = "agent" if agent == "cursor" else "claude"
+    return f"cd {shlex.quote(str(install_dir))} && {cli} {shlex.quote(ADD_DASHBOARD_PROMPT)}"
 
 
 def _applescript_string(text: str) -> str:
@@ -118,9 +129,21 @@ def handle_run(params: dict[str, str]) -> str:
     return f"Started {label}."
 
 
+def handle_add_dashboard(params: dict[str, str]) -> str:
+    agent = params.get("agent", "")
+    if agent not in run_issues.AGENT_LABELS:
+        raise LinkError(f"Unknown agent {agent!r}.")
+    open_terminal(add_dashboard_command(agent))
+    return "Opened Terminal to add a Datadog dashboard."
+
+
 def handle(url: str) -> str:
     action, params = parse(url)
-    return handle_auth(params) if action == "auth" else handle_run(params)
+    if action == "auth":
+        return handle_auth(params)
+    if action == "add-dashboard":
+        return handle_add_dashboard(params)
+    return handle_run(params)
 
 
 def main(argv: list[str] | None = None) -> int:

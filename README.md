@@ -225,7 +225,10 @@ still be generated appears below it. The notification says how many problems the
   shows **Sign in to <server>**, which opens Terminal at the sign-in step
   (`agent mcp login <server>` for Cursor; `/mcp` inside Claude Code), and **Re-run this
   report** once you have signed in.
-- **Anything a click cannot fix** (no dashboards yet, an MCP server not added to your
+- **No Datadog dashboards yet:** **Add a Datadog dashboard** opens Terminal with your
+  agent already asking for the dashboard URL (the `/add-dashboard` flow). The box also
+  lists the steps to do it yourself.
+- **Anything a click cannot fix** (an MCP server not added to your
   agent, the agent stopping early): the box explains what happened and what to do; the
   run log is `/tmp/daily-dashboard.log`.
 

@@ -46,6 +46,18 @@ def rerun_link(report_type: str) -> str:
     return _link({"type": report_type}, "run")
 
 
+def add_dashboard_link(agent: str) -> str:
+    return _link({"agent": agent}, "add-dashboard")
+
+
+_ADD_DASHBOARD_STEPS = (
+    "Open the dashboard in Datadog and copy its URL.",
+    "Select the button above (on this Mac), or open <code>~/.engineering-pulse</code> "
+    "in Cursor and type <code>/add-dashboard &lt;URL&gt;</code>.",
+    "Pick the widgets you care about. The next run includes them.",
+)
+
+
 def _fixable(issue: dict) -> bool:
     return bool((issue.get("fix") or {}).get("kind"))
 
@@ -60,6 +72,13 @@ def _row(issue: dict) -> str:
         href = html.escape(auth_link(fix["agent"], fix["server"]))
         server = html.escape(fix["server"])
         button = f'<br><a href="{href}" style="{_BUTTON}">Sign in to {server}</a>'
+    elif fix.get("kind") == "add_dashboard" and fix.get("agent"):
+        href = html.escape(add_dashboard_link(fix["agent"]))
+        steps = "".join(f"<li>{s}</li>" for s in _ADD_DASHBOARD_STEPS)
+        button = (
+            f'<br><a href="{href}" style="{_BUTTON}">Add a Datadog dashboard</a>'
+            f'<ol style="margin:8px 0 0;padding-left:20px;font-size:13px">{steps}</ol>'
+        )
     return (
         '<li style="margin:8px 0;line-height:1.5">'
         f"<strong>{source}:</strong> {message}{button}</li>"
@@ -77,7 +96,7 @@ def render_issue_box(issues: list[dict], report_type: str) -> str:
     if fixable and report_type in RERUN_TYPES:
         href = html.escape(rerun_link(report_type))
         footer = (
-            '<p style="margin:12px 0 0">After signing in: '
+            '<p style="margin:12px 0 0">When you\'re done: '
             f'<a href="{href}" style="{_BUTTON}">Re-run this report</a></p>'
         )
     if fixable:

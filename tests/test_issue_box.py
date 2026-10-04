@@ -4,6 +4,7 @@ from datetime import datetime
 
 from scripts.issue_box import (
     MARKER,
+    add_dashboard_link,
     auth_link,
     fallback_report,
     inject,
@@ -40,9 +41,19 @@ class TestRenderIssueBox:
     def test_rerun_when_fixable(self):
         box = render_issue_box([_issue("x", LOGIN)], "sprint")
         assert "engineering-pulse://run?type=sprint" in box
-        assert "After signing in: <a" in box
+        assert "When you're done: <a" in box
         assert ">Re-run this report</a></p>" in box
         assert "opened on the Mac" in box
+
+    def test_add_dashboard_button_and_steps(self):
+        fix = {"kind": "add_dashboard", "agent": "claude"}
+        box = render_issue_box([_issue("no dashboards", fix, source="datadog")], "pulse")
+        assert f'href="{add_dashboard_link("claude")}"' in box
+        assert "engineering-pulse://add-dashboard?agent=claude" in box
+        assert ">Add a Datadog dashboard</a>" in box
+        assert box.count("<li>") == 3
+        assert "/add-dashboard &lt;URL&gt;" in box
+        assert "engineering-pulse://run?type=pulse" in box
 
     def test_source_labels(self):
         box = render_issue_box(

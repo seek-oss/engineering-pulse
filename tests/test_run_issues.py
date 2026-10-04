@@ -213,7 +213,17 @@ class TestPreflightIssues:
         servers = {"GitHub": READY}
         found = preflight_issues("pulse", "cursor", servers, env=ENV_MIN, dashboards=False)
         assert len(found) == 1
-        assert "/add-dashboard" in found[0]["message"]
+        assert "No Datadog dashboards" in found[0]["message"]
+        assert found[0]["fix"] == {"kind": "add_dashboard", "agent": "cursor"}
+
+    def test_no_dashboards_without_known_agent_has_no_button(self):
+        found = preflight_issues("pulse", "pi", None, env=ENV_MIN, dashboards=False)
+        assert found[0]["fix"] is None
+
+    def test_add_stores_add_dashboard_fix(self):
+        issue = run_issues.add("pulse", "datadog", "none", agent="claude", kind="add_dashboard")
+        assert issue["fix"] == {"kind": "add_dashboard", "agent": "claude"}
+        assert run_issues.load("pulse")[0]["fix"]["kind"] == "add_dashboard"
 
     def test_cli_unavailable_only_checks_config(self):
         found = preflight_issues("pulse", "cursor", None, env=ENV_MIN, dashboards=False)
