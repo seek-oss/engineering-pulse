@@ -125,35 +125,36 @@ Each command opens a browser window. Sign in, then go back to Terminal.
 
 If you forget this step, the report tells you. A **Sign in to &lt;server&gt;** button shows in the red problems box.
 
-## 4. Put your team names in `.env`
+## 4. Configure the `.env` file
 
-The installer already copied `.env.example` to `~/.engineering-pulse/.env`.
-That copy still has placeholder values, so the reports cannot use it yet.
-Open the copy and replace the placeholders with your teams:
-
-```bash
-open -e ~/.engineering-pulse/.env
-```
-
-If `.env` is not there, copy it yourself, then open it:
+First, make a local `.env` from the example if it does not exist. The installer normally
+does this for you. This command does not overwrite an existing `.env`:
 
 ```bash
-cp ~/.engineering-pulse/.env.example ~/.engineering-pulse/.env
+cd ~/.engineering-pulse
+test -f .env || cp .env.example .env
+open -e .env
 ```
 
-Change these two lines:
+Follow the comments in `.env`. Replace the placeholder values. Uncomment an optional
+variable only when you want the part of the report that uses it.
 
-```bash
-DATADOG_TEAMS=your-datadog-team          # Datadog team slug, or more than one, separated by commas
-GITHUB_TEAM=your-github-org/your-team    # the GitHub team whose review requests you track
-```
+| Variable | Required for | What to do |
+|----------|--------------|------------|
+| `AGENT_CLI` | All reports | Keep `cursor`. The installer sets it. |
+| `DATADOG_TEAMS` | Datadog metrics | Replace `your-team` with one or more Datadog team slugs. |
+| `GITHUB_TEAM` | PR Review Queue | Replace the placeholder with `org/team`. |
+| `SPRINT_BOARD` | Sprint report | Uncomment it and describe your Jira board in one sentence. See [Sprint report](features.md#sprint-report). |
+| `STAKEHOLDERS` | Stakeholder Pulse | Uncomment it and add full names or email addresses. Glean MCP supplies the data. |
+| `TODOIST_API_TOKEN` | My Queue | Uncomment it and add your Todoist token. |
+| `DELIVERY` | Report delivery | Use `notify`, `email`, `both` or `none`. |
+| `SMTP_*` | Email delivery | Uncomment and configure these only for `DELIVERY=email` or `both`. |
 
-The installer sets `AGENT_CLI=cursor`.
+`DATADOG_TEAMS` and `GITHUB_TEAM` are the normal minimum for the Engineering Pulse
+report. The other variables enable separate reports or optional sections.
 
-> **Caution:** The `SPRINT_BOARD` line has example values. If you do not use Jira sprints, put `#` at the start of the line. If you use Jira sprints, read [Sprint report](features.md#sprint-report).
-
-Do not put API keys for Datadog or GitHub in `.env`. The MCP servers handle the sign-in.
-For all settings, read [Configuration](configuration.md).
+Do not put Datadog or GitHub API keys in `.env`. Their MCP servers handle the sign-in.
+For every setting and its accepted values, read [Configuration](configuration.md).
 
 ## 5. Add your first Datadog dashboard
 

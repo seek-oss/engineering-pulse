@@ -63,28 +63,32 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    Use the names that `agent mcp list` shows. They can be different on your Mac. Each login command opens a browser window. Sign in, then go back to Terminal.
 
-3. Put your team names in `~/.engineering-pulse/.env`.
+3. **Configure the `.env` file.**
 
-   The installer already copied `.env.example` to `.env`. That copy still has placeholder values, so the reports cannot use it yet. Open the copy and replace the placeholders with your teams:
-
-   ```bash
-   open -e ~/.engineering-pulse/.env
-   ```
-
-   If `.env` is not there, copy it yourself, then open it:
+   First, make a local `.env` from the example if it does not exist. The installer
+   normally does this for you. This command does not overwrite an existing `.env`:
 
    ```bash
-   cp ~/.engineering-pulse/.env.example ~/.engineering-pulse/.env
+   cd ~/.engineering-pulse
+   test -f .env || cp .env.example .env
+   open -e .env
    ```
 
-   Change these two lines:
+   Follow the comments in `.env`. Replace the placeholders, and uncomment only the
+   optional features that you use:
 
-   ```bash
-   DATADOG_TEAMS=your-datadog-team
-   GITHUB_TEAM=your-github-org/your-team
-   ```
+   | Variable | Used for |
+   |----------|----------|
+   | `AGENT_CLI=cursor` | Runs the reports with Cursor (the installer sets this) |
+   | `DATADOG_TEAMS` | Filters the Datadog metrics for the Engineering Pulse report |
+   | `GITHUB_TEAM` | Finds pull requests that wait for your GitHub team |
+   | `SPRINT_BOARD` | Enables the Jira sprint report |
+   | `STAKEHOLDERS` | Enables Stakeholder Pulse through Glean |
+   | `TODOIST_API_TOKEN` | Enables My Queue |
+   | `DELIVERY` and `SMTP_*` | Controls notifications and optional email |
 
-   For the sprint report, change `SPRINT_BOARD` to one sentence about your Jira board (see [Sprint report](docs/features.md#sprint-report)). If you do not use Jira sprints, put `#` at the start of the `SPRINT_BOARD` line.
+   `DATADOG_TEAMS` and `GITHUB_TEAM` are the normal minimum. For all settings, see
+   [Configuration](docs/configuration.md).
 
 4. Add one Datadog dashboard. Copy the dashboard URL from your browser. Then start the Cursor agent in `~/.engineering-pulse`:
 
