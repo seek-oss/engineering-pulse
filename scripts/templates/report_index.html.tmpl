@@ -646,7 +646,7 @@
   function settingsForm(s) {
     const current = {
       days: s.days.slice(), times: s.times.join(","), reports: (DATA.scheduled_reports || SCHED_TYPES).slice(),
-      auto_open: !!DATA.auto_open, retention: DATA.retention_days,
+      retention: DATA.retention_days,
     };
     const check = (checked, label, extra) => {
       const box = el("input", { type: "checkbox", checked });
@@ -656,7 +656,6 @@
       t === "sprint" && !DATA.sprint_configured ? el("span", { class: "muted" }, " (needs SPRINT_BOARD in .env)") : null));
     const dayBoxes = WEEK.map((d) => check(current.days.includes(d), DAY_NAMES[d]));
     const times = el("input", { type: "text", value: current.times.replace(/,/g, ", "), size: 28, "aria-label": "Run times" });
-    const autoOpen = check(current.auto_open, "Also open each new report in the browser");
     const retention = el("input", { type: "number", min: 0, max: 3650, value: current.retention, style: "width:80px", "aria-label": "Days to keep reports" });
     const status = el("p", { class: "hint" });
 
@@ -675,7 +674,6 @@
       const t = times.value.split(",").map((x) => x.trim()).filter(Boolean);
       if (!t.length || t.some((x) => !TIME_RE.test(x))) throw new Error("Times must look like 09:00, 12:30.");
       if (t.join(",") !== current.times) changes.times = t.join(",");
-      if (autoOpen.box.checked !== current.auto_open) changes.auto_open = autoOpen.box.checked ? "1" : "0";
       const keep = Number(retention.value);
       if (!Number.isInteger(keep) || keep < 0 || keep > 3650) throw new Error("Keep reports must be 0–3650 days.");
       if (keep !== current.retention) changes.retention = String(keep);
@@ -703,7 +701,6 @@
       el("div", {}, dayBoxes.map((b) => b.node)),
       el("p", {}, "Times ", times, el("span", { class: "muted" }, "  24-hour, comma-separated")),
       el("h4", {}, "Reports"),
-      el("div", {}, autoOpen.node),
       el("p", {}, "Keep reports for ", retention, " days ", el("span", { class: "muted" }, "(0 = forever)")),
       el("p", {}, el("button", { class: "btn", style: "background:var(--accent);border-color:var(--accent);color:#fff", onclick: apply }, "Apply…")),
       status,
@@ -760,7 +757,7 @@
 
       el("h4", {}, "Delivery and retention"),
       el("p", { class: "hint" }, "Edit .env in the install folder (applies from the next run):"),
-      commandBlock(`DELIVERY=notify          # notify | email | both | none (local file only)\nREPORT_AUTO_OPEN=0       # 1 = also open the report in your browser\nREPORT_RETENTION_DAYS=90 # 0 = keep forever`),
+      commandBlock(`DELIVERY=notify          # notify | email | both | none (local file only)\nREPORT_RETENTION_DAYS=90 # 0 = keep forever`),
       el("p", { class: "hint" }, "The installer sets up terminal-notifier (via Homebrew) so clicking a notification opens the report; without it a plain macOS banner is shown."),
       el("p", { class: "hint" }, "Scheduled runs only happen while the Mac is awake; a run missed during sleep fires once on wake."),
     );

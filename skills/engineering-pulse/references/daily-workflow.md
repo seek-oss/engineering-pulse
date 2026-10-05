@@ -154,3 +154,6 @@ then follows `DELIVERY` in `.env`: `notify` (default, macOS notification), `emai
 Confirm `Archived …`, plus `Notified via …` and/or `Sent to <SMTP_TO>` for the
 configured mode. Do not mark complete until the command exits 0. Run it once per
 report; a repeat with identical content is skipped.
+
+Do not open the report or calendar automatically. The macOS notification is clickable;
+the user chooses when to open the report.

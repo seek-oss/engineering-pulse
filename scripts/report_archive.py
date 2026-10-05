@@ -309,7 +309,6 @@ def index_data(root: Path) -> dict:
         "python": _python_cmd(),
         "delivery": os.environ.get("DELIVERY", "notify"),
         "retention_days": int(os.environ.get("REPORT_RETENTION_DAYS", DEFAULT_RETENTION_DAYS)),
-        "auto_open": os.environ.get("REPORT_AUTO_OPEN", "0").strip() == "1",
         "scheduled_reports": _scheduled_reports(),
         "sprint_configured": bool(os.environ.get("SPRINT_BOARD", "").strip()),
         "link_handler": _link_handler_installed(),

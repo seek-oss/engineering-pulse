@@ -124,7 +124,6 @@ def handle_run(params: dict[str, str]) -> str:
     notify(
         f"Re-running {label}",
         "You'll get a notification when the report is ready.",
-        auto_open=False,
     )
     return f"Started {label}."
 

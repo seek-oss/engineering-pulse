@@ -15,7 +15,6 @@
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
 | `SMTP_FROM` | no | Sender address (default `SMTP_USER`) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USE_TLS` | no | Defaults `smtp.gmail.com`, `587`, `true` |
-| `REPORT_AUTO_OPEN` | no | `1` also opens the report in the browser after delivery (Settings panel) |
 | `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all; Settings panel) |
 | `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, `none` (Settings panel) |
 | `REPORTS_DIR` | no | Archive root (default `output/reports`) |
@@ -89,7 +88,7 @@ the ids with `scripts/compare_reports.py prepare`, writes
 
 **Schedule:** `scripts/schedule.py show` / `set --days mon-sun --times 10:00` — edits the
 installed LaunchAgent plist and reloads it. `scripts/settings.py show` / `set` also
-covers `SCHEDULED_REPORTS`, `REPORT_AUTO_OPEN` and `REPORT_RETENTION_DAYS`, and backs
+covers `SCHEDULED_REPORTS` and `REPORT_RETENTION_DAYS`, and backs
 the calendar's Settings panel (`engineering-pulse://settings` links).
 
 | Argument (`datadog_dashboard_extract.py`) | Default | Purpose |

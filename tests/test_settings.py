@@ -39,14 +39,11 @@ def env_file(tmp_path):
 
 class TestParseUrl:
     def test_parses_all_fields(self):
-        changes = parse_url(
-            URL + "days=mon,sun&times=10:00,8:30&reports=sprint&auto_open=1&retention=30"
-        )
+        changes = parse_url(URL + "days=mon,sun&times=10:00,8:30&reports=sprint&retention=30")
         assert changes == {
             "days": [1, 0],
             "times": ["08:30", "10:00"],
             "reports": ["sprint"],
-            "auto_open": True,
             "retention": 30,
         }
 
@@ -62,7 +59,7 @@ class TestParseUrl:
             (URL + "reports=pulse;rm -rf ~", "unknown report"),
             (URL + "times=25:00", "out of range"),
             (URL + "days=funday", "unknown day"),
-            (URL + "auto_open=yes", "0 or 1"),
+            (URL + "auto_open=1", "unknown setting"),
             (URL + "retention=-1", "retention"),
             (URL + "retention=99999", "retention"),
             (URL + "reports=pulse&reports=none", "only once"),
@@ -106,13 +103,13 @@ class TestDescribeAndApply:
 
 class TestUpsertEnv:
     def test_replaces_appends_and_keeps_mode(self, env_file):
-        upsert_env(env_file, {"REPORT_RETENTION_DAYS": "7", "REPORT_AUTO_OPEN": "1"})
+        upsert_env(env_file, {"REPORT_RETENTION_DAYS": "7", "SCHEDULED_REPORTS": "pulse"})
         lines = env_file.read_text().splitlines()
         assert lines == [
             "# secrets",
             "GITHUB_TOKEN=abc",
             "REPORT_RETENTION_DAYS=7",
-            "REPORT_AUTO_OPEN=1",
+            "SCHEDULED_REPORTS=pulse",
         ]
         assert stat.S_IMODE(env_file.stat().st_mode) == 0o600
 

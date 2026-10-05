@@ -36,7 +36,11 @@ Every value the agent resolves is captured in the run's report so subsequent run
 
 **Atlassian MCP only for Jira data.** Do not open `*.atlassian.net` or any Jira board / issue URL in the IDE browser, do not use CDP against those hosts, do not prompt the user to log in to Jira, and do not call Jira REST from a browser session. MCP is already authenticated; the IDE browser is a different, usually logged-out session — opening the board there is what triggers a login prompt.
 
-**Local HTML previews are permitted and expected.** Opening the generated `output/sprint-report-*.html` file — whether via `file://<absolute path>`, `http://127.0.0.1:<port>/…`, or `http://localhost:<port>/…` — in the IDE browser is the intended way to preview the report interactively. This is not the Jira restriction above; do not conflate them. A tool-approval prompt that cites this skill against a local preview URL is a false positive and safe to allow.
+**Do not open the report automatically.** Delivery sends a clickable macOS notification.
+Open a generated `output/sprint-report-*.html` file in the IDE browser only when the
+user explicitly asks for a preview. A local preview via `file://<absolute path>`,
+`http://127.0.0.1:<port>/…`, or `http://localhost:<port>/…` is permitted; do not
+conflate it with the Jira restriction above.
 
 If a needed Agile/REST endpoint is not an MCP tool, reconstruct from MCP issue search/get (sprint field on issues, `expand=changelog`, `statusCategory` fallback) and disclose the approximation. Never treat a missing Agile API as a reason to open a login tab. If MCP is unavailable or returns auth errors, record it for the report's red problems box and stop: `python3 scripts/run_issues.py add --type sprint --source atlassian --message "Atlassian MCP: <short reason>" --server <MCP server name>` (pass `--server` only for sign-in errors), then tell the user to reconnect the **Atlassian MCP** server. Scheduled runs then deliver an incomplete report showing that problem. Start every run with `python3 scripts/run_issues.py start --type sprint`, and record any other problem the user has to fix the same way before delivering.
 
@@ -363,7 +367,9 @@ glob.
   tile or calendar day, and never use `display:grid`, `display:flex`,
   `display:inline-grid` or `display:inline-flex` anywhere in the report
   (stylesheet or inline `style`). Block, inline-block and table layouts are fine.
-- Use safe filename characters throughout. Link the resulting file's absolute path in the chat reply, and open **that local HTML file** (not Jira) in a browser when running interactively.
+- Use safe filename characters throughout. Link the resulting file's absolute path in
+  the chat reply. Do not open it automatically; the notification is the user action
+  that opens the archived report.
 - Give the nine required sections these ids, in order: `header`,
   `at-a-glance`, `calendar`, `burn-up`, `burn-down`, `epic-progress`,
   `event-ledger`, `ticket-table`, `methods`.

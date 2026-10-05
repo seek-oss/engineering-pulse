@@ -61,7 +61,6 @@ Use the **Settings** panel on the calendar for these settings. The panel writes 
 |---------|---------|---------|
 | Days and times | 09:00 and 18:00, Monday to Friday | When the schedule makes reports |
 | `SCHEDULED_REPORTS` | `pulse,sprint` | The reports that runs make: `pulse`, `sprint`, both, or `none` (paused). This also applies to `make run`. |
-| `REPORT_AUTO_OPEN` | off | `1` opens each new report in your browser |
 | `REPORT_RETENTION_DAYS` | `90` | The number of days to keep reports. `0` keeps all reports. |
 
 You can also change them in Terminal:

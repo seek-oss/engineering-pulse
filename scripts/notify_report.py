@@ -2,8 +2,8 @@
 """Show a macOS notification that a report is ready.
 
 Uses terminal-notifier when installed (clicking the banner opens the report's day
-view); otherwise falls back to a plain ``osascript`` banner. REPORT_AUTO_OPEN=1 also
-opens the page in the default browser. On non-macOS systems it only prints the link.
+view); otherwise falls back to a plain ``osascript`` banner. It never opens a browser
+without a user action. On non-macOS systems it only prints the link.
 
 Usage:
   python scripts/notify_report.py --title "Engineering Pulse" --message "Report ready" \
@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import platform
 import shutil
 import subprocess
@@ -55,12 +54,9 @@ def notify(
     subtitle: str = "",
     open_target: str | Path | None = None,
     group: str = "engineering-pulse",
-    auto_open: bool | None = None,
 ) -> str:
     """Send the notification. Returns the method used: terminal-notifier, osascript or print."""
     url = to_url(open_target) if open_target else None
-    if auto_open is None:
-        auto_open = os.environ.get("REPORT_AUTO_OPEN", "0").lower() in ("1", "true", "yes")
 
     if platform.system() != "Darwin":
         print(f"{title}: {message}" + (f" — {url}" if url else ""))
@@ -83,8 +79,6 @@ def notify(
         )
         method = "osascript"
 
-    if auto_open and url:
-        subprocess.run(["open", url], capture_output=True, check=False)
     return method
 
 

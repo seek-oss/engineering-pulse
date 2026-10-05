@@ -5,7 +5,6 @@ Editable settings (secrets are never editable here):
 
   days / times   LaunchAgent schedule (via scripts/schedule.py)
   reports        which reports scheduled runs produce: pulse, sprint, both, or none (paused)
-  auto_open      REPORT_AUTO_OPEN — also open each report in the browser (0/1)
   retention      REPORT_RETENTION_DAYS — days to keep archived reports (0 = forever)
 
 The calendar's Settings panel opens ``engineering-pulse://settings?days=…&times=…``;
@@ -42,7 +41,7 @@ REPORT_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report"}
 DEFAULT_REPORTS = "pulse,sprint"
 DEFAULT_RETENTION = 90
 MAX_RETENTION = 3650
-FIELDS = ("days", "times", "reports", "auto_open", "retention")
+FIELDS = ("days", "times", "reports", "retention")
 _INT_RE = re.compile(r"^\d{1,4}$")
 
 
@@ -61,12 +60,6 @@ def parse_reports(spec: str) -> list[str]:
             raise SettingsError(f"unknown report: {part!r} (use pulse, sprint or none)")
         chosen.add(part)
     return [t for t in REPORT_TYPES if t in chosen]
-
-
-def parse_bool(spec: str) -> bool:
-    if spec not in ("0", "1"):
-        raise SettingsError(f"expected 0 or 1, got {spec!r}")
-    return spec == "1"
 
 
 def parse_retention(spec: str) -> int:
@@ -90,8 +83,6 @@ def parse_changes(raw: dict[str, str]) -> dict:
         raise SettingsError(str(exc)) from exc
     if "reports" in raw:
         changes["reports"] = parse_reports(raw["reports"])
-    if "auto_open" in raw:
-        changes["auto_open"] = parse_bool(raw["auto_open"])
     if "retention" in raw:
         changes["retention"] = parse_retention(raw["retention"])
     return changes
@@ -122,7 +113,6 @@ def current_settings(plist: Path | None = None, env_file: Path = ENV_FILE) -> di
         "days": sched["days"] if sched else None,
         "times": sched["times"] if sched else None,
         "reports": reports,
-        "auto_open": (env.get("REPORT_AUTO_OPEN") or "0").strip() == "1",
         "retention": retention,
     }
 
@@ -136,8 +126,6 @@ def _fmt(field: str, value) -> str:
         return ", ".join(value)
     if field == "reports":
         return " + ".join(REPORT_LABELS[t] for t in value) if value else "none (paused)"
-    if field == "auto_open":
-        return "yes" if value else "no"
     return "forever" if value == 0 else f"{value} days"
 
 
@@ -145,7 +133,6 @@ _FIELD_LABELS = {
     "days": "Run days",
     "times": "Run times",
     "reports": "Scheduled reports",
-    "auto_open": "Open reports in browser",
     "retention": "Keep reports",
 }
 
@@ -208,8 +195,6 @@ def apply(
     env_updates = {}
     if "reports" in changes:
         env_updates["SCHEDULED_REPORTS"] = ",".join(changes["reports"]) or "none"
-    if "auto_open" in changes:
-        env_updates["REPORT_AUTO_OPEN"] = "1" if changes["auto_open"] else "0"
     if "retention" in changes:
         env_updates["REPORT_RETENTION_DAYS"] = str(changes["retention"])
     if env_updates:
@@ -242,7 +227,6 @@ def main(argv: list[str] | None = None) -> int:
     p_set.add_argument("--days", help="e.g. mon-fri, mon-sun")
     p_set.add_argument("--times", help="e.g. 09:00,12:00")
     p_set.add_argument("--reports", help="pulse, sprint, pulse,sprint, or none (pause)")
-    p_set.add_argument("--auto-open", dest="auto_open", choices=("0", "1"))
     p_set.add_argument("--retention", help="days to keep reports (0 = forever)")
     for name in ("describe-url", "apply-url"):
         sub.add_parser(name).add_argument("url")
@@ -274,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
     if lines and args.cmd == "apply-url":
         from scripts.notify_report import notify
 
-        notify("Settings applied", "\n".join(lines), open_target=_index_path(), auto_open=False)
+        notify("Settings applied", "\n".join(lines), open_target=_index_path())
     return 0
 
 
