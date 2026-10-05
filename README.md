@@ -63,10 +63,18 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    Use the names that `agent mcp list` shows. They can be different on your Mac. Each login command opens a browser window. Sign in, then go back to Terminal.
 
-3. Set your teams in `~/.engineering-pulse/.env`. The installer made this file from `.env.example`, so you do not copy it. Open it:
+3. Put your team names in `~/.engineering-pulse/.env`.
+
+   The installer already copied `.env.example` to `.env`. That copy still has placeholder values, so the reports cannot use it yet. Open the copy and replace the placeholders with your teams:
 
    ```bash
    open -e ~/.engineering-pulse/.env
+   ```
+
+   If `.env` is not there, copy it yourself, then open it:
+
+   ```bash
+   cp ~/.engineering-pulse/.env.example ~/.engineering-pulse/.env
    ```
 
    Change these two lines:

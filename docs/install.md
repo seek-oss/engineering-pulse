@@ -125,15 +125,23 @@ Each command opens a browser window. Sign in, then go back to Terminal.
 
 If you forget this step, the report tells you. A **Sign in to &lt;server&gt;** button shows in the red problems box.
 
-## 4. Set your teams in `.env`
+## 4. Put your team names in `.env`
 
-The installer made `~/.engineering-pulse/.env` from `.env.example`. You do not copy it. Open the file:
+The installer already copied `.env.example` to `~/.engineering-pulse/.env`.
+That copy still has placeholder values, so the reports cannot use it yet.
+Open the copy and replace the placeholders with your teams:
 
 ```bash
 open -e ~/.engineering-pulse/.env
 ```
 
-Set these two lines:
+If `.env` is not there, copy it yourself, then open it:
+
+```bash
+cp ~/.engineering-pulse/.env.example ~/.engineering-pulse/.env
+```
+
+Change these two lines:
 
 ```bash
 DATADOG_TEAMS=your-datadog-team          # Datadog team slug, or more than one, separated by commas
