@@ -98,6 +98,9 @@ def render_issue_box(issues: list[dict], report_type: str) -> str:
         footer = (
             '<p style="margin:12px 0 0">When you\'re done: '
             f'<a href="{href}" style="{_BUTTON}">Re-run this report</a></p>'
+            '<p style="margin:8px 0 0;font-size:12px;color:#9b2c2c">'
+            "This starts the Cursor agent in the background; no Terminal window opens. "
+            "To see progress, run <code>tail -f /tmp/daily-dashboard.log</code>.</p>"
         )
     if fixable:
         footer += (

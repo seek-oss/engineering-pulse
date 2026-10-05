@@ -43,6 +43,9 @@ class TestRenderIssueBox:
         assert "engineering-pulse://run?type=sprint" in box
         assert "When you're done: <a" in box
         assert ">Re-run this report</a></p>" in box
+        assert "starts the Cursor agent in the background" in box
+        assert "no Terminal window opens" in box
+        assert "tail -f /tmp/daily-dashboard.log" in box
         assert "opened on the Mac" in box
 
     def test_add_dashboard_button_and_steps(self):
