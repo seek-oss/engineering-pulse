@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300">
+  <rect width="1000" height="300" fill="#f7fafc"/>
+  <rect x="40" y="20" width="920" height="260" rx="10" fill="#fff5f5" stroke="#fc8181" stroke-width="2"/>
+  <rect x="40" y="20" width="8" height="260" fill="#fc8181"/>
+  <g font-family="Helvetica,Arial,sans-serif">
+    <text x="70" y="58" font-size="20" font-weight="800" fill="#c53030">2 problems in this run</text>
+    <text x="70" y="82" font-size="14" fill="#742a2a">Screenshot placeholder: the red problems box at the top of a report</text>
+    <text x="70" y="120" font-size="15" fill="#742a2a"><tspan font-weight="700">GitHub:</tspan> GitHub MCP needs you to sign in (Cursor CLI).</text>
+    <rect x="70" y="132" width="160" height="30" rx="6" fill="#c53030"/>
+    <text x="150" y="152" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Sign in to GitHub</text>
+    <text x="70" y="192" font-size="15" fill="#742a2a"><tspan font-weight="700">Datadog:</tspan> No Datadog dashboards are set up yet, so this report has no metrics.</text>
+    <rect x="70" y="204" width="200" height="30" rx="6" fill="#c53030"/>
+    <text x="170" y="224" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Add a Datadog dashboard</text>
+    <text x="70" y="262" font-size="15" fill="#742a2a">When you're done:</text>
+    <rect x="200" y="244" width="150" height="28" rx="6" fill="#c53030"/>
+    <text x="275" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Re-run this report</text>
+  </g>
+</svg>

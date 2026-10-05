@@ -65,6 +65,7 @@ post_install_guide() {
   echo ""
   echo -e "  ${BOLD}3) Add your own Datadog dashboards${RESET}"
   echo -e "     In Cursor, run: ${CYAN}${BOLD}/add-dashboard${RESET} ${DIM}and describe the dashboard${RESET}"
+  echo -e "     ${DIM}Or use the${RESET} ${BOLD}Add a Datadog dashboard${RESET} ${DIM}button in the first report.${RESET}"
   echo -e "     ${DIM}This creates a file in prompts/dashboards/custom_*.md — safe to upgrade later.${RESET}"
   echo ""
   echo -e "  ${BOLD}4) Upgrading${RESET}"
@@ -86,6 +87,9 @@ post_install_guide() {
   echo -e "     ${CYAN}${RUNNER_SCRIPT}${RESET}"
   echo -e "     ${DIM}Or:${RESET} ${CYAN}cd ${INSTALL_DIR} && make run${RESET}"
   echo -e "     ${DIM}Logs:${RESET} ${CYAN}tail -f ${LOG_FILE}${RESET} ${DIM}(cleared at run start if over 50 MiB)${RESET}"
+  echo ""
+  echo -e "  ${BOLD}Full guide:${RESET} ${MAGENTA}${INSTALL_DIR}/docs/install.md${RESET}"
+  echo -e "     ${DIM}Online:${RESET} ${CYAN}https://github.com/seek-oss/engineering-pulse/blob/main/docs/install.md${RESET}"
   echo ""
   divider
 }
