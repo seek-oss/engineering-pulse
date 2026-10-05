@@ -2,21 +2,25 @@
 
 [![CI](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/seek-oss/engineering-pulse/actions/workflows/ci.yml)
 
-Engineering Pulse gives an engineering manager one daily report about the team.
-It shows system health from Datadog, the pull requests that wait for review, and your own tasks.
-The Cursor agent on your Mac collects the data and writes the report. You do not write code.
+Engineering Pulse gives an engineering manager two daily reports about the team:
+
+- The **Engineering Pulse report** shows system health from Datadog, the pull requests that wait for review, and your own tasks.
+- The **sprint report** shows the progress of your Jira sprint, with burn-up and burn-down charts, the progress of each epic, and the scope changes.
+
+The Cursor agent on your Mac collects the data and writes the reports. You do not write code.
 
 ![Engineering Pulse report (example)](docs/images/report.svg)
 
 ## What you get
 
-- **A daily report.** It shows the health metrics from your Datadog dashboards with red, yellow and green colours, plus the GitHub pull requests that wait for you or your team.
-- **A schedule.** The report runs at 09:00, 12:00 and 16:00, Monday to Friday. You can change the times.
+- **A daily Engineering Pulse report.** It shows the health metrics from your Datadog dashboards with red, yellow and green colours, plus the GitHub pull requests that wait for you or your team.
+- **A daily sprint report.** It shows what is done, what remains, and what was added to or removed from the sprint. You need the Atlassian MCP server and one sentence about your board. See [Sprint report](docs/features.md#sprint-report).
+- **A schedule.** The reports run at 09:00, 12:00 and 16:00, Monday to Friday. You can change the times, or pause one report.
 - **A notification.** macOS tells you when a new report is ready. Email is optional.
 - **A report calendar.** All reports stay on your Mac. You can see what changed between two reports.
 - **A problems box.** If a data source fails, the report still comes. A red box at the top tells you what failed. Many problems have a button that fixes them.
 
-Optional features: a sprint report from Jira, a summary of what your stakeholders said in Slack (Glean), and your Todoist tasks.
+Optional features: a summary of what your stakeholders said in Slack (Glean), and your Todoist tasks.
 See [Optional features](#optional-features).
 
 ## What you need
@@ -56,7 +60,7 @@ You sign in to each MCP server one time. You do not put API keys in a file.
    GITHUB_TEAM=your-github-org/your-team
    ```
 
-   If you do not use Jira sprints, put `#` at the start of the `SPRINT_BOARD` line.
+   For the sprint report, change `SPRINT_BOARD` to one sentence about your Jira board (see [Sprint report](docs/features.md#sprint-report)). If you do not use Jira sprints, put `#` at the start of the `SPRINT_BOARD` line.
 
 4. Add one Datadog dashboard. Copy the dashboard URL from your browser. Then start the Cursor agent in `~/.engineering-pulse`:
 

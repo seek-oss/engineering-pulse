@@ -4,21 +4,27 @@ title: Engineering Pulse
 
 # Engineering Pulse
 
-**One daily report about your team, made by the Cursor agent on your Mac.**
+**Daily reports about your team and your sprint, made by the Cursor agent on your Mac.**
 
-Engineering Pulse is for engineering managers. It shows system health from Datadog, the pull requests that wait for review, and your own tasks. You do not write code. The Cursor agent collects the data and writes the report.
+Engineering Pulse is for engineering managers. It makes two reports:
+
+- The **Engineering Pulse report** shows system health from Datadog, the pull requests that wait for review, and your own tasks.
+- The **sprint report** shows the progress of your Jira sprint, with burn-up and burn-down charts, the progress of each epic, and the scope changes.
+
+You do not write code. The Cursor agent collects the data and writes the reports.
 
 ![Engineering Pulse report (example)](images/report.svg)
 
 ## What you get
 
-- **A daily report** with red, yellow and green health metrics from your Datadog dashboards, and the GitHub pull requests that wait for you or your team.
-- **A schedule:** 09:00, 12:00 and 16:00, Monday to Friday. You can change it.
+- **A daily Engineering Pulse report** with red, yellow and green health metrics from your Datadog dashboards, and the GitHub pull requests that wait for you or your team.
+- **A daily [sprint report](features.md#sprint-report)** with what is done, what remains, and what was added to or removed from the sprint.
+- **A schedule:** 09:00, 12:00 and 16:00, Monday to Friday. You can change it, or pause one report.
 - **A macOS notification** for each new report. Email is optional.
 - **A report calendar** with all reports, and a view of what changed between two reports.
 - **A problems box** at the top of the report when a step fails. Many problems have a button that fixes them.
 
-Optional: a [sprint report](features.md#sprint-report) from Jira, [Stakeholder Pulse](features.md#stakeholder-pulse) from Slack through Glean, and [My Queue](features.md#my-queue-todoist) from Todoist.
+Optional: [Stakeholder Pulse](features.md#stakeholder-pulse) from Slack through Glean, and [My Queue](features.md#my-queue-todoist) from Todoist.
 
 ![Report calendar (example)](images/calendar.svg)
 
