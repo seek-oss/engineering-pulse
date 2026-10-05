@@ -87,11 +87,12 @@ The installer does these steps:
 1. It copies the repository to `~/.engineering-pulse`.
 2. It makes a Python environment in `~/.engineering-pulse/.venv`.
 3. It makes `~/.engineering-pulse/.env` from `.env.example`. It does not change an `.env` that exists.
-4. It installs the schedule: 09:00, 12:00 and 16:00, Monday to Friday.
+4. It installs the schedule: 09:00 and 18:00, Monday to Friday. You can change it later in **Settings** on the report calendar.
 5. It installs `~/Applications/Engineering Pulse.app`. This small app makes the buttons in the reports work.
 6. It installs `terminal-notifier` with Homebrew, if you have Homebrew. Then a notification opens the report when you select it.
 
 To use a different folder, set `INSTALL_DIR` before the command. To use different run hours, set `SCHEDULE_HOURS`, for example `SCHEDULE_HOURS="8 13"`.
+When you run the installer again, it keeps the schedule that you set in Settings. It changes the schedule only when you set `SCHEDULE_HOURS`.
 
 ## 3. Sign in to the MCP servers
 
@@ -101,19 +102,23 @@ Do this step one time for each MCP server. Find the server names first:
 agent mcp list
 ```
 
-A server that shows `requires_authentication` needs a sign-in. Run this command for each of these servers:
+A server that shows `requires_authentication` needs a sign-in. Run the command for each of these servers. These are the usual servers:
 
 ```bash
-agent mcp login <server-name>
+agent mcp login Datadog      # dashboard metrics (necessary)
+agent mcp login GitHub       # pull request review queue (necessary)
+agent mcp login Atlassian    # sprint report from Jira
+agent mcp login Glean        # Stakeholder Pulse from Slack
 ```
 
-A browser window opens. Sign in.
+Use the names that `agent mcp list` shows. They can be different on your Mac.
+Each command opens a browser window. Sign in, then go back to Terminal.
 
 If you forget this step, the report tells you. A **Sign in to &lt;server&gt;** button shows in the red problems box.
 
 ## 4. Set your teams in `.env`
 
-Open the file:
+The installer made `~/.engineering-pulse/.env` from `.env.example`. You do not copy it. Open the file:
 
 ```bash
 open -e ~/.engineering-pulse/.env
@@ -147,7 +152,8 @@ For all settings, read [Configuration](configuration.md).
    In the Cursor app, open `~/.engineering-pulse` and type `/add-dashboard <dashboard URL>` in the chat.
 
 4. The agent shows a list of the widgets on the dashboard. Tell it which widgets you want.
-5. The agent writes `prompts/dashboards/custom_<name>.md`. The next run uses this file.
+5. The agent proposes a red, yellow and green threshold for each metric. Confirm or change each threshold. Without thresholds, a tile is always green.
+6. The agent writes `prompts/dashboards/custom_<name>.md`. The next run uses this file.
 
 Repeat this procedure for each dashboard. You can also start it from the report: when no dashboard is set up, the red problems box shows an **Add a Datadog dashboard** button.
 

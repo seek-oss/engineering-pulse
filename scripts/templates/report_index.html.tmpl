@@ -754,7 +754,7 @@
 
       el("h4", {}, "Other examples"),
       el("p", { class: "hint" }, "Weekdays only, three times a day (the installer default):"),
-      commandBlock(`${py} scripts/schedule.py set --days mon-fri --times 09:00,12:00,16:00`),
+      commandBlock(`${py} scripts/schedule.py set --days mon-fri --times 09:00,18:00`),
       el("p", { class: "hint" }, "Pause and resume both reports:"),
       commandBlock(`${py} scripts/settings.py set --reports none\n${py} scripts/settings.py set --reports pulse,sprint`),
 

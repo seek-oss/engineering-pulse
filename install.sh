@@ -102,7 +102,8 @@ RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
 PLIST_LABEL="com.$(whoami).daily-dashboard"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_LABEL}.plist"
 LOG_FILE="/tmp/daily-dashboard.log"
-SCHEDULE_HOURS="${SCHEDULE_HOURS:-9 12 16}"  # space-separated
+SCHEDULE_HOURS_GIVEN="${SCHEDULE_HOURS:+1}"
+SCHEDULE_HOURS="${SCHEDULE_HOURS:-9 18}"  # space-separated
 
 use_color() {
   [[ -z "${NO_COLOR:-}" ]] && [[ -t 1 ]]
@@ -564,6 +565,16 @@ if [ "${SKIP_LAUNCHD}" = "1" ]; then
 else
   mkdir -p "$HOME/Library/LaunchAgents"
 
+  # A re-install keeps the days and times chosen in Settings unless SCHEDULE_HOURS is given.
+  KEPT_SCHEDULE=""
+  if [[ -z "$SCHEDULE_HOURS_GIVEN" && -f "$PLIST_PATH" ]]; then
+    KEPT_SCHEDULE=$(mktemp)
+    if ! /usr/bin/plutil -extract StartCalendarInterval xml1 -o "$KEPT_SCHEDULE" "$PLIST_PATH" 2>/dev/null; then
+      rm -f "$KEPT_SCHEDULE"
+      KEPT_SCHEDULE=""
+    fi
+  fi
+
   # Build StartCalendarInterval entries from SCHEDULE_HOURS
   # Weekday 1=Mon … 5=Fri (macOS launchd convention)
   INTERVAL_ENTRIES=""
@@ -613,11 +624,30 @@ else
 </plist>
 EOF
 
+  if [[ -n "$KEPT_SCHEDULE" ]]; then
+    "$INSTALL_DIR/.venv/bin/python" - "$PLIST_PATH" "$KEPT_SCHEDULE" <<'PYEOF'
+import plistlib, sys
+plist, kept = sys.argv[1], sys.argv[2]
+with open(kept, "rb") as fh:
+    intervals = plistlib.load(fh)
+with open(plist, "rb") as fh:
+    data = plistlib.load(fh)
+data["StartCalendarInterval"] = intervals
+with open(plist, "wb") as fh:
+    plistlib.dump(data, fh)
+PYEOF
+    rm -f "$KEPT_SCHEDULE"
+  fi
+
   # Unload any previous version, then load
   launchctl unload "$PLIST_PATH" 2>/dev/null || true
   launchctl load "$PLIST_PATH"
   success "LaunchAgent loaded: $PLIST_LABEL"
-  info "Schedule: runs at $(echo "$SCHEDULE_HOURS" | sed 's/ /:00, /g'):00 Mon–Fri"
+  if [[ -n "$KEPT_SCHEDULE" ]]; then
+    info "Schedule: kept your current days and times (change them in the calendar's Settings)"
+  else
+    info "Schedule: runs at $(echo "$SCHEDULE_HOURS" | sed 's/ /:00, /g'):00 Mon–Fri (change it in the calendar's Settings)"
+  fi
   info "Logs: $LOG_FILE"
   info "launchd stdout: /tmp/daily-dashboard-launchd.out"
 

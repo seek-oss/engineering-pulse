@@ -17,9 +17,9 @@ You do not write code. The Cursor agent collects the data and writes the reports
 
 ## What you get
 
-- **A daily Engineering Pulse report** with red, yellow and green health metrics from your Datadog dashboards, and the GitHub pull requests that wait for you or your team.
+- **A daily Engineering Pulse report** with the latest values of your Datadog widgets, coloured red, yellow or green by the thresholds that you set, and the GitHub pull requests that wait for you or your team.
 - **A daily [sprint report](features.md#sprint-report)** with what is done, what remains, and what was added to or removed from the sprint.
-- **A schedule:** 09:00, 12:00 and 16:00, Monday to Friday. You can change it, or pause one report.
+- **A schedule:** by default 09:00 and 18:00, Monday to Friday. Change it, or pause one report, in **Settings** on the report calendar.
 - **A macOS notification** for each new report. Email is optional.
 - **A report calendar** with all reports, and a view of what changed between two reports.
 - **A problems box** at the top of the report when a step fails. Many problems have a button that fixes them.

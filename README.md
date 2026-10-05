@@ -13,9 +13,9 @@ The Cursor agent on your Mac collects the data and writes the reports. You do no
 
 ## What you get
 
-- **A daily Engineering Pulse report.** It shows the health metrics from your Datadog dashboards with red, yellow and green colours, plus the GitHub pull requests that wait for you or your team.
+- **A daily Engineering Pulse report.** It shows the latest value of each Datadog widget that you select, plus the GitHub pull requests that wait for you or your team. When you add a dashboard, you set a red, yellow and green threshold for each metric. The tile then shows the colour.
 - **A daily sprint report.** It shows what is done, what remains, and what was added to or removed from the sprint. You need the Atlassian MCP server and one sentence about your board. See [Sprint report](docs/features.md#sprint-report).
-- **A schedule.** The reports run at 09:00, 12:00 and 16:00, Monday to Friday. You can change the times, or pause one report.
+- **A schedule.** By default, the reports run at 09:00 and 18:00, Monday to Friday. To change the days and times, or to pause one report, use **Settings** on the report calendar.
 - **A notification.** macOS tells you when a new report is ready. Email is optional.
 - **A report calendar.** All reports stay on your Mac. You can see what changed between two reports.
 - **A problems box.** If a data source fails, the report still comes. A red box at the top tells you what failed. Many problems have a button that fixes them.
@@ -47,13 +47,24 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    The installer asks which agent to use. Select **Cursor CLI**. It installs to `~/.engineering-pulse`.
 
-2. Sign in to the MCP servers. Use the names that `agent mcp list` shows.
+2. Sign in to the MCP servers. Run `agent mcp list` to see their names. A server that shows `requires_authentication` needs a sign-in. These are the usual servers:
 
    ```bash
-   agent mcp login <server-name>
+   agent mcp login Datadog      # dashboard metrics (necessary)
+   agent mcp login GitHub       # pull request review queue (necessary)
+   agent mcp login Atlassian    # sprint report from Jira
+   agent mcp login Glean        # Stakeholder Pulse from Slack
    ```
 
-3. Open `~/.engineering-pulse/.env` and set your teams:
+   Use the names that `agent mcp list` shows. They can be different on your Mac. Each command opens a browser window. Sign in, then go back to Terminal.
+
+3. Set your teams in `~/.engineering-pulse/.env`. The installer made this file from `.env.example`, so you do not copy it. Open it:
+
+   ```bash
+   open -e ~/.engineering-pulse/.env
+   ```
+
+   Change these two lines:
 
    ```bash
    DATADOG_TEAMS=your-datadog-team
@@ -69,7 +80,7 @@ You sign in to each MCP server one time. You do not put API keys in a file.
    agent "Follow skills/engineering-pulse/references/add-dashboard.md to add this dashboard: <dashboard URL>"
    ```
 
-   The agent shows the widgets on the dashboard. Tell it which widgets you want in the report.
+   The agent shows the widgets on the dashboard. Tell it which widgets you want in the report. Then confirm or change the red, yellow and green threshold that it proposes for each metric.
    You can also use the Cursor app: open `~/.engineering-pulse` and type `/add-dashboard <dashboard URL>` in the chat.
 
 5. Make your first report:
@@ -84,10 +95,31 @@ For more detail, read the [installation guide](docs/install.md).
 
 ## Daily use
 
-- **Read the report.** Select the notification, or open the calendar with `make reports`.
-- **Make a report now.** Run `make run` in `~/.engineering-pulse`. To make only the Engineering Pulse report, run `ENGINEERING_PULSE_ONLY=pulse make run`.
-- **Change the schedule.** On the calendar, open **Settings**. Change the days and times, then select **Apply**.
-- **Compare two reports.** On the calendar, select **Compare**. The agent writes a short summary of what changed.
+### Scheduled reports
+
+At each scheduled time, Engineering Pulse makes the reports in the background. You do not have to do anything.
+When a report is ready, a macOS notification shows. Select the notification to open the report on the report calendar.
+
+### Make a report now
+
+Run one of these commands in `~/.engineering-pulse`:
+
+| Command | Result |
+|---------|--------|
+| `make run` | Makes all scheduled reports now. Terminal shows the progress. |
+| `ENGINEERING_PULSE_ONLY=pulse make run` | Makes only the Engineering Pulse report |
+| `ENGINEERING_PULSE_ONLY=sprint make run` | Makes only the sprint report |
+| `make run-bg` | Makes the reports in the background. You get a notification when they are ready. |
+| `make reports` | Opens the report calendar |
+| `make logs` | Shows the run log while a run continues |
+| `make help` | Shows all commands |
+
+### Use the report calendar
+
+- **Read old reports.** Select a day to read its reports.
+- **See what changed.** Above each report, a bar tells you what changed since the previous report.
+- **Change the schedule.** Select **Settings**. Change the days and times, then select **Apply**.
+- **Compare two reports.** Select **Compare**. The agent writes a short summary of what changed.
 
 ![Report calendar (example)](docs/images/calendar.svg)
 

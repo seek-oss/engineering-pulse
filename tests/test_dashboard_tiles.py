@@ -1,6 +1,12 @@
 """Focused dashboard tiles evaluate query-value formulas and colour bands."""
 
-from scripts.dashboard_tiles import WidgetSpec, build_tiles, eval_formula, titles_match
+from scripts.dashboard_tiles import (
+    WidgetSpec,
+    band_matches,
+    build_tiles,
+    eval_formula,
+    titles_match,
+)
 from scripts.dashboards_plugin import ColorRule
 
 
@@ -90,3 +96,22 @@ class TestFocusTiles:
     def test_catalogue_spelling_matches_catalog(self):
         assert titles_match("Catalogue", "Catalog Quality")
         assert titles_match("System assessed", "Systems Assessed")
+
+
+class TestBandMatches:
+    def test_percent_and_spans(self):
+        assert band_matches(20, "> 15%")
+        assert band_matches(10, "5–15%")
+        assert not band_matches(3, "5–15%")
+
+    def test_units_after_numbers_are_ignored(self):
+        assert band_matches(600, "> 500ms")
+        assert band_matches(300, "200–500ms")
+        assert band_matches(2, "1–5/week")
+        assert band_matches(0.5, "< 1/week")
+        assert band_matches(4, "<= 5 s")
+
+    def test_empty_cells_never_match(self):
+        assert not band_matches(1, "")
+        assert not band_matches(1, "—")
+        assert not band_matches(1, "n/a")

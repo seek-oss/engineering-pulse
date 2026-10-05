@@ -12,7 +12,7 @@ The report has these sections, in this sequence. Each section gets a letter (Par
 
 | Section | Content | Source |
 |---------|---------|--------|
-| One section for each Datadog dashboard | One tile for each widget that you selected. Red, yellow and green show the health. | Datadog MCP |
+| One section for each Datadog dashboard | One tile for each widget that you selected. The tile is red, yellow or green by the thresholds in the dashboard file. | Datadog MCP |
 | PR Review Queue | Open pull requests that wait for a review from you or your team, newest first. Renovate pull requests are not shown. | GitHub MCP |
 | My Queue | Your Todoist tasks and reading list | Todoist (optional) |
 | Extras | Your own Markdown notes as cards | `prompts/extras/` (optional) |
@@ -36,8 +36,25 @@ To add a dashboard:
    In the Cursor app, type `/add-dashboard <dashboard URL>` in the chat.
 
 3. Tell the agent which widgets you want.
+4. Confirm or change the red, yellow and green threshold that the agent proposes for each metric.
 
 The agent writes `prompts/dashboards/custom_<name>.md`. The file contains the URL, the widgets and the colour rules. You can edit the file. To remove a dashboard, delete its file.
+
+### Tile colours
+
+A tile gets its colour from the **Colouring rules** table in the dashboard file. A tile without a rule is green when it has a value, and grey when it has no value.
+To add colours to a dashboard, add a table like this one to its file:
+
+```markdown
+**Colouring rules:**
+
+| Metric | RED | YELLOW | GREEN |
+|--------|-----|--------|-------|
+| Error Rate | > 15% | 5–15% | < 5% |
+| P99 Latency | > 500ms | 200–500ms | < 200ms |
+```
+
+Each **Metric** name must match the widget title (or its name in the **Focus** list). Units after a number, for example `ms` or `/week`, are ignored. You can also ask the agent: "Add colour thresholds to `prompts/dashboards/<file>.md`".
 
 These files are not part of git. Your dashboard URLs stay on your Mac.
 For the file format, see [`prompts/dashboards/_example.md`](https://github.com/seek-oss/engineering-pulse/blob/main/prompts/dashboards/_example.md).

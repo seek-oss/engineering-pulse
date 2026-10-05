@@ -59,7 +59,7 @@ Use the **Settings** panel on the calendar for these settings. The panel writes 
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| Days and times | 09:00, 12:00, 16:00, Monday to Friday | When the schedule makes reports |
+| Days and times | 09:00 and 18:00, Monday to Friday | When the schedule makes reports |
 | `SCHEDULED_REPORTS` | `pulse,sprint` | The reports that runs make: `pulse`, `sprint`, both, or `none` (paused). This also applies to `make run`. |
 | `REPORT_AUTO_OPEN` | off | `1` opens each new report in your browser |
 | `REPORT_RETENTION_DAYS` | `90` | The number of days to keep reports. `0` keeps all reports. |
@@ -69,7 +69,7 @@ You can also change them in Terminal:
 ```bash
 cd ~/.engineering-pulse
 .venv/bin/python scripts/schedule.py show
-.venv/bin/python scripts/schedule.py set --days mon-fri --times 09:00,12:00,16:00
+.venv/bin/python scripts/schedule.py set --days mon-fri --times 09:00,18:00
 .venv/bin/python scripts/settings.py set --reports pulse --times 10:00
 ```
 

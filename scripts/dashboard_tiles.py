@@ -119,6 +119,10 @@ def eval_formula(expr: str, env: dict[str, float | None]) -> float | None:
     return _eval_node(tree.body, env)
 
 
+# Unit text after a number in a colour cell: "500ms", "5 s", "1/week".
+_UNIT_RE = re.compile(r"(?<=\d)\s*(?:/\s*)?[A-Za-zµ]+")
+
+
 def band_matches(value: float, expr: str) -> bool:
     """True when ``value`` falls in a markdown colour cell such as ``< 50%`` or ``50–80%``."""
     text = (
@@ -132,6 +136,7 @@ def band_matches(value: float, expr: str) -> bool:
     )
     if not text or text in {"-", "n/a"}:
         return False
+    text = _UNIT_RE.sub("", text).strip()
     compared = re.fullmatch(r"([<>]=?)\s*(-?\d+(?:\.\d+)?)", text)
     if compared:
         op, number = compared.group(1), float(compared.group(2))
