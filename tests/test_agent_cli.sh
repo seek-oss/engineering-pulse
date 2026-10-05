@@ -21,7 +21,18 @@ assert_eq "$(resolve_agent)" "pi" "AGENT_CLI override"
 
 unset AGENT_CLI
 PATH="/usr/bin:/bin"
-assert_eq "$(resolve_agent)" "claude" "default when nothing detected"
+assert_eq "$(resolve_agent)" "cursor" "default when nothing detected"
+
+# Cursor comes first in the installer menu, so it is the default when both are installed
+MOCK_BIN="$(mktemp -d)"
+printf '#!/bin/sh\nexit 0\n' >"$MOCK_BIN/agent"
+printf '#!/bin/sh\nexit 0\n' >"$MOCK_BIN/claude"
+chmod +x "$MOCK_BIN/agent" "$MOCK_BIN/claude"
+PATH="$MOCK_BIN:/usr/bin:/bin"
+assert_eq "$(detect_agents)" "cursor claude" "cursor listed first"
+assert_eq "$(resolve_agent)" "cursor" "cursor default when both installed"
+rm -rf "$MOCK_BIN"
+PATH="/usr/bin:/bin"
 
 # detect_agents with mocked PATH
 MOCK_BIN="$(mktemp -d)"

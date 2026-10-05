@@ -2,7 +2,7 @@
 # Agent CLI abstraction for scheduled dashboard runs (Claude Code, Cursor, Pi).
 # Sourced by install.sh and ~/bin/run-daily-dashboard.sh — do not execute directly.
 
-AGENT_ORDER=(claude cursor pi)
+AGENT_ORDER=(cursor claude pi)
 
 agent_label() {
   case "$1" in
@@ -57,7 +57,7 @@ default_agent_choice() {
     echo "$a"
     return 0
   done
-  echo "claude"
+  echo "cursor"
 }
 
 load_agent_env() {
@@ -98,8 +98,8 @@ run_agent() {
     echo "ERROR: No agent CLI configured." >&2
     echo "" >&2
     echo "Re-run the installer to choose an agent, or set AGENT_CLI in .env:" >&2
-    echo "  claude — Claude Code  ($(agent_install_hint claude))" >&2
     echo "  cursor — Cursor CLI   ($(agent_install_hint cursor))" >&2
+    echo "  claude — Claude Code  ($(agent_install_hint claude))" >&2
     echo "  pi     — Pi Agent     ($(agent_install_hint pi))" >&2
     return 1
   fi

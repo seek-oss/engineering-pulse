@@ -58,7 +58,7 @@ post_install_guide() {
   if [[ -n "${SELECTED_AGENT:-}" ]]; then
     echo -e "     Selected: ${CYAN}${BOLD}${SELECTED_AGENT}${RESET} ($(agent_label "$SELECTED_AGENT"))"
   fi
-  echo -e "     Change:   edit ${BOLD}AGENT_CLI${RESET} in .env (options: claude, cursor; pi experimental)"
+  echo -e "     Change:   edit ${BOLD}AGENT_CLI${RESET} in .env (options: cursor, claude; pi experimental)"
   echo -e "     Skill the scheduler runs: ${MAGENTA}${BOLD}${INSTALL_DIR}/skills/engineering-pulse/SKILL.md${RESET}"
   echo -e "     ${DIM}In Cursor chat: ${RESET}${CYAN}${BOLD}/daily-dashboard${RESET}"
   echo -e "     ${DIM}Shipped dashboards live in: ${RESET}${MAGENTA}${INSTALL_DIR}/prompts/dashboards/${RESET}"
@@ -161,8 +161,8 @@ show_agent_selector() {
   echo "" >&2
 
   if [[ -z "$detected" ]]; then
-    warn "None detected. We recommend Claude Code:" >&2
-    warn "  $(agent_install_hint claude)" >&2
+    warn "None detected. We recommend Cursor CLI:" >&2
+    warn "  $(agent_install_hint cursor)" >&2
     echo "" >&2
   fi
 
@@ -317,7 +317,7 @@ DETECTED_AGENTS=$(detect_agents)
 if [[ -n "$DETECTED_AGENTS" ]]; then
   success "Agent CLI(s) detected: $DETECTED_AGENTS"
 else
-  warn "No agent CLI detected (install Claude Code or Cursor CLI — Pi Agent optional, in progress)"
+  warn "No agent CLI detected (install Cursor CLI, or Claude Code — Pi Agent optional, in progress)"
 fi
 
 # macOS launchd (expected on macOS only)
