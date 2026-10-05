@@ -9,7 +9,7 @@ The procedure takes approximately 15 minutes.
 
 **Words in this guide**
 
-- **Agent:** the AI tool that does the work. Engineering Pulse uses Claude Code or Cursor CLI.
+- **Agent:** the AI tool that does the work. Engineering Pulse uses the Cursor agent. In Terminal, the Cursor CLI command is `agent`.
 - **MCP server:** a connection that lets the agent read data from a tool, for example Datadog or GitHub.
 - **Dashboard:** a Datadog dashboard. Engineering Pulse reads its widgets and shows their values.
 - **Report:** the HTML page that Engineering Pulse makes. Each report goes on the report calendar.
@@ -28,25 +28,27 @@ git --version
 
 If Python is older than 3.11, install a newer version from [python.org](https://www.python.org/downloads/) or with Homebrew (`brew install python`).
 
-### 1.2 Install one agent CLI
+### 1.2 Install Cursor and the Cursor CLI
 
-Install **one** of these agents:
+1. Install the Cursor app from [cursor.com](https://cursor.com) and sign in.
+2. Install the Cursor CLI:
 
-| Agent | Install command | Notes |
-|-------|-----------------|-------|
-| Claude Code | `npm install -g @anthropic-ai/claude-code` | Scheduled runs need an Anthropic API key or a signed-in account. |
-| Cursor CLI | `curl https://cursor.com/install -fsSL \| bash` | Uses your Cursor subscription. The command is `agent`. |
+   ```bash
+   curl https://cursor.com/install -fsSL | bash
+   ```
 
-Pi Agent support is experimental. See [harness/pi-agent](https://github.com/seek-oss/engineering-pulse/tree/main/harness/pi-agent).
+3. Make sure that the CLI starts and that you are signed in:
 
-Make sure that the agent starts:
+   ```bash
+   agent --version
+   agent status
+   ```
 
-```bash
-claude --version      # Claude Code
-agent --version       # Cursor CLI
-```
+   If `agent status` shows that you are not signed in, run `agent login`.
 
-### 1.3 Add the MCP servers to the agent
+The Cursor CLI uses your Cursor subscription.
+
+### 1.3 Add the MCP servers in Cursor
 
 Engineering Pulse needs two MCP servers:
 
@@ -57,18 +59,15 @@ Engineering Pulse needs two MCP servers:
 
 Optional features need more MCP servers: Atlassian for the sprint report, and Glean for Stakeholder Pulse.
 
-Add each server to your agent:
-
-- **Cursor CLI:** the CLI uses the MCP servers that you add in Cursor (Settings, then MCP). See [Cursor MCP](https://docs.cursor.com/context/mcp).
-- **Claude Code:** use `claude mcp add`. See [Claude Code MCP](https://docs.anthropic.com/en/docs/claude-code/mcp).
+Add each server in the Cursor app: open **Settings**, then **MCP**. See [Cursor MCP](https://docs.cursor.com/context/mcp).
+The Cursor CLI uses the same MCP servers as the Cursor app.
 
 Your company can have a standard MCP setup. Ask your platform team before you add servers.
 
-Make sure that the agent shows the servers:
+Make sure that the CLI shows the servers:
 
 ```bash
-agent mcp list        # Cursor CLI
-claude mcp list       # Claude Code
+agent mcp list
 ```
 
 ## 2. Run the installer
@@ -81,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web
 
 > **Note:** Use `web-install.sh`, not `install.sh`, in this command. `web-install.sh` gets the repository first and then starts the installer from your disk.
 
-The installer asks which agent to use. Type the number of your agent and push Enter.
+The installer asks which agent to use. Type the number for **Cursor CLI** and push Enter.
 
 The installer does these steps:
 
@@ -99,14 +98,16 @@ To use a different folder, set `INSTALL_DIR` before the command. To use differen
 Do this step one time for each MCP server. Find the server names first:
 
 ```bash
-agent mcp list        # Cursor CLI
-claude mcp list       # Claude Code
+agent mcp list
 ```
 
-A server that shows `requires_authentication` or `Needs authentication` needs a sign-in.
+A server that shows `requires_authentication` needs a sign-in. Run this command for each of these servers:
 
-- **Cursor CLI:** run `agent mcp login <server-name>`. A browser window opens. Sign in.
-- **Claude Code:** run `claude`. Type `/mcp`, select the server, and sign in. Then type `/exit`.
+```bash
+agent mcp login <server-name>
+```
+
+A browser window opens. Sign in.
 
 If you forget this step, the report tells you. A **Sign in to &lt;server&gt;** button shows in the red problems box.
 
@@ -125,7 +126,7 @@ DATADOG_TEAMS=your-datadog-team          # Datadog team slug, or more than one, 
 GITHUB_TEAM=your-github-org/your-team    # the GitHub team whose review requests you track
 ```
 
-`AGENT_CLI` is already set by the installer.
+The installer sets `AGENT_CLI=cursor`.
 
 > **Caution:** The `SPRINT_BOARD` line has example values. If you do not use Jira sprints, put `#` at the start of the line. If you use Jira sprints, read [Sprint report](features.md#sprint-report).
 
@@ -136,14 +137,13 @@ For all settings, read [Configuration](configuration.md).
 
 1. Open the Datadog dashboard in your browser.
 2. Copy the URL from the address bar.
-3. Start your agent in the install folder:
+3. Start the Cursor agent in the install folder:
 
    ```bash
    cd ~/.engineering-pulse
    agent "Follow skills/engineering-pulse/references/add-dashboard.md to add this dashboard: <dashboard URL>"
    ```
 
-   For Claude Code, use `claude` in place of `agent`.
    In the Cursor app, open `~/.engineering-pulse` and type `/add-dashboard <dashboard URL>` in the chat.
 
 4. The agent shows a list of the widgets on the dashboard. Tell it which widgets you want.

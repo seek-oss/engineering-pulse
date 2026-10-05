@@ -4,7 +4,7 @@
 
 Engineering Pulse gives an engineering manager one daily report about the team.
 It shows system health from Datadog, the pull requests that wait for review, and your own tasks.
-An AI agent on your Mac collects the data and writes the report. You do not write code.
+The Cursor agent on your Mac collects the data and writes the report. You do not write code.
 
 ![Engineering Pulse report (example)](docs/images/report.svg)
 
@@ -26,12 +26,12 @@ See [Optional features](#optional-features).
 | A Mac | The schedule, notifications and buttons use macOS. |
 | Python 3.11 or newer | `python3 --version` |
 | `git` | `git --version` |
-| One agent CLI: **Claude Code** or **Cursor CLI** | `claude --version` or `agent --version` |
-| The **Datadog** and **GitHub** MCP servers, added to that agent | `claude mcp list` or `agent mcp list` |
+| **Cursor** and the **Cursor CLI** (the `agent` command) | `agent --version` |
+| The **Datadog** and **GitHub** MCP servers, added in Cursor | `agent mcp list` |
 
 An MCP server is a connection that lets the agent read data from a tool, for example Datadog.
 You sign in to each MCP server one time. You do not put API keys in a file.
-[docs/install.md](docs/install.md#1-get-the-prerequisites) tells you how to install the agent CLI and add the MCP servers.
+[docs/install.md](docs/install.md#1-get-the-prerequisites) tells you how to install the Cursor CLI and add the MCP servers.
 
 ## Install in 5 steps
 
@@ -41,13 +41,12 @@ You sign in to each MCP server one time. You do not put API keys in a file.
    curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
    ```
 
-   The installer asks one question: which agent to use. It installs to `~/.engineering-pulse`.
+   The installer asks which agent to use. Select **Cursor CLI**. It installs to `~/.engineering-pulse`.
 
-2. Sign in to the MCP servers. Use the name that `agent mcp list` or `claude mcp list` shows.
+2. Sign in to the MCP servers. Use the names that `agent mcp list` shows.
 
    ```bash
-   agent mcp login <server-name>      # Cursor CLI
-   claude                             # Claude Code: then type /mcp and sign in
+   agent mcp login <server-name>
    ```
 
 3. Open `~/.engineering-pulse/.env` and set your teams:
@@ -59,7 +58,7 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    If you do not use Jira sprints, put `#` at the start of the `SPRINT_BOARD` line.
 
-4. Add one Datadog dashboard. Copy the dashboard URL from your browser. Then start your agent in `~/.engineering-pulse` (use `claude` in place of `agent` for Claude Code):
+4. Add one Datadog dashboard. Copy the dashboard URL from your browser. Then start the Cursor agent in `~/.engineering-pulse`:
 
    ```bash
    cd ~/.engineering-pulse
@@ -67,6 +66,7 @@ You sign in to each MCP server one time. You do not put API keys in a file.
    ```
 
    The agent shows the widgets on the dashboard. Tell it which widgets you want in the report.
+   You can also use the Cursor app: open `~/.engineering-pulse` and type `/add-dashboard <dashboard URL>` in the chat.
 
 5. Make your first report:
 
@@ -76,7 +76,7 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    The run takes 2 to 5 minutes. A notification tells you when the report is ready.
 
-For more detail and for Claude Code commands, read the [installation guide](docs/install.md).
+For more detail, read the [installation guide](docs/install.md).
 
 ## Daily use
 

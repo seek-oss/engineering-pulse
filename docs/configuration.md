@@ -13,7 +13,7 @@ To edit the file, run `make config` in `~/.engineering-pulse`, or open the file 
 
 | Setting | Example | Purpose |
 |---------|---------|---------|
-| `AGENT_CLI` | `cursor` | The agent that makes the reports: `claude` or `cursor`. The installer sets it. |
+| `AGENT_CLI` | `cursor` | The agent that makes the reports. Use `cursor`. The installer sets it. |
 | `DATADOG_TEAMS` | `team-a` | Your Datadog team slug. Use commas for more than one team. It filters the dashboard queries. |
 | `GITHUB_TEAM` | `acme/team-a` | The GitHub team whose review requests you track, as `org/team`. Your own review requests are always included. |
 | `DELIVERY` | `notify` | How you get the report. See [Delivery](#delivery). |
@@ -84,7 +84,6 @@ ENGINEERING_PULSE_ONLY=pulse make run      # or: ENGINEERING_PULSE_ONLY=sprint m
 | Setting | Purpose |
 |---------|---------|
 | `GITHUB_TOKEN` | Use only when the GitHub MCP server is not available. A personal access token with `repo` (read) and `read:org`. |
-| `ANTHROPIC_API_KEY` | An API key for scheduled runs with Claude Code |
 | `REPORTS_DIR` | A different folder for the report calendar (default: `output/reports`) |
 | `GITHUB_ORG` | Old format: `GITHUB_ORG` plus a team slug in `GITHUB_TEAM`. It still works. |
 

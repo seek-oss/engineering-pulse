@@ -13,7 +13,7 @@ Engineering Pulse is driven by an agent and a skill. The workflow is Markdown in
 ```mermaid
 flowchart LR
   schedule["LaunchAgent or make run"] --> runner["~/bin/run-daily-dashboard.sh"]
-  runner --> agent["Agent CLI: claude or cursor"]
+  runner --> agent["Cursor CLI: agent"]
   agent --> skill["skills/engineering-pulse/SKILL.md"]
   skill --> mcp["MCP servers: Datadog, GitHub, Glean, Atlassian"]
   skill --> scripts["scripts/*.py"]
@@ -32,7 +32,7 @@ flowchart LR
 skills/engineering-pulse/   the daily workflow (SKILL.md + references/)
 skills/sprint-report/       the sprint report skill
 skills/report-compare/      the compare skill
-harness/                    commands and notes for each agent (Cursor, Claude Code, Pi)
+harness/                    commands and notes for each agent (Cursor commands in harness/cursor/)
 AGENTS.md                   rules for agents in this repository
 
 prompts/dashboards/         your dashboards (custom_*.md, not in git; _example.md is in git)

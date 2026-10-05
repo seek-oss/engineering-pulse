@@ -4,9 +4,9 @@ title: Engineering Pulse
 
 # Engineering Pulse
 
-**One daily report about your team, made by an AI agent on your Mac.**
+**One daily report about your team, made by the Cursor agent on your Mac.**
 
-Engineering Pulse is for engineering managers. It shows system health from Datadog, the pull requests that wait for review, and your own tasks. You do not write code. An agent (Claude Code or Cursor CLI) collects the data and writes the report.
+Engineering Pulse is for engineering managers. It shows system health from Datadog, the pull requests that wait for review, and your own tasks. You do not write code. The Cursor agent collects the data and writes the report.
 
 ![Engineering Pulse report (example)](images/report.svg)
 
@@ -31,8 +31,8 @@ Optional: a [sprint report](features.md#sprint-report) from Jira, [Stakeholder P
 ## What you need
 
 - A Mac with Python 3.11 or newer and `git`
-- Claude Code or Cursor CLI
-- The Datadog and GitHub MCP servers in that agent
+- Cursor and the Cursor CLI
+- The Datadog and GitHub MCP servers in Cursor
 
 ## Your data
 

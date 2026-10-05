@@ -16,7 +16,7 @@ Some problems have a button:
 | Button | What it does | When to use it |
 |--------|--------------|----------------|
 | **Sign in to &lt;server&gt;** | Opens Terminal at the sign-in step for that MCP server | An MCP server needs a sign-in |
-| **Add a Datadog dashboard** | Opens Terminal with your agent. The agent asks for the dashboard URL. | No dashboard is set up |
+| **Add a Datadog dashboard** | Opens Terminal with the Cursor agent. The agent asks for the dashboard URL. | No dashboard is set up |
 | **Re-run this report** | Starts a new run of the same report in the background | After you fix the problems |
 
 For a problem without a button, the box tells you what to do.
@@ -39,10 +39,11 @@ To see a run while it continues, run `make logs` in `~/.engineering-pulse`.
 
 The problems box shows **Sign in to &lt;server&gt;**. Select the button, or do the sign-in in Terminal:
 
-- **Cursor CLI:** `agent mcp login <server-name>`
-- **Claude Code:** run `claude`, type `/mcp`, select the server and sign in.
+```bash
+agent mcp login <server-name>
+```
 
-Then select **Re-run this report**. To see the server names and their status, run `agent mcp list` or `claude mcp list`.
+Then select **Re-run this report**. To see the server names and their status, run `agent mcp list`.
 
 ### The report has no Datadog metrics
 
@@ -94,10 +95,13 @@ The Atlassian MCP server must be signed in.
 2. Glean finds messages in public Slack channels only. A person who writes only in private channels has no card data.
 3. The Glean MCP server must be signed in.
 
-### A scheduled run with Claude Code stops
+### A scheduled run stops at the start
 
-Scheduled runs cannot ask you for permission. The runner starts Claude Code without permission questions.
-If an old runner is installed, run `bash install.sh` again. For scheduled runs, Claude Code also needs a valid sign-in or `ANTHROPIC_API_KEY` in `.env`.
+Scheduled runs cannot ask you questions. Make sure of these items:
+
+1. The Cursor CLI is signed in. Run `agent status`. If necessary, run `agent login`.
+2. `AGENT_CLI=cursor` is in `.env`.
+3. The runner is the current version. Run `bash install.sh` again in `~/.engineering-pulse`.
 
 ## Get help
 

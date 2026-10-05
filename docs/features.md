@@ -27,7 +27,7 @@ You can add as many Datadog dashboards as you want. Each dashboard is a file in 
 To add a dashboard:
 
 1. Copy the dashboard URL from your browser.
-2. In `~/.engineering-pulse`, start your agent with this request:
+2. In `~/.engineering-pulse`, start the Cursor agent with this request:
 
    ```bash
    agent "Follow skills/engineering-pulse/references/add-dashboard.md to add this dashboard: <dashboard URL>"
@@ -89,7 +89,7 @@ The sprint report shows the progress of your team's sprint from Jira. It has a b
 
 You need:
 
-- the Atlassian MCP server in your agent
+- the Atlassian MCP server in Cursor
 - one sentence that describes your board, in `.env`
 
 ```bash
@@ -105,7 +105,7 @@ Stakeholder Pulse shows what a small group of people said and asked for in Slack
 
 You need:
 
-- the Glean MCP server in your agent
+- the Glean MCP server in Cursor
 - the names or email addresses, in `.env`:
 
 ```bash
@@ -160,11 +160,8 @@ Put a Markdown file in `prompts/extras/`. The next report shows it as a card.
 
 For an example, see [`prompts/extras/_example.md`](https://github.com/seek-oss/engineering-pulse/blob/main/prompts/extras/_example.md).
 
-## Use the agent in a chat
+## Use Cursor chat
 
-You can also make a report in a chat with your agent:
-
-- **Cursor:** open `~/.engineering-pulse` and type `/daily-dashboard`.
-- **Claude Code:** run `claude` in `~/.engineering-pulse` and ask it to use the **engineering-pulse** skill.
+You can also make a report in a Cursor chat. Open `~/.engineering-pulse` in Cursor and type `/daily-dashboard`.
 
 The scheduled runs and `make run` use the same instructions as the chat. The instructions are in [`skills/engineering-pulse/SKILL.md`](https://github.com/seek-oss/engineering-pulse/blob/main/skills/engineering-pulse/SKILL.md).
