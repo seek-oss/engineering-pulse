@@ -59,16 +59,22 @@ Engineering Pulse needs two MCP servers:
 
 Optional features need more MCP servers: Atlassian for the sprint report, and Glean for Stakeholder Pulse.
 
-Add each server in the Cursor app: open **Settings**, then **MCP**. See [Cursor MCP](https://docs.cursor.com/context/mcp).
-The Cursor CLI uses the same MCP servers as the Cursor app.
+The Cursor CLI reads MCP servers from these files:
 
-Your company can have a standard MCP setup. Ask your platform team before you add servers.
+| File | Scope |
+|------|-------|
+| `~/.cursor/mcp.json` | Your user config. Used for all projects and for `agent` in Terminal. |
+| `.cursor/mcp.json` in a project | That project only. |
+
+Ask your platform team for the company MCP config, or add the servers in the Cursor app: open **Settings**, then **MCP**. See [Cursor MCP](https://docs.cursor.com/context/mcp).
 
 Make sure that the CLI shows the servers:
 
 ```bash
 agent mcp list
 ```
+
+If a server is missing from the list, it is not in the MCP config yet. Add it to `~/.cursor/mcp.json` (or to the project file), then run `agent mcp list` again.
 
 ## 2. Run the installer
 
@@ -96,7 +102,10 @@ When you run the installer again, it keeps the schedule that you set in Settings
 
 ## 3. Sign in to the MCP servers
 
-Do this step one time for each MCP server. Find the server names first:
+Do this step one time for each MCP server. The servers must already be in
+`~/.cursor/mcp.json` or in a project `.cursor/mcp.json` (see [step 1.3](#13-add-the-mcp-servers-in-cursor)).
+
+Find the server names first:
 
 ```bash
 agent mcp list

@@ -47,16 +47,21 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
    The installer asks which agent to use. Select **Cursor CLI**. It installs to `~/.engineering-pulse`.
 
-2. Sign in to the MCP servers. Run `agent mcp list` to see their names. A server that shows `requires_authentication` needs a sign-in. These are the usual servers:
+2. Make sure that the MCP servers are in Cursor's MCP config, then sign in.
+
+   The Cursor CLI reads servers from `~/.cursor/mcp.json` (your user config) or from `.cursor/mcp.json` in a project. Ask your platform team for the company MCP config, or add the servers in the Cursor app under **Settings**, then **MCP**. See [Cursor MCP](https://docs.cursor.com/context/mcp).
+
+   Then check the names and sign in. A server that shows `requires_authentication` needs a sign-in. These are the usual servers:
 
    ```bash
+   agent mcp list
    agent mcp login Datadog      # dashboard metrics (necessary)
    agent mcp login GitHub       # pull request review queue (necessary)
    agent mcp login Atlassian    # sprint report from Jira
    agent mcp login Glean        # Stakeholder Pulse from Slack
    ```
 
-   Use the names that `agent mcp list` shows. They can be different on your Mac. Each command opens a browser window. Sign in, then go back to Terminal.
+   Use the names that `agent mcp list` shows. They can be different on your Mac. Each login command opens a browser window. Sign in, then go back to Terminal.
 
 3. Set your teams in `~/.engineering-pulse/.env`. The installer made this file from `.env.example`, so you do not copy it. Open it:
 
