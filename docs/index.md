@@ -13,7 +13,12 @@ Engineering Pulse is for engineering managers. It makes two reports:
 
 You do not write code. The Cursor agent collects the data and writes the reports.
 
-![Engineering Pulse report (example)](images/report.svg)
+The examples below come from real reports. Team names, people and internal details are
+redacted.
+
+![Datadog engineering metrics with red, yellow and green health tiles](images/datadog-metrics.jpg)
+
+![Sprint report summary, calendar, burn-up chart and burn-down chart](images/sprint-report.jpg)
 
 ## What you get
 
@@ -26,7 +31,7 @@ You do not write code. The Cursor agent collects the data and writes the reports
 
 Optional: [Stakeholder Pulse](features.md#stakeholder-pulse) from Slack through Glean, and [My Queue](features.md#my-queue-todoist) from Todoist.
 
-![Report calendar (example)](images/calendar.svg)
+![Report calendar with Engineering Pulse and sprint reports by day](images/report-calendar.jpg)
 
 ## Start here
 

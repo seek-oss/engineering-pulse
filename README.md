@@ -9,8 +9,6 @@ Engineering Pulse gives an engineering manager two daily reports about the team:
 
 The Cursor agent on your Mac collects the data and writes the reports. You do not write code.
 
-![Engineering Pulse report (example)](docs/images/report.svg)
-
 ## What you get
 
 - **A daily Engineering Pulse report.** It shows the latest value of each Datadog widget that you select, plus the GitHub pull requests that wait for you or your team. When you add a dashboard, you set a red, yellow and green threshold for each metric. The tile then shows the colour.
@@ -22,6 +20,39 @@ The Cursor agent on your Mac collects the data and writes the reports. You do no
 
 Optional features: a summary of what your stakeholders said in Slack (Glean), and your Todoist tasks.
 See [Optional features](#optional-features).
+
+## What the reports look like
+
+These examples come from real reports. Team names, people and internal details are redacted.
+
+### Engineering Pulse report
+
+**Team health from Datadog.** See the latest value for each selected metric. The
+thresholds that you configure make risks red or yellow and healthy values green.
+
+![Datadog engineering metrics with red, yellow and green health tiles](docs/images/datadog-metrics.jpg)
+
+**Pull requests that wait for review.** See the repository, title, author and age.
+Older requests use stronger warning colours, so review bottlenecks are easy to find.
+
+![GitHub pull request review queue, ordered by age](docs/images/pr-review-queue.jpg)
+
+**Stakeholder Pulse (optional).** See the main themes, one notable update and the top
+links for each stakeholder from public Slack channels indexed by Glean.
+
+![Stakeholder Pulse cards with themes, notable updates and links](docs/images/stakeholder-pulse.jpg)
+
+### Sprint report
+
+**Delivery position and forecast.** See total scope, completed work, remaining work,
+recent and required pace, the sprint calendar, and burn-up and burn-down charts.
+
+![Sprint report summary, calendar, burn-up chart and burn-down chart](docs/images/sprint-report.jpg)
+
+**Progress by epic.** See status, completion, work added and completed since the
+baseline, due dates and items that need attention.
+
+![Epic progress table with status, completion, scope changes and due dates](docs/images/epic-progress.jpg)
 
 ## What you need
 
@@ -138,7 +169,7 @@ Run one of these commands in `~/.engineering-pulse`:
 - **Change the schedule.** Select **Settings**. Change the days and times, then select **Apply**.
 - **Compare two reports.** Select **Compare**. The agent writes a short summary of what changed.
 
-![Report calendar (example)](docs/images/calendar.svg)
+![Report calendar with Engineering Pulse and sprint reports by day](docs/images/report-calendar.jpg)
 
 ## Optional features
 
