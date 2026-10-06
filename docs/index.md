@@ -53,6 +53,7 @@ Engineering Pulse runs on your Mac. Reports, dashboards and settings stay in `~/
 
 | Guide | Content |
 |-------|---------|
+| [Report examples](report-examples.md) | Datadog metrics, PR queue, Stakeholder Pulse, sprint charts, epic progress and calendar |
 | [Installation guide](install.md) | Prerequisites, MCP servers, first run, upgrade, uninstall |
 | [Features](features.md) | Report sections, calendar, Compare, sprint report, Stakeholder Pulse, Todoist, extras |
 | [Configuration](configuration.md) | All `.env` settings, schedule, delivery |

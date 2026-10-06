@@ -32,16 +32,6 @@ thresholds that you configure make risks red or yellow and healthy values green.
 
 ![Datadog engineering metrics with red, yellow and green health tiles](docs/images/datadog-metrics.jpg)
 
-**Pull requests that wait for review.** See the repository, title, author and age.
-Older requests use stronger warning colours, so review bottlenecks are easy to find.
-
-![GitHub pull request review queue, ordered by age](docs/images/pr-review-queue.jpg)
-
-**Stakeholder Pulse (optional).** See the main themes, one notable update and the top
-links for each stakeholder from public Slack channels indexed by Glean.
-
-![Stakeholder Pulse cards with themes, notable updates and links](docs/images/stakeholder-pulse.jpg)
-
 ### Sprint report
 
 **Delivery position and forecast.** See total scope, completed work, remaining work,
@@ -49,10 +39,8 @@ recent and required pace, the sprint calendar, and burn-up and burn-down charts.
 
 ![Sprint report summary, calendar, burn-up chart and burn-down chart](docs/images/sprint-report.jpg)
 
-**Progress by epic.** See status, completion, work added and completed since the
-baseline, due dates and items that need attention.
-
-![Epic progress table with status, completion, scope changes and due dates](docs/images/epic-progress.jpg)
+**[See more report examples →](docs/report-examples.md)** View the PR review queue,
+Stakeholder Pulse, epic progress and report calendar.
 
 ## What you need
 
@@ -169,8 +157,6 @@ Run one of these commands in `~/.engineering-pulse`:
 - **Change the schedule.** Select **Settings**. Change the days and times, then select **Apply**.
 - **Compare two reports.** Select **Compare**. The agent writes a short summary of what changed.
 
-![Report calendar with Engineering Pulse and sprint reports by day](docs/images/report-calendar.jpg)
-
 ## Optional features
 
 The report shows a **"✦ N more features"** badge when optional features are off. Select the badge to see how to turn them on.
@@ -196,6 +182,7 @@ The run log is `/tmp/daily-dashboard.log`. For more help, read [Troubleshooting]
 
 | Guide | Content |
 |-------|---------|
+| [Report examples](docs/report-examples.md) | PR queue, Stakeholder Pulse, sprint charts, epic progress and calendar |
 | [Installation guide](docs/install.md) | Prerequisites, MCP servers, first run, upgrade, uninstall |
 | [Features](docs/features.md) | Report sections, calendar, Compare, sprint report, Stakeholder Pulse, Todoist, extras |
 | [Configuration](docs/configuration.md) | All `.env` settings, schedule, delivery |
