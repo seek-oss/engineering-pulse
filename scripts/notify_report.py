@@ -7,7 +7,7 @@ without a user action. On non-macOS systems it only prints the link.
 
 Usage:
   python scripts/notify_report.py --title "Engineering Pulse" --message "Report ready" \
-      --open output/reports/latest-day.html
+      --open ~/.engineering-pulse-data/reports/latest-day.html
 """
 
 from __future__ import annotations

@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
+from scripts.user_data import dashboards_dir, env_file
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -42,7 +43,7 @@ def main() -> int:
     args = ap.parse_args()
 
     os.chdir(ROOT)
-    load_dotenv(ROOT / ".env")
+    load_dotenv(env_file())
     OUT.mkdir(parents=True, exist_ok=True)
 
     py = sys.executable
@@ -50,7 +51,7 @@ def main() -> int:
     sys.path.insert(0, str(SCRIPTS))
     from dashboards_plugin import discover_dashboards, load_snapshot, parse_dashboard
 
-    for path in discover_dashboards(ROOT / "prompts" / "dashboards"):
+    for path in discover_dashboards(dashboards_dir()):
         dash = parse_dashboard(path)
         if load_snapshot(dash.slug, OUT) is None:
             print(

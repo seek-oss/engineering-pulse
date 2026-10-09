@@ -1,8 +1,8 @@
 """Drop-in dashboards plugin for the daily report.
 
-Every `*.md` file under `prompts/dashboards/` (except files starting with `_`,
-which are reference templates) declares one Datadog dashboard to render as a
-Part section in the daily report.
+Every `*.md` file under the configured durable dashboards directory declares one
+Datadog dashboard to render as a Part section in the daily report. Shipped
+`prompts/dashboards/_*.md` files are reference templates only.
 
 File format
 -----------

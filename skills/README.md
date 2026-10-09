@@ -8,7 +8,8 @@ Daily engineering health dashboard (Datadog, GitHub, Todoist, optional Glean Sta
 
 **Path:** `skills/engineering-pulse/`
 
-**Requires:** cloned repo (or `~/.engineering-pulse`) with `scripts/`, `.env`, and user `prompts/dashboards/*.md`.
+**Requires:** cloned repo (or `~/.engineering-pulse`) with `scripts/` and durable
+user configuration under `~/.engineering-pulse-data/`.
 
 ## `sprint-report`
 
@@ -35,7 +36,8 @@ validates the ids, writes a context file and runs this skill through `AGENT_CLI`
 
 **Path:** `skills/report-compare/SKILL.md` (single file)
 
-**Requires:** the local report archive (`output/reports/`); no MCP access.
+**Requires:** the durable local report archive (`~/.engineering-pulse-data/reports/`);
+no MCP access.
 
 ## Install
 

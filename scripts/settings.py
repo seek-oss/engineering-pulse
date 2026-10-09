@@ -32,14 +32,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import dotenv_values
 from scripts import schedule
+from scripts.user_data import env_file
 
 ROOT = Path(__file__).resolve().parent.parent
-ENV_FILE = ROOT / ".env"
+ENV_FILE = env_file()
 URL_SCHEME = "engineering-pulse"
 REPORT_TYPES = ("pulse", "sprint")
 REPORT_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report"}
 DEFAULT_REPORTS = "pulse,sprint"
-DEFAULT_RETENTION = 90
+DEFAULT_RETENTION = 0
 MAX_RETENTION = 3650
 FIELDS = ("days", "times", "reports", "retention")
 _INT_RE = re.compile(r"^\d{1,4}$")

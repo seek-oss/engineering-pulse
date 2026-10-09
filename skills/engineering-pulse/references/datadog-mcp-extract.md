@@ -6,7 +6,7 @@ does not call the Datadog REST API.
 
 **Time window:** past **7 days** (`from: now-7d`, `to: now` on every metric call).
 
-For **each** dashboard in `prompts/dashboards/` (skip `_*.md`):
+For **each** dashboard in `~/.engineering-pulse-data/dashboards/`:
 
 ## 1A — Fetch dashboard definition
 

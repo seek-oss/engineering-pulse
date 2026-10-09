@@ -21,6 +21,11 @@ warn()    { echo -e "  ${YELLOW}⚠${RESET}  $*"; }
 divider() { echo -e "${DIM}────────────────────────────────────────────────────${RESET}"; }
 
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
+if [[ -z "${ENGINEERING_PULSE_DATA_DIR:-}" && -L "$INSTALL_DIR/.env" ]]; then
+  DATA_DIR="$(cd "$(dirname "$INSTALL_DIR/.env")" && cd "$(dirname "$(readlink "$INSTALL_DIR/.env")")" && pwd)"
+else
+  DATA_DIR="${ENGINEERING_PULSE_DATA_DIR:-$HOME/.engineering-pulse-data}"
+fi
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
 PLIST_LABEL="com.$(whoami).daily-dashboard"
@@ -35,6 +40,7 @@ echo -e "  ${DIM}  • LaunchAgent  $PLIST_PATH${RESET}"
 echo -e "  ${DIM}  • Runner       $RUNNER_SCRIPT${RESET}"
 echo -e "  ${DIM}  • Link handler $HOME/Applications/Engineering Pulse.app${RESET}"
 echo -e "  ${DIM}  • Install dir  $INSTALL_DIR${RESET}"
+echo -e "  ${GREEN}  • Preserved    $DATA_DIR (configuration, reports and custom content)${RESET}"
 echo ""
 read -r -p "  Proceed? [y/N] " CONFIRM
 echo ""
@@ -77,4 +83,5 @@ fi
 echo ""
 divider
 echo -e "  ${GREEN}${BOLD}Uninstall complete.${RESET}"
+echo -e "  ${DIM}Your durable user data remains at $DATA_DIR${RESET}"
 echo ""

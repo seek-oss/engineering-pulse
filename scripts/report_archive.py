@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Keep every generated report and rebuild the calendar index.
 
-Layout under REPORTS_DIR (default ``output/reports``)::
+Layout under REPORTS_DIR (default ``~/.engineering-pulse-data/reports``)::
 
   2026/10/02/pulse-090012.html     archived copy, never overwritten
   manifest.json                    one entry per archived report or failed run
@@ -35,12 +35,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 from rich.console import Console
 from scripts.report_snapshot import extract as extract_snapshot
+from scripts.user_data import env_file
+from scripts.user_data import reports_dir as durable_reports_dir
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "output"
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "report_index.html.tmpl"
 TYPE_LABELS = {"pulse": "Engineering Pulse", "sprint": "Sprint report", "compare": "Comparison"}
-DEFAULT_RETENTION_DAYS = 90
+DEFAULT_RETENTION_DAYS = 0
 
 _TITLE_RE = re.compile(r"<title[^>]*>([\s\S]*?)</title>", re.IGNORECASE)
 _SPRINT_NAME_RE = re.compile(
@@ -84,9 +86,8 @@ def _ensure_external_links(path: Path) -> None:
 
 
 def reports_dir() -> Path:
-    load_dotenv(ROOT / ".env")
-    override = os.environ.get("REPORTS_DIR")
-    return Path(override).expanduser() if override else OUTPUT / "reports"
+    load_dotenv(env_file())
+    return durable_reports_dir()
 
 
 def manifest_path(root: Path) -> Path:

@@ -122,6 +122,12 @@ def test_runner_supports_pause(tmp_path):
     assert runner_supports_pause(new)
 
 
+def test_default_retention_keeps_reports_forever(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("# no retention override\n")
+    assert current_settings(tmp_path / "missing.plist", env_file)["retention"] == 0
+
+
 def test_cli_rejects_bad_link(capsys):
     assert main(["describe-url", URL + "token=1"]) == 2
     assert "Settings not applied" in capsys.readouterr().err

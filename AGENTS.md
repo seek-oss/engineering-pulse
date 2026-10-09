@@ -32,16 +32,16 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 | `scripts/` | Python orchestration (Datadog, GitHub, render, SMTP, Todoist) |
 | `scripts/lib/agent_cli.sh` | Multi-agent CLI abstraction for scheduled runs (`AGENT_CLI`) |
 | `skills/engineering-pulse/` | Canonical daily-dashboard workflow (`SKILL.md` + `references/`) |
-| `prompts/dashboards/*.md` | User dashboard defs (gitignored except `_example.md`) |
-| `prompts/extras/*.md` | Drop-in report cards (gitignored except `_example.md`) |
-| `output/` | Generated JSON/HTML; `output/stakeholders/*.md` for Glean cards |
-| `.env` | Secrets (never commit) |
+| `prompts/dashboards/_*.md` | Shipped dashboard definition templates |
+| `prompts/extras/_*.md` | Shipped extra-card templates |
+| `output/` | Disposable generated JSON/HTML; `output/stakeholders/*.md` for Glean cards |
+| `~/.engineering-pulse-data/` | Durable `.env`, dashboard definitions, extras and report archive |
 | `local/` | Maintainer-only tools (gitignored) |
 | `.cursor/skills/` | Cursor adapters; product skill symlinks to `skills/engineering-pulse/` |
 
 ## Rules
 
-- **Credentials:** `.env` via python-dotenv only — never hardcode tokens or org URLs in tracked files.
+- **Credentials:** `~/.engineering-pulse-data/.env` via python-dotenv only — never hardcode tokens or org URLs in tracked files.
 - **Output:** HTML/JSON under `output/` (`output/daily_dashboard_report.html`).
 - **Config:** No hardcoded org/team names — use env vars (`DATADOG_TEAMS`, `GITHUB_TEAM`, etc.).
 - **Privacy:** No real stakeholder names or other PII in tracked files; demo and test fixtures use fictional orgs, hosts and names.

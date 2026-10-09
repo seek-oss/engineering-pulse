@@ -3,7 +3,7 @@
 Build `output/daily_dashboard_report.html` (default) from per-dashboard Datadog snapshots,
 GitHub PRs, Todoist tasks, and drop-in extras cards.
 
-Dashboards are discovered from `prompts/dashboards/*.md` (skipping `_*.md`
+Dashboards are discovered from the durable user dashboards folder (skipping `_*.md`
 templates). Each `.md` file declares a title + slug + URL; the matching
 `output/<slug>_metric_results.json` snapshot is loaded and rendered with
 the generic tile renderer. A dashboard **Focus** list keeps one tile per
@@ -15,8 +15,8 @@ actually present:
   - one Part per `--extra LABEL:FILE` argument (CLI order)
   - PR Review Queue
   - My Queue (Todoist)
-  - Extras cards (from `prompts/extras/*.md`)
-  - Stakeholder Pulse — names come from `STAKEHOLDERS` in the repo `.env` **file**.
+  - Extras cards (from the durable user extras folder)
+  - Stakeholder Pulse — names come from `STAKEHOLDERS` in the durable `.env` **file**.
     Omit that line entirely to disable Pulse (even if `export STAKEHOLDERS` exists in
     the shell). The section is driven entirely by the configured names: every name
     gets one card slot, in `.env` order, mapped to `output/stakeholders/<slug>.md`.
@@ -55,6 +55,7 @@ from dashboards_plugin import (  # noqa: E402
 )
 from extras_plugin import parse_extra, render_extras_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
+from user_data import dashboards_dir, env_file, extras_dir  # noqa: E402
 
 _SINCE: float | None = None
 HINTS_START, HINTS_END = "<!--ep-hints-->", "<!--/ep-hints-->"
@@ -81,8 +82,8 @@ def _part_letter(idx: int) -> str:
 
 
 def _parse_stakeholder_names(dotenv_override: Path | None = None) -> list[str]:
-    """Comma-separated `STAKEHOLDERS` from a dotenv file (default: repo `.env`)."""
-    path = ROOT / ".env" if dotenv_override is None else dotenv_override
+    """Comma-separated `STAKEHOLDERS` from a dotenv file."""
+    path = env_file() if dotenv_override is None else dotenv_override
     raw = ""
     if path.is_file():
         vals = dotenv_values(path) or {}
@@ -120,8 +121,8 @@ def _clean_stale_stakeholder_cards(stakeholders_dir: Path) -> None:
 
 
 def _config_values(dotenv_override: Path | None = None) -> dict[str, str]:
-    """Settings from the repo `.env` file (same source as STAKEHOLDERS), else the environment."""
-    path = ROOT / ".env" if dotenv_override is None else dotenv_override
+    """Settings from the durable `.env` file (same source as STAKEHOLDERS)."""
+    path = env_file() if dotenv_override is None else dotenv_override
     if path.is_file():
         return {k: v or "" for k, v in (dotenv_values(path) or {}).items()}
     return dict(os.environ)
@@ -285,8 +286,8 @@ def main() -> None:
     )
     ap.add_argument(
         "--dashboards-dir",
-        default="prompts/dashboards",
-        help="Folder of dashboard *.md files (default: prompts/dashboards)",
+        default=str(dashboards_dir()),
+        help="Folder of dashboard *.md files (default: durable user data)",
     )
     ap.add_argument(
         "--output-dir",
@@ -305,8 +306,8 @@ def main() -> None:
     )
     ap.add_argument(
         "--extras-dir",
-        default="prompts/extras",
-        help="Folder of drop-in *.md cards (default: prompts/extras)",
+        default=str(extras_dir()),
+        help="Folder of drop-in *.md cards (default: durable user data)",
     )
     ap.add_argument(
         "--stakeholders-dir",
@@ -331,7 +332,7 @@ def main() -> None:
 
     global _SINCE
     _SINCE = args.since
-    load_dotenv(ROOT / ".env")
+    load_dotenv(env_file())
 
     stakeholder_dotenv: Path | None = None
     if args.stakeholders_dotenv is not None:

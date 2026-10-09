@@ -39,7 +39,9 @@ from rich.console import Console
 from rich.table import Table
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-load_dotenv()
+from scripts.user_data import env_file
+
+load_dotenv(env_file())
 
 console = Console()
 

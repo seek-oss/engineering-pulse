@@ -92,7 +92,8 @@ The installer does these steps:
 
 1. It copies the repository to `~/.engineering-pulse`.
 2. It makes a Python environment in `~/.engineering-pulse/.venv`.
-3. It makes `~/.engineering-pulse/.env` from `.env.example`. It does not change an `.env` that exists.
+3. It creates durable user data under `~/.engineering-pulse-data`, including `.env`,
+   reports, dashboard definitions and extras. Existing repo-local data is migrated.
 4. It installs the schedule: 09:00 and 18:00, Monday to Friday. You can change it later in **Settings** on the report calendar.
 5. It installs `~/Applications/Engineering Pulse.app`. This small app makes the buttons in the reports work.
 6. It installs `terminal-notifier` with Homebrew, if you have Homebrew. Then a notification opens the report when you select it.
@@ -127,13 +128,11 @@ If you forget this step, the report tells you. A **Sign in to &lt;server&gt;** b
 
 ## 4. Configure the `.env` file
 
-First, make a local `.env` from the example if it does not exist. The installer normally
-does this for you. This command does not overwrite an existing `.env`:
+The installer creates the durable `.env`. Open it with:
 
 ```bash
 cd ~/.engineering-pulse
-test -f .env || cp .env.example .env
-open -e .env
+make config
 ```
 
 Follow the comments in `.env`. Replace the placeholder values. Uncomment an optional
@@ -171,7 +170,8 @@ For every setting and its accepted values, read [Configuration](configuration.md
 
 4. The agent shows a list of the widgets on the dashboard. Tell it which widgets you want.
 5. The agent proposes a red, yellow and green threshold for each metric. Confirm or change each threshold. Without thresholds, a tile is always green.
-6. The agent writes `prompts/dashboards/custom_<name>.md`. The next run uses this file.
+6. The agent writes `~/.engineering-pulse-data/dashboards/custom_<name>.md`. The next
+   run uses this file.
 
 Repeat this procedure for each dashboard. You can also start it from the report: when no dashboard is set up, the red problems box shows an **Add a Datadog dashboard** button.
 
@@ -207,17 +207,13 @@ Run the installer again:
 curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web-install.sh | bash
 ```
 
-The installer gets the new version and updates the runner, the schedule and the button app.
-It does not change these items:
-
-- `.env`
-- your dashboards in `prompts/dashboards/`
-- your notes in `prompts/extras/`
-- your reports in `output/`
+The installer gets the new version and updates the runner, the schedule and the button
+app. It does not change durable data under `~/.engineering-pulse-data`.
 
 ## Uninstall
 
-> **Warning:** The uninstaller deletes `~/.engineering-pulse`, which includes `.env`, your dashboards and all reports. Copy the files that you want to keep before you start.
+The uninstaller deletes the replaceable checkout at `~/.engineering-pulse`, but preserves
+configuration, custom content and reports under `~/.engineering-pulse-data`.
 
 ```bash
 bash ~/.engineering-pulse/uninstall.sh
@@ -234,7 +230,6 @@ git clone https://github.com/seek-oss/engineering-pulse.git ~/.engineering-pulse
 cd ~/.engineering-pulse
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env
 bash install.sh
 ```
 

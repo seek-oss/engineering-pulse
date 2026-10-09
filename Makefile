@@ -26,6 +26,7 @@ help:
 	@echo "  make update       Pull latest code + reinstall dependencies"
 	@echo "  make test         Run the test suite with coverage"
 	@echo "  make reports      Open the report calendar in your browser"
+	@echo "  make data         Open the durable user-data folder"
 	@echo "  make compare A=<id> B=<id>  Ask the agent to compare two archived reports"
 	@echo "  make schedule-show Show the scheduled days and times"
 	@echo "  make schedule     Reload the LaunchAgent (after plist changes)"
@@ -74,7 +75,11 @@ schedule-show:
 .PHONY: reports
 reports:
 	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/report_archive.py build-index
-	@open "$(INSTALL_DIR)/output/reports/index.html"
+	@cd "$(INSTALL_DIR)" && open "$$($(PYTHON) scripts/user_data.py path index)"
+
+.PHONY: data
+data:
+	@cd "$(INSTALL_DIR)" && open "$$($(PYTHON) scripts/user_data.py path root)"
 
 .PHONY: compare
 compare:
@@ -100,6 +105,8 @@ update:
 	@echo "→  Updating dependencies…"
 	@$(INSTALL_DIR)/.venv/bin/pip install --quiet --upgrade pip
 	@$(INSTALL_DIR)/.venv/bin/pip install --quiet -r "$(INSTALL_DIR)/requirements.txt"
+	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/user_data.py migrate
+	@cd "$(INSTALL_DIR)" && $(PYTHON) scripts/report_archive.py build-index >/dev/null
 	@echo "✓  Update complete"
 
 # ── Test ─────────────────────────────────────────────────────────────────────
@@ -111,7 +118,7 @@ test:
 # ── Config ───────────────────────────────────────────────────────────────────
 .PHONY: config
 config:
-	@$${EDITOR:-nano} "$(INSTALL_DIR)/.env"
+	@cd "$(INSTALL_DIR)" && $${EDITOR:-nano} "$$($(PYTHON) scripts/user_data.py path env)"
 
 # ── Uninstall ────────────────────────────────────────────────────────────────
 .PHONY: uninstall

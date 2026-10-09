@@ -4,8 +4,9 @@ title: Configuration
 
 # Configuration
 
-Engineering Pulse reads its settings from `~/.engineering-pulse/.env`.
-To edit the file, run `make config` in `~/.engineering-pulse`, or open the file in a text editor.
+Engineering Pulse reads its settings from `~/.engineering-pulse-data/.env`.
+To edit the file, run `make config` in `~/.engineering-pulse`, or open the durable
+file in a text editor. The checkout contains a compatibility symlink named `.env`.
 
 > **Caution:** `.env` can contain passwords and tokens. Do not share it and do not add it to git.
 
@@ -61,7 +62,7 @@ Use the **Settings** panel on the calendar for these settings. The panel writes 
 |---------|---------|---------|
 | Days and times | 09:00 and 18:00, Monday to Friday | When the schedule makes reports |
 | `SCHEDULED_REPORTS` | `pulse,sprint` | The reports that runs make: `pulse`, `sprint`, both, or `none` (paused). This also applies to `make run`. |
-| `REPORT_RETENTION_DAYS` | `90` | The number of days to keep reports. `0` keeps all reports. |
+| `REPORT_RETENTION_DAYS` | `0` | The number of days to keep reports. `0` keeps all reports forever. |
 
 You can also change them in Terminal:
 
@@ -83,18 +84,26 @@ ENGINEERING_PULSE_ONLY=pulse make run      # or: ENGINEERING_PULSE_ONLY=sprint m
 | Setting | Purpose |
 |---------|---------|
 | `GITHUB_TOKEN` | Use only when the GitHub MCP server is not available. A personal access token with `repo` (read) and `read:org`. |
-| `REPORTS_DIR` | A different folder for the report calendar (default: `output/reports`) |
+| `ENGINEERING_PULSE_DATA_DIR` | A different durable user-data root (default: `~/.engineering-pulse-data`) |
+| `REPORTS_DIR` | A different folder for the report calendar (default: `<data-dir>/reports`) |
 | `GITHUB_ORG` | Old format: `GITHUB_ORG` plus a team slug in `GITHUB_TEAM`. It still works. |
 
 For the full list, see [`env-and-paths.md`](https://github.com/seek-oss/engineering-pulse/blob/main/skills/engineering-pulse/references/env-and-paths.md).
 
 ## Files that stay on your Mac
 
-These files are not part of git. An upgrade does not change them.
+These files live outside the replaceable git checkout. Upgrades, reclones and uninstall
+do not change them.
 
 | Path | Content |
 |------|---------|
-| `.env` | Your settings and passwords |
-| `prompts/dashboards/*.md` | Your Datadog dashboards (not `_example.md`) |
-| `prompts/extras/*.md` | Your extra cards |
-| `output/` | All data and reports, including the calendar in `output/reports/` |
+| `~/.engineering-pulse-data/.env` | Your settings and passwords |
+| `~/.engineering-pulse-data/dashboards/*.md` | Your Datadog dashboards |
+| `~/.engineering-pulse-data/extras/*.md` | Your extra cards |
+| `~/.engineering-pulse-data/reports/` | Report history and calendar |
+
+The checkout's `output/` folder contains disposable files from the current run. Use
+`make data` to open the durable folder in Finder.
+
+To back up everything user-owned, copy `~/.engineering-pulse-data`. Treat the backup as
+sensitive because `.env` can contain credentials.

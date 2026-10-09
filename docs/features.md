@@ -15,14 +15,15 @@ The report has these sections, in this sequence. Each section gets a letter (Par
 | One section for each Datadog dashboard | One tile for each widget that you selected. The tile is red, yellow or green by the thresholds in the dashboard file. | Datadog MCP |
 | PR Review Queue | Open pull requests that wait for a review from you or your team, newest first. Renovate pull requests are not shown. | GitHub MCP |
 | My Queue | Your Todoist tasks and reading list | Todoist (optional) |
-| Extras | Your own Markdown notes as cards | `prompts/extras/` (optional) |
+| Extras | Your own Markdown notes as cards | `~/.engineering-pulse-data/extras/` (optional) |
 | Stakeholder Pulse | One card for each person: themes, notable messages and links from Slack | Glean MCP (optional) |
 
 The **"✦ N more features"** badge at the top right shows the optional features that are off. Select it to see how to turn each one on. Email copies of the report do not show the badge.
 
 ## Datadog dashboards
 
-You can add as many Datadog dashboards as you want. Each dashboard is a file in `prompts/dashboards/`.
+You can add as many Datadog dashboards as you want. Each dashboard is a file in
+`~/.engineering-pulse-data/dashboards/`.
 
 To add a dashboard:
 
@@ -38,7 +39,9 @@ To add a dashboard:
 3. Tell the agent which widgets you want.
 4. Confirm or change the red, yellow and green threshold that the agent proposes for each metric.
 
-The agent writes `prompts/dashboards/custom_<name>.md`. The file contains the URL, the widgets and the colour rules. You can edit the file. To remove a dashboard, delete its file.
+The agent writes `~/.engineering-pulse-data/dashboards/custom_<name>.md`. The file
+contains the URL, the widgets and the colour rules. You can edit the file. To remove a
+dashboard, delete its file.
 
 ### Tile colours
 
@@ -54,14 +57,15 @@ To add colours to a dashboard, add a table like this one to its file:
 | P99 Latency | > 500ms | 200–500ms | < 200ms |
 ```
 
-Each **Metric** name must match the widget title (or its name in the **Focus** list). Units after a number, for example `ms` or `/week`, are ignored. You can also ask the agent: "Add colour thresholds to `prompts/dashboards/<file>.md`".
+Each **Metric** name must match the widget title (or its name in the **Focus** list). Units after a number, for example `ms` or `/week`, are ignored. You can also ask the agent: "Add colour thresholds to `~/.engineering-pulse-data/dashboards/<file>.md`".
 
 These files are not part of git. Your dashboard URLs stay on your Mac.
 For the file format, see [`prompts/dashboards/_example.md`](https://github.com/seek-oss/engineering-pulse/blob/main/prompts/dashboards/_example.md).
 
 ## Report calendar
 
-All reports go on a calendar at `~/.engineering-pulse/output/reports/index.html`. To open it, run `make reports`.
+All reports go on a calendar at `~/.engineering-pulse-data/reports/index.html`. To open
+it, run `make reports`.
 
 - A coloured dot on a day shows a report: one colour for each report type.
 - Select a day to read its reports. Use the arrow keys to go to the next or previous report.
@@ -74,7 +78,7 @@ Select **Settings** on the calendar to change:
 - the days and times of the schedule
 - which reports the schedule makes (pause or resume each report)
 - if the report opens in your browser after each run
-- how many days to keep reports (default: 90)
+- how many days to keep reports (default: forever)
 
 Select **Apply**. A macOS dialog asks you to confirm.
 
@@ -169,7 +173,8 @@ You can also use the Todoist app on your phone.
 
 ## Extras
 
-Put a Markdown file in `prompts/extras/`. The next report shows it as a card.
+Put a Markdown file in `~/.engineering-pulse-data/extras/`. The next report shows it as
+a card.
 
 - The first `# Heading` is the card title. If there is no heading, the file name is the title.
 - The card can contain headings, bold and italic text, lists, links and code blocks.

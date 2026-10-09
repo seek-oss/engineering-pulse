@@ -45,6 +45,7 @@ def install(tmp_path):
     env = {
         **os.environ,
         "qi": str(inst),
+        "qd": str(tmp_path / "data"),
         "ql": str(tmp_path / "run.log"),
         "qal": str(inst / "scripts/lib/agent_cli.sh"),
     }

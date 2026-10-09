@@ -61,16 +61,16 @@ post_install_guide() {
   echo -e "     Change:   edit ${BOLD}AGENT_CLI${RESET} in .env (options: cursor, claude; pi experimental)"
   echo -e "     Skill the scheduler runs: ${MAGENTA}${BOLD}${INSTALL_DIR}/skills/engineering-pulse/SKILL.md${RESET}"
   echo -e "     ${DIM}In Cursor chat: ${RESET}${CYAN}${BOLD}/daily-dashboard${RESET}"
-  echo -e "     ${DIM}Shipped dashboards live in: ${RESET}${MAGENTA}${INSTALL_DIR}/prompts/dashboards/${RESET}"
+  echo -e "     ${DIM}Your dashboards live in: ${RESET}${MAGENTA}${DATA_DIR}/dashboards/${RESET}"
   echo ""
   echo -e "  ${BOLD}3) Add your own Datadog dashboards${RESET}"
   echo -e "     In Cursor, run: ${CYAN}${BOLD}/add-dashboard${RESET} ${DIM}and describe the dashboard${RESET}"
   echo -e "     ${DIM}Or use the${RESET} ${BOLD}Add a Datadog dashboard${RESET} ${DIM}button in the first report.${RESET}"
-  echo -e "     ${DIM}This creates a file in prompts/dashboards/custom_*.md — safe to upgrade later.${RESET}"
+  echo -e "     ${DIM}This creates a file in ${DATA_DIR}/dashboards — safe across upgrades and uninstall.${RESET}"
   echo ""
   echo -e "  ${BOLD}4) Upgrading${RESET}"
-  echo -e "     Re-run this installer or ${CYAN}git pull --ff-only${RESET} — your custom dashboards"
-  echo -e "     ${DIM}(prompts/dashboards/custom_*.md) and .env are never overwritten.${RESET}"
+  echo -e "     Re-run this installer or ${CYAN}cd ${INSTALL_DIR} && make update${RESET} — durable user data"
+  echo -e "     ${DIM}under ${DATA_DIR} is never overwritten.${RESET}"
   echo ""
   echo -e "  ${BOLD}5) Schedule (LaunchAgent)${RESET}"
   echo -e "     ${DIM}Installed plist:${RESET} ${MAGENTA}${BOLD}${PLIST_PATH}${RESET}"
@@ -81,7 +81,7 @@ post_install_guide() {
   echo ""
   echo -e "  ${BOLD}6) Reports${RESET}"
   echo -e "     ${DIM}Every report is archived to a calendar (DELIVERY=notify|email|both|none in .env):${RESET}"
-  echo -e "       ${MAGENTA}${INSTALL_DIR}/output/reports/index.html${RESET}"
+  echo -e "       ${MAGENTA}${DATA_DIR}/reports/index.html${RESET}"
   echo ""
   echo -e "  ${BOLD}7) Run once after .env is filled${RESET}"
   echo -e "     ${CYAN}${RUNNER_SCRIPT}${RESET}"
@@ -97,6 +97,8 @@ post_install_guide() {
 # ── Config ───────────────────────────────────────────────────────────────────
 REPO_URL="${REPO_URL:-https://github.com/seek-oss/engineering-pulse.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.engineering-pulse}"
+DATA_DIR="${ENGINEERING_PULSE_DATA_DIR:-$HOME/.engineering-pulse-data}"
+export ENGINEERING_PULSE_DATA_DIR="$DATA_DIR"
 BIN_DIR="${BIN_DIR:-$HOME/bin}"
 RUNNER_SCRIPT="$BIN_DIR/run-daily-dashboard.sh"
 PLIST_LABEL="com.$(whoami).daily-dashboard"
@@ -368,27 +370,18 @@ if [[ "$SKIP_LAUNCHD" == "0" ]]; then
   fi
 fi
 
-# ── 3. Seed .env (non-interactive — safe for curl | bash) ───────────────────
+# ── 3. Durable user data (non-interactive — safe for curl | bash) ───────────
 header "3/5  Configuration"
 
-ENV_FILE="$INSTALL_DIR/.env"
-EXAMPLE_ENV="$INSTALL_DIR/.env.example"
+ENV_FILE="$DATA_DIR/.env"
 
-# Interactive prompts are intentionally omitted: when stdin is a pipe, `read` would
-# consume this script’s own source and skip commands (e.g. qi=…), breaking the install.
-if [ -f "$ENV_FILE" ]; then
-  info "Keeping existing $ENV_FILE (edit it with your real credentials)"
-else
-  if [ -f "$EXAMPLE_ENV" ]; then
-    cp "$EXAMPLE_ENV" "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
-    success "Created $ENV_FILE from .env.example — set your team names next"
-  else
-    warn ".env.example not found in clone — creating empty $ENV_FILE"
-    : > "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
-  fi
-fi
+info "Preparing durable data at $DATA_DIR"
+MIGRATION_OUTPUT=$("$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/user_data.py" migrate)
+while IFS= read -r migration_message; do
+  success "$migration_message"
+done <<<"$MIGRATION_OUTPUT"
+"$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/report_archive.py" build-index >/dev/null
+success "User data is stored outside the replaceable git checkout"
 
 # Re-source lib from install dir (updated on clone/pull)
 # shellcheck source=scripts/lib/agent_cli.sh
@@ -422,6 +415,7 @@ mkdir -p "$BIN_DIR"
 # Shell-quote paths here; the heredoc only expands $qi / $ql so runner lines are not
 # executed by the parent shell if delimiter parsing ever goes wrong.
 qi=$(printf '%q' "$INSTALL_DIR")
+qd=$(printf '%q' "$DATA_DIR")
 ql=$(printf '%q' "$LOG_FILE")
 qal=$(printf '%q' "$INSTALL_DIR/scripts/lib/agent_cli.sh")
 cat > "$RUNNER_SCRIPT" <<EOF
@@ -433,12 +427,14 @@ cat > "$RUNNER_SCRIPT" <<EOF
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$HOME/.local/bin:\$HOME/bin"
 
 INSTALL_DIR=$qi
+DATA_DIR=$qd
 LOG_FILE=$ql
 AGENT_LIB=$qal
+export ENGINEERING_PULSE_DATA_DIR="\$DATA_DIR"
 
 # shellcheck source=scripts/lib/agent_cli.sh
 source "\$AGENT_LIB"
-load_agent_env "\$INSTALL_DIR/.env"
+load_agent_env "\$DATA_DIR/.env"
 
 # Cap run log: clear if over 50 MiB (hardcoded; avoids unbounded growth).
 if [[ -f "\$LOG_FILE" ]]; then

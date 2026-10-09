@@ -37,8 +37,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
+from scripts.user_data import env_file
 
-load_dotenv()
+load_dotenv(env_file())
 
 
 SVG_RE = re.compile(r"<svg\b[\s\S]*?</svg>", re.IGNORECASE)

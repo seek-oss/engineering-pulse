@@ -15,9 +15,10 @@
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_TO` | for email | Gmail SMTP credentials (only when `DELIVERY` is `email` or `both`) |
 | `SMTP_FROM` | no | Sender address (default `SMTP_USER`) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USE_TLS` | no | Defaults `smtp.gmail.com`, `587`, `true` |
-| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `90`; `0` keeps all; Settings panel) |
+| `REPORT_RETENTION_DAYS` | no | Days of archived reports to keep (default `0`, forever; Settings panel) |
 | `SCHEDULED_REPORTS` | no | Reports that runs make, scheduled or `make run`: `pulse,sprint` (default), `pulse`, `sprint`, `none` (Settings panel) |
-| `REPORTS_DIR` | no | Archive root (default `output/reports`) |
+| `ENGINEERING_PULSE_DATA_DIR` | no | Durable user-data root (default `~/.engineering-pulse-data`) |
+| `REPORTS_DIR` | no | Archive root override (default: `<data-dir>/reports`) |
 | `TODOIST_API_TOKEN` | no | Todoist API token (for My Queue; unset → section omitted) |
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Pulse names (Glean). **Leave this key out** of `.env` to omit Pulse entirely (ignored if only set via shell `export`). |
@@ -39,16 +40,20 @@ SMTP_PASSWORD=xxxx xxxx xxxx xxxx
 SMTP_TO=recipient@example.com
 ```
 
-## Gitignored user content
+## Durable user content
 
 | Path | Purpose |
 |------|---------|
-| `prompts/dashboards/*.md` | Real Datadog URLs (except `_example.md`) |
-| `prompts/extras/*.md` | Extra report cards |
-| `output/` | All generated JSON/HTML |
+| `~/.engineering-pulse-data/.env` | Settings and secrets |
+| `~/.engineering-pulse-data/dashboards/*.md` | User Datadog dashboard definitions |
+| `~/.engineering-pulse-data/extras/*.md` | Extra report cards |
+| `~/.engineering-pulse-data/reports/` | Archived reports, `manifest.json`, calendar `index.html` |
+| `output/` | Disposable generated JSON/HTML for the current run |
 | `output/stakeholders/*.md` | Glean-generated stakeholder cards |
-| `output/reports/` | Archived reports, `manifest.json`, calendar `index.html` |
-| `.env` | Secrets |
+
+The durable root is outside the git checkout, so it cannot be committed and survives
+upgrades, reclones and uninstall. The installer keeps a gitignored `.env` symlink in the
+checkout for compatibility.
 
 ## Script reference
 

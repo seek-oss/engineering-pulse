@@ -38,7 +38,8 @@ Skip a metric only if the user says it has no good or bad direction.
 
 ## 5. Generate dashboard file
 
-Create **`prompts/dashboards/custom_<slug>.md`** with URL, slug, focus, metrics table,
+Create **`~/.engineering-pulse-data/dashboards/custom_<slug>.md`** with URL, slug,
+focus, metrics table,
 and the **Colouring rules** table agreed in step 4 (same format as
 [`prompts/dashboards/_example.md`](../../../prompts/dashboards/_example.md)). Use `custom_`
 prefix (gitignored user content). No REST extract command block — the daily agent follows
@@ -46,6 +47,6 @@ prefix (gitignored user content). No REST extract command block — the daily ag
 
 ## 6. Confirm
 
-- File at `prompts/dashboards/custom_<slug>.md`
+- File at `~/.engineering-pulse-data/dashboards/custom_<slug>.md`
 - No `.env` change needed (URL in file)
 - Next daily run picks it up automatically

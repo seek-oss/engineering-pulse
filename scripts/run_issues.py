@@ -25,9 +25,13 @@ import sys
 import time
 from pathlib import Path
 
-from dotenv import dotenv_values
-
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from dotenv import dotenv_values  # noqa: E402
+from scripts.user_data import dashboards_dir as user_dashboards_dir  # noqa: E402
+from scripts.user_data import env_file  # noqa: E402
+
 ISSUES_DIR = ROOT / "output" / "run_issues"
 REPORT_TYPES = ("pulse", "sprint", "compare")
 MAX_AGE_SECONDS = 12 * 3600
@@ -170,13 +174,13 @@ def mcp_status(agent: str, timeout: int = MCP_LIST_TIMEOUT) -> dict[str, str] | 
 
 
 def _dotenv() -> dict[str, str]:
-    path = ROOT / ".env"
+    path = env_file()
     vals = dotenv_values(path) if path.is_file() else {}
     return {k: v or "" for k, v in vals.items()}
 
 
 def has_dashboards(dashboards_dir: Path | None = None) -> bool:
-    folder = dashboards_dir or ROOT / "prompts" / "dashboards"
+    folder = dashboards_dir or user_dashboards_dir()
     return any(not p.name.startswith("_") for p in folder.glob("*.md"))
 
 

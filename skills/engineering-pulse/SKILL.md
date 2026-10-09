@@ -50,9 +50,10 @@ paths, and script reference.
 
 ## User data locations
 
-- Dashboard defs: `prompts/dashboards/*.md` (skip `_*.md`)
-- Extras: `prompts/extras/*.md`
+- Configuration: `~/.engineering-pulse-data/.env`
+- Dashboard defs: `~/.engineering-pulse-data/dashboards/*.md`
+- Extras: `~/.engineering-pulse-data/extras/*.md`
 - Stakeholder cards (generated): `output/stakeholders/*.md`
 - Snapshots: `output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`
 - HTML scorecard (default render): `output/daily_dashboard_report.html`
-- Report archive + calendar: `output/reports/` (`index.html`, `manifest.json`)
+- Report archive + calendar: `~/.engineering-pulse-data/reports/` (`index.html`, `manifest.json`)

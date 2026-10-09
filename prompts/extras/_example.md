@@ -5,7 +5,8 @@
 > **This file is a format reference only.** The renderer skips any file in
 > this directory whose name starts with `_`.
 >
-> To add a real extra task, drop a new `*.md` file into `prompts/extras/`.
+> To add a real extra task, drop a new `*.md` file into
+> `~/.engineering-pulse-data/extras/`.
 > The next dashboard run will pick it up automatically — no code changes
 > needed.
 
@@ -13,7 +14,7 @@
 
 ## How it works
 
-Each `*.md` file in `prompts/extras/` becomes one card under **Part E —
+Each `*.md` file in `~/.engineering-pulse-data/extras/` becomes one card under **Part E —
 Extras** in the daily report.
 
 - The first `# Heading` is used as the card **title**.

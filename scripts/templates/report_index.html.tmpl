@@ -757,7 +757,7 @@
 
       el("h4", {}, "Delivery and retention"),
       el("p", { class: "hint" }, "Edit .env in the install folder (applies from the next run):"),
-      commandBlock(`DELIVERY=notify          # notify | email | both | none (local file only)\nREPORT_RETENTION_DAYS=90 # 0 = keep forever`),
+      commandBlock(`DELIVERY=notify         # notify | email | both | none (local file only)\nREPORT_RETENTION_DAYS=0 # keep forever`),
       el("p", { class: "hint" }, "The installer sets up terminal-notifier (via Homebrew) so clicking a notification opens the report; without it a plain macOS banner is shown."),
       el("p", { class: "hint" }, "Scheduled runs only happen while the Mac is awake; a run missed during sleep fires once on wake."),
     );

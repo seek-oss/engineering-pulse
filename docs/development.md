@@ -35,8 +35,9 @@ skills/report-compare/      the compare skill
 harness/                    commands and notes for each agent (Cursor commands in harness/cursor/)
 AGENTS.md                   rules for agents in this repository
 
-prompts/dashboards/         your dashboards (custom_*.md, not in git; _example.md is in git)
-prompts/extras/             your extra cards (not in git, except _example.md)
+prompts/dashboards/         shipped dashboard templates (_*.md)
+prompts/extras/             shipped extra-card templates (_*.md)
+~/.engineering-pulse-data/ durable user config, dashboards, extras and report history
 
 scripts/
   datadog_dashboard_extract.py   Datadog widgets and values

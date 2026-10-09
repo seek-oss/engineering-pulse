@@ -57,19 +57,19 @@ dist/
 !.cursor/commands/daily-dashboard.md
 !.cursor/commands/todo.md
 
-# Customer-specific dashboard definitions (contain real Datadog URLs — local only).
-# Underscore-prefixed files are reference templates and stay in the repo.
+# Legacy repo-local dashboard definitions are ignored and migrated to
+# ~/.engineering-pulse-data/dashboards. Reference templates stay in the repo.
 prompts/dashboards/*.md
 !prompts/dashboards/_*.md
 
-# Drop-in extras plugin folder (user content — local only)
+# Legacy repo-local extras are migrated to ~/.engineering-pulse-data/extras.
 prompts/extras/*.md
 !prompts/extras/_example.md
 
 # Local maintainer tools (org-term scanner, etc. — not shipped)
 local/
 
-# Generated output (regenerated on every run)
+# Disposable generated output (durable reports live outside the checkout)
 output/
 *.html
 *.txt

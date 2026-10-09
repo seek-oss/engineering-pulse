@@ -41,9 +41,9 @@ This matches what [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs in
 - Open a PR against `main`.
 - Ensure CI passes (lint + both test matrix jobs).
 - Do not commit secrets (`.env`, API keys, SMTP passwords).
+- User configuration, dashboards, extras and reports belong in
+  `~/.engineering-pulse-data/`, outside the repository.
 - Keep local-only files out of the PR:
-  - `prompts/dashboards/*.md` (except `_example.md`)
-  - `prompts/extras/*.md` (except `_example.md`)
   - `output/stakeholders/*.md` (generated each run; gitignored via `output/`)
   - `output/`
 

@@ -84,13 +84,11 @@ You sign in to each MCP server one time. You do not put API keys in a file.
 
 3. **Configure the `.env` file.**
 
-   First, make a local `.env` from the example if it does not exist. The installer
-   normally does this for you. This command does not overwrite an existing `.env`:
+   The installer creates the durable configuration for you. Open it with:
 
    ```bash
    cd ~/.engineering-pulse
-   test -f .env || cp .env.example .env
-   open -e .env
+   make config
    ```
 
    Follow the comments in `.env`. Replace the placeholders, and uncomment only the
@@ -147,6 +145,8 @@ Run one of these commands in `~/.engineering-pulse`:
 | `ENGINEERING_PULSE_ONLY=sprint make run` | Makes only the sprint report |
 | `make run-bg` | Makes the reports in the background. You get a notification when they are ready. |
 | `make reports` | Opens the report calendar |
+| `make data` | Opens durable configuration, custom content and report history |
+| `make config` | Opens the durable `.env` file |
 | `make logs` | Shows the run log while a run continues |
 | `make help` | Shows all commands |
 
@@ -167,7 +167,7 @@ The report shows a **"✦ N more features"** badge when optional features are of
 | [Stakeholder Pulse](docs/features.md#stakeholder-pulse) | One card per person: what they said and asked for in Slack this week | Glean MCP and `STAKEHOLDERS` in `.env` |
 | [My Queue](docs/features.md#my-queue-todoist) | Your Todoist tasks and reading list | `TODOIST_API_TOKEN` in `.env` |
 | [Email](docs/configuration.md#delivery) | The report in your inbox | A Gmail App Password and `DELIVERY=email` |
-| [Extras](docs/features.md#extras) | Your own notes as cards in the report | A Markdown file in `prompts/extras/` |
+| [Extras](docs/features.md#extras) | Your own notes as cards in the report | A Markdown file in `~/.engineering-pulse-data/extras/` |
 
 ## If something goes wrong
 
@@ -189,7 +189,8 @@ The run log is `/tmp/daily-dashboard.log`. For more help, read [Troubleshooting]
 | [Troubleshooting](docs/troubleshooting.md) | The problems box and common problems |
 | [Development](docs/development.md) | How it works, scripts, tests |
 
-Your data stays on your Mac. Reports, dashboards and `.env` are not part of git, and an upgrade does not change them.
+Your data stays on your Mac under `~/.engineering-pulse-data`. Reports are kept forever
+by default, and upgrades, reclones and uninstall leave this durable folder untouched.
 
 ## Contributing and licence
 

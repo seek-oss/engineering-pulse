@@ -2,7 +2,8 @@
 
 ## Overview
 
-Run **all Datadog dashboards** defined under `prompts/dashboards/`, produce a **single
+Run **all Datadog dashboards** defined under
+`~/.engineering-pulse-data/dashboards/`, produce a **single
 focused HTML report**, archive it to the report calendar, and notify and/or email per `DELIVERY`.
 
 ## Problems box — always deliver a report
@@ -36,10 +37,11 @@ of the report.
 ## Step 1 — Extract Datadog Dashboards
 
 Use **Datadog MCP** (see [datadog-mcp-extract.md](datadog-mcp-extract.md)). For **each**
-dashboard in `prompts/dashboards/` (skip `_*.md` templates), produce
+dashboard in `~/.engineering-pulse-data/dashboards/`, produce
 `output/<slug>_metric_results.json` via MCP + local helper scripts.
 
-Read every qualifying `.md` in `prompts/dashboards/`; see `_example.md` for file format.
+Read every qualifying `.md` in `~/.engineering-pulse-data/dashboards/`; see
+`prompts/dashboards/_example.md` for the file format.
 
 ---
 
@@ -55,8 +57,9 @@ python3 scripts/render_daily_dashboard_html.py
 
 Writes `output/daily_dashboard_report.html` by default (override with `--out`).
 
-The renderer reads `prompts/dashboards/*.md` + matching `output/<slug>_metric_results.json`,
-`output/github_prs.json`, `output/todos.json`, `prompts/extras/*.md`, and
+The renderer reads `~/.engineering-pulse-data/dashboards/*.md` + matching
+`output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`,
+`~/.engineering-pulse-data/extras/*.md`, and
 `output/stakeholders/*.md` when `STAKEHOLDERS` is set.
 
 **Section order (dynamic Part letters):**
@@ -65,7 +68,7 @@ The renderer reads `prompts/dashboards/*.md` + matching `output/<slug>_metric_re
 2. Each `--extra LABEL:FILE` (CLI)
 3. PR Review Queue
 4. My Queue
-5. Extras (`prompts/extras/*.md`, skip `_*.md`)
+5. Extras (`~/.engineering-pulse-data/extras/*.md`)
 6. Stakeholder Pulse (only if `STAKEHOLDERS` non-empty)
 
 One-off snapshot without a dashboard file:
@@ -134,8 +137,8 @@ Renderer adds **My Queue**: work tasks, personal tasks, reading queue. Actions u
 
 ## Step 2E — Extras
 
-Drop `*.md` into `prompts/extras/` (skip `_*.md`). First `# Heading` = card title.
-Override: `--extras-dir prompts/extras`.
+Drop `*.md` into `~/.engineering-pulse-data/extras/`. First `# Heading` = card title.
+Override with `--extras-dir`.
 
 ---
 
@@ -147,7 +150,8 @@ python3 scripts/deliver_report.py send --type pulse \
   output/daily_dashboard_report.html
 ```
 
-Always archives the report to `output/reports/` (calendar at `output/reports/index.html`),
+Always archives the report to `~/.engineering-pulse-data/reports/` (calendar at
+`~/.engineering-pulse-data/reports/index.html`),
 then follows `DELIVERY` in `.env`: `notify` (default, macOS notification), `email`
 (SMTP via `send_report_smtp.py`), `both`, or `none` (archive only).
 

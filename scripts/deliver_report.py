@@ -2,8 +2,7 @@
 """Deliver a finished report: archive it, then notify and/or email per DELIVERY.
 
 DELIVERY (from .env): notify (default) | email | both | none (local file only).
-Archiving always happens, so every report shows up on the calendar at
-output/reports/index.html.
+Archiving always happens, so every report shows up on the durable report calendar.
 
 Usage:
   # Agent workflow (skill "Deliver" step):
@@ -44,6 +43,7 @@ from scripts.report_archive import (
     prune,
     reports_dir,
 )
+from scripts.user_data import env_file
 
 DELIVERY_MODES = ("notify", "email", "both", "none")
 RUN_LOGS = {"compare": "/tmp/engineering-pulse-compare.log"}
@@ -179,7 +179,7 @@ def build_fallback(report_type: str, since: datetime) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv(ROOT / ".env")
+    load_dotenv(env_file())
     ap = argparse.ArgumentParser(description="Archive + notify/email a finished report")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p_send = sub.add_parser("send", help="Deliver a report now")

@@ -1,8 +1,8 @@
 """Drop-in extras plugin for the daily dashboard.
 
-Any `*.md` file dropped into `prompts/extras/` (except files starting with `_`,
-which are reference templates) is rendered as an extra task card in the daily
-report.
+Any `*.md` file dropped into the configured durable extras directory is rendered
+as an extra task card in the daily report. Shipped `prompts/extras/_*.md` files
+are reference templates only.
 
 File format
 -----------

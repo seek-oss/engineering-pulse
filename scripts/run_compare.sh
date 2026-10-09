@@ -19,13 +19,14 @@ PY="$INSTALL_DIR/.venv/bin/python"
 source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
 load_agent_env "$INSTALL_DIR/.env"
 cd "$INSTALL_DIR" || exit 1
+REPORTS_INDEX=$("$PY" scripts/user_data.py path index)
 
 log() { printf '%s\n' "[$(date)] $*" | tee -a "$LOG_FILE" >&2; }
 
 fail() {
   log "Compare not started: $1"
   "$PY" scripts/notify_report.py --title "Comparison not started" --message "$1" \
-    --open "$INSTALL_DIR/output/reports/index.html" >>"$LOG_FILE" 2>&1 || true
+    --open "$REPORTS_INDEX" >>"$LOG_FILE" 2>&1 || true
   exit 2
 }
 
