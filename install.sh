@@ -227,14 +227,44 @@ show_agent_selector() {
   printf '  Type 1-3, or press Enter for default %s (%s).\n  › ' "$default_idx" "$default_pick_name" >&2
 
   local pick="$default_idx"
-  if [[ -t 0 ]]; then
-    read -r pick || true
-    pick="${pick:-$default_idx}"
-  fi
+  read -r pick || true
+  pick="${pick:-$default_idx}"
   if [[ "$pick" =~ ^[1-3]$ ]]; then
     echo "${AGENT_ORDER[$((pick - 1))]}"
   else
     echo "$default"
+  fi
+}
+
+# Sets SELECTED_AGENT and saves it as AGENT_CLI. With curl | bash, stdin is the
+# pipe, so the menu reads /dev/tty instead — but only when no agent is saved yet.
+choose_agent() {
+  local env_file="$1" default="$2" detected="$3"
+  local tty="${AGENT_PROMPT_TTY:-/dev/tty}"
+  local existing
+  existing=$(grep '^AGENT_CLI=' "$env_file" 2>/dev/null | head -1 | cut -d= -f2- || true)
+
+  if [[ -t 0 ]]; then
+    SELECTED_AGENT=$(show_agent_selector "$default" "$detected")
+  elif [[ -z "$existing" ]] && { : <"$tty"; } 2>/dev/null; then
+    SELECTED_AGENT=$(show_agent_selector "$default" "$detected" <"$tty")
+  elif [[ -n "$existing" ]]; then
+    SELECTED_AGENT="$existing"
+    info "Keeping existing AGENT_CLI=$SELECTED_AGENT"
+    return 0
+  else
+    SELECTED_AGENT="$default"
+    upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$env_file"
+    info "Non-interactive install: set AGENT_CLI=$SELECTED_AGENT (edit .env to change)"
+    return 0
+  fi
+
+  upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$env_file"
+  success "Selected agent: $(agent_label "$SELECTED_AGENT") (AGENT_CLI=$SELECTED_AGENT)"
+  if ! agent_is_installed "$SELECTED_AGENT"; then
+    warn "$(agent_label "$SELECTED_AGENT") is not installed yet. Install it:"
+    warn "  $(agent_install_hint "$SELECTED_AGENT")"
+    warn "The schedule will not work until the agent CLI is available."
   fi
 }
 
@@ -388,25 +418,7 @@ success "User data is stored outside the replaceable git checkout"
 source "$INSTALL_DIR/scripts/lib/agent_cli.sh"
 
 DEFAULT_AGENT=$(default_agent_choice "$DETECTED_AGENTS")
-if [[ -t 0 ]]; then
-  SELECTED_AGENT=$(show_agent_selector "$DEFAULT_AGENT" "$DETECTED_AGENTS")
-  upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$ENV_FILE"
-  success "Selected agent: $(agent_label "$SELECTED_AGENT") (AGENT_CLI=$SELECTED_AGENT)"
-  if ! agent_is_installed "$SELECTED_AGENT"; then
-    warn "$(agent_label "$SELECTED_AGENT") is not installed yet. Install it:"
-    warn "  $(agent_install_hint "$SELECTED_AGENT")"
-    warn "The schedule will not work until the agent CLI is available."
-  fi
-else
-  if ! grep -q '^AGENT_CLI=' "$ENV_FILE" 2>/dev/null; then
-    SELECTED_AGENT="$DEFAULT_AGENT"
-    upsert_env_var "AGENT_CLI" "$SELECTED_AGENT" "$ENV_FILE"
-    info "Non-interactive install: set AGENT_CLI=$SELECTED_AGENT (edit .env to change)"
-  else
-    SELECTED_AGENT=$(grep '^AGENT_CLI=' "$ENV_FILE" | head -1 | cut -d= -f2-)
-    info "Keeping existing AGENT_CLI=$SELECTED_AGENT"
-  fi
-fi
+choose_agent "$ENV_FILE" "$DEFAULT_AGENT" "$DETECTED_AGENTS"
 
 # ── 4. Shell runner script ────────────────────────────────────────────────────
 header "4/5  Installing runner script"

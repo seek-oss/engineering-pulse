@@ -210,6 +210,10 @@ curl -fsSL https://raw.githubusercontent.com/seek-oss/engineering-pulse/main/web
 The installer gets the new version and updates the runner, the schedule and the button
 app. It does not change durable data under `~/.engineering-pulse-data`.
 
+The installer keeps the agent saved as `AGENT_CLI` in `.env` and does not ask again.
+To choose a different agent, run `bash ~/.engineering-pulse/install.sh`, which always
+asks.
+
 ## Uninstall
 
 The uninstaller deletes the replaceable checkout at `~/.engineering-pulse`, but preserves
