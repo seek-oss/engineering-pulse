@@ -11,20 +11,19 @@ Agent + Datadog MCP (no API keys):
        ``output/<slug>_mcp_responses.json``
     4. ``--from-mcp-responses`` → ``*_metric_results.json``
 
-Optional:
-    DATADOG_TEAMS  (comma-separated — overrides tpl_var_team in URL and query filters)
+Team scope for metric queries comes from ``tpl_var_team`` in each dashboard URL
+(when the dashboard defines a ``team`` template variable).
 """
 
 import argparse
 import json
-import os
 import re
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 from rich.console import Console
@@ -272,19 +271,36 @@ def build_metric_results_from_mcp_bundle(bundle: dict[str, Any]) -> list[dict[st
     return metric_results
 
 
-def resolve_query_overrides_and_url(dashboard_url: str) -> tuple[str, dict[str, str]]:
-    teams_csv = os.environ.get("DATADOG_TEAMS", "").strip()
-    query_overrides: dict[str, str] = {}
-    url = dashboard_url
-    if teams_csv:
-        url = _apply_teams_to_url(url, teams_csv)
-        query_overrides["team"] = _teams_to_query_value(teams_csv)
-        console.print(
-            f"[dim]Using DATADOG_TEAMS override: "
-            f"[cyan]{teams_csv}[/cyan] "
-            f"→ query filter [cyan]team:{query_overrides['team']}[/cyan][/dim]"
-        )
-    return url, query_overrides
+def _teams_from_dashboard_url(url: str) -> list[str]:
+    """Read ``tpl_var_team[i]`` values from a Datadog dashboard share URL."""
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    teams: list[str] = []
+    for key in sorted(params):
+        if re.match(r"tpl_var_team\[", key):
+            for value in params[key]:
+                if value and str(value).strip():
+                    teams.append(str(value).strip())
+    return teams
+
+
+def query_overrides_from_dashboard_url(dashboard_url: str) -> dict[str, str]:
+    """Map dashboard URL template params to query substitution overrides."""
+    teams = _teams_from_dashboard_url(dashboard_url)
+    if not teams:
+        return {}
+    query_value = _teams_to_query_value(",".join(teams))
+    console.print(
+        f"[dim]Team filter from dashboard URL: "
+        f"[cyan]{', '.join(teams)}[/cyan] "
+        f"→ query [cyan]team:{query_value}[/cyan][/dim]"
+    )
+    return {"team": query_value}
+
+
+def first_team_slug_from_dashboard_url(url: str) -> str | None:
+    teams = _teams_from_dashboard_url(url)
+    return teams[0] if teams else None
 
 
 def resolve_lookback_window(days: int, dashboard_url: str) -> tuple[int, int]:
@@ -362,7 +378,7 @@ def run_mcp_query_plan(
 ) -> None:
     raw = json.loads(dashboard_path.read_text(encoding="utf-8"))
     dashboard = normalize_mcp_dashboard(raw)
-    dashboard_url, query_overrides = resolve_query_overrides_and_url(dashboard_url)
+    query_overrides = query_overrides_from_dashboard_url(dashboard_url)
     resolve_lookback_window(days, dashboard_url)
 
     title = dashboard.get("title", "Untitled")
@@ -476,24 +492,6 @@ def _extract_time_window(url: str) -> tuple | None:
         to_sec = int(time.time())
 
     return from_sec, to_sec
-
-
-def _apply_teams_to_url(url: str, teams_csv: str) -> str:
-    """Replace all tpl_var_team query parameters in *url* with the teams
-    listed in *teams_csv* (comma-separated).  All other params are preserved."""
-    teams = [t.strip() for t in teams_csv.split(",") if t.strip()]
-    parsed = urlparse(url)
-    params = parse_qs(parsed.query, keep_blank_values=True)
-
-    # Drop every existing tpl_var_team[*] key
-    params = {k: v for k, v in params.items() if not re.match(r"tpl_var_team\[", k)}
-
-    # Add new indexed keys
-    for i, team in enumerate(teams):
-        params[f"tpl_var_team[{i}]"] = [team]
-
-    new_query = urlencode(params, doseq=True)
-    return urlunparse(parsed._replace(query=new_query))
 
 
 # ---------------------------------------------------------------------------

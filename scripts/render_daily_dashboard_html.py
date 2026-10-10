@@ -53,6 +53,7 @@ from dashboards_plugin import (  # noqa: E402
     load_snapshot,
     parse_dashboard,
 )
+from datadog_dashboard_extract import first_team_slug_from_dashboard_url  # noqa: E402
 from extras_plugin import parse_extra, render_extras_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
 from user_data import dashboards_dir, env_file, extras_dir  # noqa: E402
@@ -439,7 +440,16 @@ def main() -> None:
                 file=sys.stderr,
             )
 
-    team = os.environ.get("DATADOG_TEAMS", "team-a").split(",")[0].strip()
+    header_label = "Engineering Pulse"
+    for dashboard, _ in dashboard_records:
+        if dashboard.url:
+            slug = first_team_slug_from_dashboard_url(dashboard.url)
+            if slug:
+                header_label = slug
+                break
+    else:
+        if dashboard_records and dashboard_records[0][0].title:
+            header_label = dashboard_records[0][0].title
     today = date.today().isoformat()
     hints_html = render_feature_hints(
         feature_hints(_config_values(stakeholder_dotenv), bool(stakeholder_names))
@@ -466,7 +476,7 @@ def main() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily Dashboard — {html_mod.escape(team)} — {today}</title>
+<title>Daily Dashboard — {html_mod.escape(header_label)} — {today}</title>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f7f7f8; color: #1a1a2e; }}
@@ -581,7 +591,7 @@ def main() -> None:
 <div class="wrapper">
   <div class="header">
     {hints_html}
-    <h1>Daily Dashboard — {html_mod.escape(team)}</h1>
+    <h1>Daily Dashboard — {html_mod.escape(header_label)}</h1>
     <div class="subtitle">{today} (past 7 days)</div>
     <div class="links">
       {header_links}

@@ -97,8 +97,7 @@ def main() -> int:
         print("skip email (--no-email)", flush=True)
         return 0
 
-    team = (os.environ.get("DATADOG_TEAMS") or "engineering").split(",")[0].strip() or "engineering"
-    subject = f"Daily dashboard — {team} — {datetime.now():%Y-%m-%d}"
+    subject = f"Daily dashboard — {datetime.now():%Y-%m-%d}"
     try:
         _run_logged([py, str(SCRIPTS / "send_report_smtp.py"), subject, str(report)])
     except subprocess.CalledProcessError as e:

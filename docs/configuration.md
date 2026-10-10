@@ -15,7 +15,6 @@ file in a text editor. The checkout contains a compatibility symlink named `.env
 | Setting | Example | Purpose |
 |---------|---------|---------|
 | `AGENT_CLI` | `cursor` | The agent that makes the reports. Use `cursor`. The installer sets it. |
-| `DATADOG_TEAMS` | `team-a` | Your Datadog team slug. Use commas for more than one team. It filters the dashboard queries. |
 | `GITHUB_TEAM` | `acme/team-a` | The GitHub team whose review requests you track, as `org/team`. Your own review requests are always included. |
 | `DELIVERY` | `notify` | How you get the report. See [Delivery](#delivery). |
 

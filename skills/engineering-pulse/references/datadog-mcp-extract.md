@@ -16,7 +16,7 @@ For **each** dashboard in `~/.engineering-pulse-data/dashboards/`:
    - `dashboard_id`: that ID
    - `include_widgets`: `true`
    - If the URL sets `tpl_var_team`, pass matching `template_variable_values`
-     (e.g. `team` → value from `DATADOG_TEAMS` in `.env`, or from the URL).
+     for `team` using the value from the dashboard URL (same as in the browser).
 4. Save the full JSON response to **`output/<slug>_dashboard.json`**.
 
 ## 1B — Build query plan (local script, no keys)

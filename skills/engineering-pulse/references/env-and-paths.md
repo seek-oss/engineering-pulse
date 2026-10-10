@@ -7,7 +7,6 @@
 | `AGENT_CLI` | for schedule | `claude` or `cursor` (set by installer). `pi`: **experimental / in progress** — see [`harness/pi-agent/`](../../../harness/pi-agent/). |
 | `ANTHROPIC_API_KEY` | for Claude automation | API key when using Claude Code for scheduled runs |
 | `PI_API_KEY` | experimental | Provider API key if testing `AGENT_CLI=pi` ([in progress](../../../harness/pi-agent/README.md)) |
-| `DATADOG_TEAMS` | no | Comma-separated teams — replaces `tpl_var_team` in URL **and** injects `team:<value>` into every metric query |
 | `DELIVERY` | no | `notify` (default, macOS notification), `email`, `both`, or `none` (local file only). Reports are always archived. |
 | `GITHUB_TEAM` | no | Team whose PR reviews you track, as `org/team`. PRs come from GitHub MCP (Step 2C); your own review requests are always included. |
 | `GITHUB_ORG` | legacy | Older `.env` files set `GITHUB_ORG` plus a bare `GITHUB_TEAM` slug; still works |
@@ -104,7 +103,7 @@ the calendar's Settings panel (`engineering-pulse://settings` links).
 | `--days N` | `0` | Past N days (use `7` for daily run; MCP plan default 7) |
 | `--output-slug` | | File prefix under `output/` |
 
-**DATADOG_TEAMS:** replaces `tpl_var_team` in URL; injects `team:<value>` into queries.
+**Datadog team scope:** each dashboard `.md` URL is the source of truth (`tpl_var_team` / `$team` when present). No separate `.env` team setting.
 
 **Time window:** `--days` → URL timestamps → 30-day fallback. `live=true` snaps `to_ts` to now.
 

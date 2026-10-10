@@ -51,7 +51,7 @@ post_install_guide() {
   if [ -f "$ex" ]; then
     echo -e "     ${DIM}Template:${RESET} ${MAGENTA}${ex}${RESET}"
   fi
-  echo -e "     ${DIM}Set DATADOG_TEAMS and GITHUB_TEAM; data comes from Datadog and GitHub MCP in your agent.${RESET}"
+  echo -e "     ${DIM}Set GITHUB_TEAM if you want the team PR queue; Datadog scope comes from each dashboard URL.${RESET}"
   echo -e "     ${DIM}Optional: STAKEHOLDERS, SPRINT_BOARD, TODOIST_API_TOKEN, SMTP_* for email.${RESET}"
   echo ""
   echo -e "  ${BOLD}2) Agent CLI (required)${RESET}"

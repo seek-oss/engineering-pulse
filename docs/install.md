@@ -141,7 +141,6 @@ variable only when you want the part of the report that uses it.
 | Variable | Required for | What to do |
 |----------|--------------|------------|
 | `AGENT_CLI` | All reports | Keep `cursor`. The installer sets it. |
-| `DATADOG_TEAMS` | Datadog metrics | Replace `your-team` with one or more Datadog team slugs. |
 | `GITHUB_TEAM` | PR Review Queue | Replace the placeholder with `org/team`. |
 | `SPRINT_BOARD` | Sprint report | Uncomment it and describe your Jira board in one sentence. See [Sprint report](features.md#sprint-report). |
 | `STAKEHOLDERS` | Stakeholder Pulse | Uncomment it and add full names or email addresses. Glean MCP supplies the data. |
@@ -149,8 +148,9 @@ variable only when you want the part of the report that uses it.
 | `DELIVERY` | Report delivery | Use `notify`, `email`, `both` or `none`. |
 | `SMTP_*` | Email delivery | Uncomment and configure these only for `DELIVERY=email` or `both`. |
 
-`DATADOG_TEAMS` and `GITHUB_TEAM` are the normal minimum for the Engineering Pulse
-report. The other variables enable separate reports or optional sections.
+Datadog team scope is taken from each dashboard URL when you add it (`/add-dashboard`).
+`GITHUB_TEAM` is optional if `review-requested:@me` is enough for your PR queue. The other
+variables enable separate reports or optional sections.
 
 Do not put Datadog or GitHub API keys in `.env`. Their MCP servers handle the sign-in.
 For every setting and its accepted values, read [Configuration](configuration.md).

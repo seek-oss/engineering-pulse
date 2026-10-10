@@ -97,14 +97,14 @@ You sign in to each MCP server one time. You do not put API keys in a file.
    | Variable | Used for |
    |----------|----------|
    | `AGENT_CLI=cursor` | Runs the reports with Cursor (the installer sets this) |
-   | `DATADOG_TEAMS` | Filters the Datadog metrics for the Engineering Pulse report |
    | `GITHUB_TEAM` | Finds pull requests that wait for your GitHub team |
    | `SPRINT_BOARD` | Enables the Jira sprint report |
    | `STAKEHOLDERS` | Enables Stakeholder Pulse through Glean |
    | `TODOIST_API_TOKEN` | Enables My Queue |
    | `DELIVERY` and `SMTP_*` | Controls notifications and optional email |
 
-   `DATADOG_TEAMS` and `GITHUB_TEAM` are the normal minimum. For all settings, see
+   Configure `GITHUB_TEAM` for the team PR queue if you need it. Datadog filters come from
+   each dashboard URL you save. For all settings, see
    [Configuration](docs/configuration.md).
 
 4. Add one Datadog dashboard. Copy the dashboard URL from your browser. Then start the Cursor agent in `~/.engineering-pulse`:

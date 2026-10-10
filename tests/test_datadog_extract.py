@@ -4,13 +4,14 @@ import time
 
 import pytest
 from scripts.datadog_dashboard_extract import (
-    _apply_teams_to_url,
     _extract_time_window,
+    _teams_from_dashboard_url,
     _teams_to_query_value,
     detect_query_source,
     extract_dashboard_id,
     extract_widget_queries,
     flatten_widgets,
+    query_overrides_from_dashboard_url,
     resolve_template_variables,
 )
 
@@ -259,37 +260,25 @@ class TestExtractTimeWindow:
 
 
 # ---------------------------------------------------------------------------
-# _apply_teams_to_url
+# Team scope from dashboard URL
 # ---------------------------------------------------------------------------
 
 
-class TestApplyTeamsToUrl:
-    def test_replaces_existing_team_params(self):
+class TestTeamsFromDashboardUrl:
+    def test_reads_indexed_team_params(self):
         url = (
-            "https://app.datadoghq.com/dashboard/abc?tpl_var_team[0]=old-team&tpl_var_team[1]=other"
+            "https://app.datadoghq.com/dashboard/abc?"
+            "tpl_var_team%5B0%5D=talent-search&tpl_var_team%5B1%5D=other"
         )
-        result = _apply_teams_to_url(url, "new-team")
-        assert "new-team" in result
-        assert "old-team" not in result
-        assert "other" not in result
+        assert _teams_from_dashboard_url(url) == ["talent-search", "other"]
 
-    def test_adds_team_params_when_none_exist(self):
+    def test_empty_when_no_team_template(self):
         url = "https://app.datadoghq.com/dashboard/abc?from_ts=1000"
-        result = _apply_teams_to_url(url, "my-team")
-        assert "my-team" in result
-        assert "from_ts=1000" in result
+        assert _teams_from_dashboard_url(url) == []
 
-    def test_multiple_teams_creates_indexed_params(self):
-        url = "https://app.datadoghq.com/dashboard/abc"
-        result = _apply_teams_to_url(url, "team-a,team-b")
-        assert "team-a" in result
-        assert "team-b" in result
-
-    def test_preserves_non_team_params(self):
-        url = "https://app.datadoghq.com/dashboard/abc?from_ts=111&tpl_var_team[0]=old"
-        result = _apply_teams_to_url(url, "new-team")
-        assert "from_ts=111" in result
-        assert "new-team" in result
+    def test_query_overrides_or_multiple_teams(self):
+        url = "https://app.datadoghq.com/dashboard/abc?tpl_var_team[0]=a&tpl_var_team[1]=b"
+        assert query_overrides_from_dashboard_url(url) == {"team": "(a OR b)"}
 
 
 # ---------------------------------------------------------------------------

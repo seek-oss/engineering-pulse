@@ -80,7 +80,7 @@ python3 scripts/render_daily_dashboard_html.py \
 
 #### Report format
 
-Focused scorecard — no long prose. Header: `Daily Dashboard — <DATADOG_TEAMS> — YYYY-MM-DD (past 7 days)`.
+Focused scorecard — no long prose. Header: `Daily Dashboard — <label> — YYYY-MM-DD (past 7 days)` where `<label>` is the first `tpl_var_team` from a dashboard URL, else the first dashboard title.
 One tile per widget (latest value; grey for null). Tile colours if hand-editing:
 
 - RED: `#fff5f5` / `#fc8181`
@@ -146,7 +146,7 @@ Override with `--extras-dir`.
 
 ```bash
 python3 scripts/deliver_report.py send --type pulse \
-  --subject "Daily dashboard — <team> — $(date +%Y-%m-%d)" \
+  --subject "Daily dashboard — $(date +%Y-%m-%d)" \
   output/daily_dashboard_report.html
 ```
 
