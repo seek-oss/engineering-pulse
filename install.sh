@@ -119,6 +119,13 @@ upsert_env_var() {
     else
       sed -i "s/^${key}=.*/${key}=${val}/" "$file"
     fi
+  elif grep -qE "^[[:space:]]*#[[:space:]]*${key}=" "$file" 2>/dev/null; then
+    # .env.example keeps AGENT_CLI commented; promote that line instead of appending.
+    if [[ "$(uname)" == Darwin ]]; then
+      sed -i '' -E "s/^[[:space:]]*#[[:space:]]*${key}=.*/${key}=${val}/" "$file"
+    else
+      sed -i -E "s/^[[:space:]]*#[[:space:]]*${key}=.*/${key}=${val}/" "$file"
+    fi
   else
     printf '\n%s=%s\n' "$key" "$val" >>"$file"
   fi

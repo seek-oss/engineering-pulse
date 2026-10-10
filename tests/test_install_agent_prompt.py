@@ -52,6 +52,25 @@ def test_asks_via_tty_when_no_agent_saved(tmp_path):
     out, env = _choose(tmp_path, "# AGENT_CLI=cursor\n", "2\n")
     assert "SELECTED=claude" in out
     assert re.search(r"^AGENT_CLI=claude$", env, re.M)
+    assert "# AGENT_CLI" not in env
+
+
+def test_upsert_promotes_commented_placeholder(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# Agent that runs the reports\n"
+        "# AGENT_CLI=cursor\n"
+        "DATADOG_TEAMS=your-team\n"
+    )
+    script = (
+        f'source "{ROOT}/scripts/lib/agent_cli.sh"\n{_functions()}\n'
+        f'upsert_env_var "AGENT_CLI" "claude" "{env_file}"\n'
+    )
+    subprocess.run(["bash", "-c", script], check=True, capture_output=True, text=True)
+    text = env_file.read_text()
+    assert re.search(r"^AGENT_CLI=claude$", text, re.M)
+    assert "# AGENT_CLI" not in text
+    assert "DATADOG_TEAMS=your-team" in text
 
 
 def test_keeps_saved_agent_without_asking(tmp_path):
