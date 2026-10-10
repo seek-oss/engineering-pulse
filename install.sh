@@ -306,7 +306,7 @@ print_banner() {
   printf '%s     ██         ██████   ████████   ██████   ████████%s\n' "$C5" "$CR"
 
   printf '\n'
-  printf '%s        d a t a d o g  ·  g i t h u b  ·  e m a i l%s\n' "$CG" "$CR"
+  printf '%s        d a t a d o g  ·  g i t h u b  ·  s p r i n t%s\n' "$CG" "$CR"
   printf '\n'
   printf '%s+ -------------------------------------- +%s\n' "$CG" "$CR"
   printf '%s| [✓] engine  : online  pulse : steady   |%s\n' "$CG" "$CR"
