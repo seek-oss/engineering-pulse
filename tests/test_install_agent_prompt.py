@@ -58,9 +58,7 @@ def test_asks_via_tty_when_no_agent_saved(tmp_path):
 def test_upsert_promotes_commented_placeholder(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "# Agent that runs the reports\n"
-        "# AGENT_CLI=cursor\n"
-        "DATADOG_TEAMS=your-team\n"
+        "# Agent that runs the reports\n# AGENT_CLI=cursor\nDATADOG_TEAMS=your-team\n"
     )
     script = (
         f'source "{ROOT}/scripts/lib/agent_cli.sh"\n{_functions()}\n'
