@@ -32,6 +32,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 | `scripts/` | Python orchestration (Datadog, GitHub, render, SMTP, Todoist) |
 | `scripts/lib/agent_cli.sh` | Multi-agent CLI abstraction for scheduled runs (`AGENT_CLI`) |
 | `skills/engineering-pulse/` | Canonical daily-dashboard workflow (`SKILL.md` + `references/`) |
+| `skills/dx-build-success/` | On-demand DX build success rate HTML (`DX_TOKEN`, Data Studio SQL) |
 | `prompts/dashboards/_*.md` | Shipped dashboard definition templates |
 | `prompts/extras/_*.md` | Shipped extra-card templates |
 | `output/` | Disposable generated JSON/HTML; `output/stakeholders/*.md` for Glean cards |
@@ -53,6 +54,7 @@ queue, Todoist tasks, optional Stakeholder Pulse (Glean MCP), HTML scorecard, SM
 | Script | Purpose |
 |--------|---------|
 | `datadog_dashboard_extract.py` | Dashboard metrics → `output/<slug>_metric_results.json` |
+| `dx_build_success_extract.py` | DX build success → `output/<slug>_dx_build_success.json` (pulse Part) |
 | `github_prs.py` | PR review queue → `output/github_prs.json` |
 | `render_daily_dashboard_html.py` | Build `output/daily_dashboard_report.html` |
 | `send_report_smtp.py` | Email the report |

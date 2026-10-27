@@ -34,14 +34,29 @@ of the report.
 
 ---
 
-## Step 1 — Extract Datadog Dashboards
+## Step 1 — Extract dashboards
+
+Read every qualifying `.md` in `~/.engineering-pulse-data/dashboards/` (see
+`prompts/dashboards/_example.md` for Datadog parts).
+
+### Datadog (default)
 
 Use **Datadog MCP** (see [datadog-mcp-extract.md](datadog-mcp-extract.md)). For **each**
-dashboard in `~/.engineering-pulse-data/dashboards/`, produce
+dashboard **without** `Type: dx-build-success`, produce
 `output/<slug>_metric_results.json` via MCP + local helper scripts.
 
-Read every qualifying `.md` in `~/.engineering-pulse-data/dashboards/`; see
-`prompts/dashboards/_example.md` for the file format.
+### DX build success (`Type: dx-build-success`)
+
+When a dashboard declares **Type:** `dx-build-success` (template:
+`prompts/dashboards/dx_build_success.md`), run:
+
+```bash
+python3 scripts/dx_build_success_extract.py
+```
+
+(or `--slug <slug>` for one part). Requires `DX_TOKEN`. Writes
+`output/<slug>_dx_build_success.json`. On failure, record
+`run_issues.py add --type pulse --source dx --message "..."` and continue.
 
 ---
 
@@ -58,7 +73,7 @@ python3 scripts/render_daily_dashboard_html.py
 Writes `output/daily_dashboard_report.html` by default (override with `--out`).
 
 The renderer reads `~/.engineering-pulse-data/dashboards/*.md` + matching
-`output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`,
+`output/<slug>_metric_results.json` or `output/<slug>_dx_build_success.json`, `output/github_prs.json`, `output/todos.json`,
 `~/.engineering-pulse-data/extras/*.md`, and
 `output/stakeholders/*.md` when `STAKEHOLDERS` is set.
 

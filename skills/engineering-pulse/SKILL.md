@@ -34,7 +34,7 @@ paths, and script reference.
 
 ## Workflow
 
-1. **Datadog** — [datadog-mcp-extract.md](references/datadog-mcp-extract.md) (MCP; past 7 days)
+1. **Dashboards** — Datadog MCP per [datadog-mcp-extract.md](references/datadog-mcp-extract.md) (past 7 days); for `Type: dx-build-success` parts run `python3 scripts/dx_build_success_extract.py` ([daily-workflow.md § Step 1](references/daily-workflow.md#step-1--extract-dashboards))
 2. **Render prep** — PRs (GitHub MCP), todos, extras per [daily-workflow.md](references/daily-workflow.md#step-2--build-the-html-report)
 3. **Stakeholder Pulse** (if `STAKEHOLDERS` set) — [stakeholder-pulse.md](references/stakeholder-pulse.md)
 4. **Render HTML** — `python3 scripts/render_daily_dashboard_html.py`
@@ -54,6 +54,7 @@ paths, and script reference.
 - Dashboard defs: `~/.engineering-pulse-data/dashboards/*.md`
 - Extras: `~/.engineering-pulse-data/extras/*.md`
 - Stakeholder cards (generated): `output/stakeholders/*.md`
-- Snapshots: `output/<slug>_metric_results.json`, `output/github_prs.json`, `output/todos.json`
+- Snapshots: `output/<slug>_metric_results.json`, `output/<slug>_dx_build_success.json`, `output/github_prs.json`, `output/todos.json`
+- **Repo-local test:** `ENGINEERING_PULSE_DATA_DIR=$PWD/local/pulse-data` — see `dev/pulse-data/README.md`
 - HTML scorecard (default render): `output/daily_dashboard_report.html`
 - Report archive + calendar: `~/.engineering-pulse-data/reports/` (`index.html`, `manifest.json`)

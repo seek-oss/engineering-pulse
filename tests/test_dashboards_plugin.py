@@ -7,7 +7,9 @@ from pathlib import Path
 
 import pytest
 from scripts.dashboards_plugin import (
+    KIND_DX_BUILD_SUCCESS,
     discover_dashboards,
+    load_dx_build_success_snapshot,
     load_snapshot,
     parse_dashboard,
 )
@@ -125,6 +127,22 @@ class TestParseDashboard:
         assert d.color_rules[0].label == "Systems Assessed"
         assert d.color_rules[0].yellow == "50–80%"
 
+    def test_dx_build_success_type_and_fields(self, tmp_path: Path) -> None:
+        f = tmp_path / "build_success.md"
+        f.write_text(
+            "# Build success\n"
+            "- **Type:** dx-build-success\n"
+            "- **Slug:** build_success\n"
+            "- **Team:** Example Team\n"
+            "- **Period:** 3 months\n",
+            encoding="utf-8",
+        )
+        d = parse_dashboard(f)
+        assert d.kind == KIND_DX_BUILD_SUCCESS
+        assert d.slug == "build_success"
+        assert d.team == "Example Team"
+        assert d.period == "3 months"
+
     def test_value_with_no_decoration(self, tmp_path: Path) -> None:
         f = tmp_path / "x.md"
         f.write_text(
@@ -157,3 +175,13 @@ class TestLoadSnapshot:
         (tmp_path / "bad_metric_results.json").write_text("not json", encoding="utf-8")
         with pytest.raises(json.JSONDecodeError):
             load_snapshot("bad", tmp_path)
+
+
+class TestLoadDxBuildSuccessSnapshot:
+    def test_missing_returns_none(self, tmp_path: Path) -> None:
+        assert load_dx_build_success_snapshot("x", tmp_path) is None
+
+    def test_loads_json(self, tmp_path: Path) -> None:
+        payload = {"meta": {"team": "T"}, "rows": []}
+        (tmp_path / "foo_dx_build_success.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert load_dx_build_success_snapshot("foo", tmp_path) == payload

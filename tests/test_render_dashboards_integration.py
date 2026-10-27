@@ -285,6 +285,39 @@ class TestDashboardOrdering:
         assert "Part A — PR Review Queue" in html
 
 
+class TestDxBuildSuccessDashboard:
+    def test_dx_part_renders_chart_in_pulse(self, base_dirs: Path) -> None:
+        (base_dirs / "dashboards" / "build_success.md").write_text(
+            "# Build success\n"
+            "- **Type:** dx-build-success\n"
+            "- **Slug:** build_success\n",
+            encoding="utf-8",
+        )
+        payload = {
+            "meta": {
+                "team_name": "Example Team",
+                "period_label": "Last 3 months",
+                "overall_pct": 88.0,
+            },
+            "rows": [
+                {
+                    "week_start": "2026-10-19 00:00:00+00",
+                    "successful_builds": 88,
+                    "total_builds": 100,
+                    "success_rate_pct": 88.0,
+                },
+            ],
+        }
+        (base_dirs / "output" / "build_success_dx_build_success.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+        html = _run(base_dirs)
+        assert "Part A — Build success" in html
+        assert "dx-build-success-embed" in html
+        assert "88.00" in html
+        assert "Part B — PR Review Queue" in html
+
+
 class TestGenericRendererWithDashboard:
     def test_generic_renderer_emits_tile_per_widget(self, base_dirs: Path) -> None:
         (base_dirs / "dashboards" / "my_dashboard.md").write_text(

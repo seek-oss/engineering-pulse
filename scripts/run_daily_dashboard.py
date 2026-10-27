@@ -49,10 +49,24 @@ def main() -> int:
     py = sys.executable
 
     sys.path.insert(0, str(SCRIPTS))
-    from dashboards_plugin import discover_dashboards, load_snapshot, parse_dashboard
+    from dashboards_plugin import (
+        KIND_DX_BUILD_SUCCESS,
+        discover_dashboards,
+        load_dx_build_success_snapshot,
+        load_snapshot,
+        parse_dashboard,
+    )
 
     for path in discover_dashboards(dashboards_dir()):
         dash = parse_dashboard(path)
+        if dash.kind == KIND_DX_BUILD_SUCCESS:
+            if load_dx_build_success_snapshot(dash.slug, OUT) is None:
+                print(
+                    f"WARN: missing output/{dash.slug}_dx_build_success.json for "
+                    f"{path.name} — run scripts/dx_build_success_extract.py.",
+                    flush=True,
+                )
+            continue
         if load_snapshot(dash.slug, OUT) is None:
             print(
                 f"WARN: missing output/{dash.slug}_metric_results.json for "
@@ -60,6 +74,12 @@ def main() -> int:
                 "(skills/engineering-pulse/references/datadog-mcp-extract.md).",
                 flush=True,
             )
+
+    if os.environ.get("DX_TOKEN", "").strip():
+        try:
+            _run_logged([py, str(SCRIPTS / "dx_build_success_extract.py")])
+        except subprocess.CalledProcessError as e:
+            print(f"WARN: dx_build_success_extract failed: {e}", flush=True)
 
     todos_path = OUT / "todos.json"
     try:

@@ -24,6 +24,9 @@ stripping surrounding whitespace and backticks):
   HTML report shows only the first matching widget for each fragment.
   `(none)` means no filter. A colour table (`RED` / `YELLOW` / `GREEN`) in the
   same file sets tile colours for those metrics.
+- `Type`   — `datadog` (default) or `dx-build-success`. DX parts use **Team** and
+  **Period** (`3 months` or `12 weeks`) and read `output/<slug>_dx_build_success.json`
+  (from `scripts/dx_build_success_extract.py`).
 
 The snapshot JSON for slug `<x>` is expected at `output/<x>_metric_results.json`
 (matching what `scripts/datadog_dashboard_extract.py` writes). If the snapshot
@@ -41,6 +44,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+KIND_DATADOG = "datadog"
+KIND_DX_BUILD_SUCCESS = "dx-build-success"
 
 
 @dataclass(frozen=True)
@@ -63,9 +69,19 @@ class Dashboard:
     source: Path
     focus: tuple[str, ...] = ()
     color_rules: tuple[ColorRule, ...] = ()
+    kind: str = KIND_DATADOG
+    team: str = ""
+    period: str = ""
 
 
 _NO_FOCUS = {"", "(none)", "none", "n/a", "—", "-"}
+
+
+def _parse_kind(raw: str) -> str:
+    key = raw.strip().lower().replace("_", "-")
+    if key in {KIND_DX_BUILD_SUCCESS, "dx build success"}:
+        return KIND_DX_BUILD_SUCCESS
+    return KIND_DATADOG
 
 
 def _parse_focus(raw: str) -> tuple[str, ...]:
@@ -157,6 +173,9 @@ def parse_dashboard(path: Path) -> Dashboard:
         source=path,
         focus=_parse_focus(fields.get("focus", "")),
         color_rules=_parse_color_rules(raw),
+        kind=_parse_kind(fields.get("type", "")),
+        team=fields.get("team", ""),
+        period=fields.get("period", ""),
     )
 
 
@@ -176,6 +195,14 @@ def load_snapshot(slug: str, output_dir: Path) -> dict[str, Any] | None:
     placeholder or skip the section. An unreadable file (bad JSON) raises.
     """
     path = output_dir / f"{slug}_metric_results.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_dx_build_success_snapshot(slug: str, output_dir: Path) -> dict[str, Any] | None:
+    """Return parsed ``output/<slug>_dx_build_success.json``, or ``None`` if missing."""
+    path = output_dir / f"{slug}_dx_build_success.json"
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))

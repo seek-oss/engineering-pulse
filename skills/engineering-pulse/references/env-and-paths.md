@@ -22,6 +22,10 @@
 | `TODOIST_PROJECT_ID` | no | Auto-set by `python scripts/todo.py setup` |
 | `STAKEHOLDERS` | no | Pulse names (Glean). **Leave this key out** of `.env` to omit Pulse entirely (ignored if only set via shell `export`). |
 | `SPRINT_BOARD` | for sprint | One sentence describing the sprint board ([sprint-report skill](../../sprint-report/SKILL.md)); unset → no sprint report |
+| `DX_TOKEN` | for DX reports | Personal access token with `datacloud:query` ([dx-build-success skill](../../dx-build-success/SKILL.md)) |
+| `DX_BUILD_SUCCESS_TEAM` | no | DX team name substring for build success SQL (default `Example Team`) |
+| `DX_BUILD_SUCCESS_PERIOD` | no | `3 months` (default, matches DX l3m) or `12 weeks` |
+| `DX_BUILD_SUCCESS_REPORT_URL` | no | Override “Open in DX” link on the HTML report |
 
 The keys marked *Settings panel* are normally changed from the calendar's Settings panel
 (or `scripts/settings.py`), which writes them to `.env` for you.

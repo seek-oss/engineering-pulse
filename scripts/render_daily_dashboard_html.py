@@ -48,13 +48,16 @@ from dashboard_tiles import (  # noqa: E402
     section_suffix,
 )
 from dashboards_plugin import (  # noqa: E402
+    KIND_DX_BUILD_SUCCESS,
     Dashboard,
     discover_dashboards,
+    load_dx_build_success_snapshot,
     load_snapshot,
     parse_dashboard,
 )
 from datadog_dashboard_extract import first_team_slug_from_dashboard_url  # noqa: E402
 from extras_plugin import parse_extra, render_extras_section  # noqa: E402
+from render_dx_build_success_html import render_pulse_section  # noqa: E402
 from todo_report import format_view_action_html  # noqa: E402
 from user_data import dashboards_dir, env_file, extras_dir  # noqa: E402
 
@@ -355,6 +358,22 @@ def main() -> None:
     dashboard_records: list[tuple[Dashboard, dict[str, Any]]] = []
     for md_path in discover_dashboards(ROOT / args.dashboards_dir):
         dash = parse_dashboard(md_path)
+        if dash.kind == KIND_DX_BUILD_SUCCESS:
+            snap_path = output_dir / f"{dash.slug}_dx_build_success.json"
+            snap = (
+                load_dx_build_success_snapshot(dash.slug, output_dir) if _fresh(snap_path) else None
+            )
+            if snap is None:
+                print(
+                    f"Warning: snapshot output/{dash.slug}_dx_build_success.json not "
+                    f"found for dashboard '{dash.title}' ({md_path.name}); skipping. "
+                    f"Run scripts/dx_build_success_extract.py --slug {dash.slug} "
+                    f"to populate it.",
+                    file=sys.stderr,
+                )
+                continue
+            dashboard_records.append((dash, snap))
+            continue
         snap_path = output_dir / f"{dash.slug}_metric_results.json"
         snap = load_snapshot(dash.slug, output_dir) if _fresh(snap_path) else None
         if snap is None:
@@ -377,7 +396,10 @@ def main() -> None:
     # 1) Dashboards from *.md
     for dash, snap in dashboard_records:
         label = next_label(section_suffix(dash.title))
-        sections.append((label, _render_dashboard_section(label, dash, snap, output_dir)))
+        if dash.kind == KIND_DX_BUILD_SUCCESS:
+            sections.append((label, render_pulse_section(label, snap)))
+        else:
+            sections.append((label, _render_dashboard_section(label, dash, snap, output_dir)))
 
     # 2) Ad-hoc --extra dashboards (CLI order)
     for spec in args.extra:

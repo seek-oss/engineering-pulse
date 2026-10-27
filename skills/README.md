@@ -27,6 +27,15 @@ event ledger, and a per-ticket table. Suitable for browsers, Gmail and Outlook.
 Reports are delivered via `scripts/deliver_report.py` (archive to the report calendar,
 then notify and/or email per `DELIVERY`).
 
+## `dx-build-success`
+
+DX **Build success rate** dashboard for one team: Data Studio SQL via `DX_TOKEN`, HTML with
+overall %, weekly area chart, trendline, and breakdown table (DX-like layout).
+
+**Path:** `skills/dx-build-success/`
+
+**Requires:** `DX_TOKEN` in `~/.engineering-pulse-data/.env`; run on demand with `/dx-build-success`.
+
 ## `report-compare`
 
 Written comparison of two archived reports of the same type (Engineering Pulse or

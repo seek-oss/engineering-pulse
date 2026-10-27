@@ -120,6 +120,19 @@ SPRINT_BOARD="My sprint board is at https://<your-site>.atlassian.net/jira/softw
 You can add more information to the sentence, for example "use story points" or the locations of your team for public holidays.
 If `SPRINT_BOARD` is not set, the schedule does not make a sprint report.
 
+## DX build success rate
+
+On-demand report that mirrors the DX **Build success rate** view: overall percentage, weekly chart with trendline, and team breakdown table.
+
+You need:
+
+- `DX_TOKEN` in `.env` (DX personal access token with `datacloud:query`)
+- optional `DX_BUILD_SUCCESS_TEAM` (default `Example Team`) and `DX_BUILD_SUCCESS_PERIOD` (default `3 months`)
+
+In Cursor, open the Engineering Pulse workspace and run **`/dx-build-success`**. Output is written under `output/dx-build-success-*.html`. This report is not part of the scheduled daily run.
+
+See [`skills/dx-build-success/SKILL.md`](../skills/dx-build-success/SKILL.md).
+
 ## Stakeholder Pulse
 
 Stakeholder Pulse shows what a small group of people said and asked for in Slack in the last 7 days. Each person gets one card with three items: themes, a notable message with a link, and the top links.
